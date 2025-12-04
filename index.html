@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glühweinstand Kasse Mobile</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better readability and a festive feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        /* Custom scrollbar for receipt (optional, but good for UX) */
+        #receipt-content {
+            overflow-y: auto;
+            /* Passt sich dynamisch der Höhe an, max. 45% der Viewport-Höhe */
+            max-height: 45vh; 
+        }
+        .product-btn {
+             transition: transform 0.1s;
+        }
+        .product-btn:active {
+             transform: scale(0.98);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-2 md:p-6 bg-red-500/10">
+
+    <!-- Lade-Overlay für Firebase-Initialisierung -->
+    <div id="loading-overlay" class="loading-overlay">
+        Lade Kasse und Benutzerkonto...
+    </div>
+
+    <div class="flex justify-between items-center mb-4">
+        <div class="text-xs text-gray-600 p-2 rounded-lg bg-white shadow-sm max-w-xs truncate">
+            Benutzer-ID: <span id="user-id-display" class="font-mono font-semibold text-red-600">Laden...</span>
+        </div>
+        <h1 class="text-3xl font-bold text-center text-red-700">Glühweinstand Kasse 🍷</h1>
+        <div><!-- Spacer for alignment --></div>
+    </div>
+
+
+    <!-- Geändert zu lg:grid-cols-2 für 50/50 Split auf Desktops/Tablets -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        
+        <!-- Linke Spalte: Produkte & Steuerung (Jetzt lg:col-span-1) -->
+        <div class="lg:col-span-1 space-y-4">
+            
+            <div class="bg-white p-4 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-3 text-red-800">Produkte buchen</h2>
+                <!-- Feste Spaltenanordnung für bessere Strukturierung -->
+                <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+                    <!-- Produkt-Buttons werden hier von JavaScript eingefügt -->
+                </div>
+            </div>
+
+            <!-- Storno & Reset -->
+            <div class="bg-white p-4 rounded-xl shadow-lg flex flex-wrap gap-3 justify-between">
+                <button id="undo-button" onclick="undoLastAction()" 
+                        class="product-btn w-full md:w-1/2 p-3 rounded-lg font-bold text-base text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
+                    ↩️ Letzte Buchung rückgängig machen
+                </button>
+                <!-- Farbe zu neutralem Grau geändert -->
+                <button id="reset-button" onclick="resetBestellung()" 
+                        class="product-btn w-full md:w-[48%] p-3 rounded-lg font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
+                    Neue Bestellung / Reset
+                </button>
+            </div>
+            
+            <!-- Abschluss Buttons -->
+            <div class="flex flex-col gap-3">
+                <button onclick="showPaymentDialog()" 
+                        class="product-btn w-full p-4 rounded-xl font-extrabold text-xl text-white bg-green-600 hover:bg-green-700 shadow-lg">
+                    🧾 Bon erstellen & Buchen
+                </button>
+                <!-- Farbe zu klarem Blau geändert -->
+                <button onclick="tagesAbschluss()" 
+                        class="product-btn w-full p-4 rounded-xl font-bold text-lg text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
+                    💰 Tagesabschluss anzeigen
+                </button>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Bon-Anzeige & Summe (Jetzt lg:col-span-1) -->
+        <div class="lg:col-span-1 bg-white p-4 rounded-xl shadow-lg h-full sticky top-4">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Aktueller Bon</h2>
+            
+            <div id="receipt-content" class="bg-gray-50 p-3 rounded-lg text-sm font-mono whitespace-pre text-gray-700 border border-gray-200">
+                <!-- Bon-Inhalt wird hier von JavaScript eingefügt -->
+            </div>
+
+            <div class="mt-4 pt-4 border-t-2 border-red-700">
+                <div id="total-display" class="text-3xl font-extrabold text-right text-red-700">
+                    GESAMT: 0.00 €
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal für Zahlungsdialog -->
+    <div id="payment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id === 'payment-modal') hidePaymentDialog()">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Zahlung</h3>
+            <div id="payment-total" class="text-xl font-bold text-red-700 mb-6 text-center">Zu zahlen: 0.00 €</div>
+
+            <label for="received-amount" class="block text-sm font-medium text-gray-700 mb-1">Erhaltene Summe (€):</label>
+            <input type="text" id="received-amount" placeholder="0.00"
+                   class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-center focus:outline-none focus:ring-2 focus:ring-green-500 mb-4" 
+                   oninput="calculateChange()" onkeyup="if(event.key === 'Enter') handlePaymentConfirm()">
+
+            <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
+
+            <button id="confirm-payment-button" onclick="handlePaymentConfirm()" disabled
+                    class="product-btn w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400 hover:bg-green-600 transition-colors">
+                Zahlung Buchen
+            </button>
+            <button onclick="hidePaymentDialog()" class="mt-3 w-full p-2 text-sm text-gray-500 hover:text-gray-700">
+                Abbrechen
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal für Mitteilungen/Bericht -->
+    <div id="info-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id === 'info-modal') hideInfoModal()">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <h3 id="info-title" class="text-xl font-bold text-gray-800 mb-3">Mitteilung</h3>
+            <pre id="info-content" class="whitespace-pre-wrap text-sm font-mono bg-gray-100 p-3 rounded-lg"></pre>
+            <button onclick="hideInfoModal()" class="mt-5 w-full p-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
+                Schließen
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importiere Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 1. Konfiguration & Globale Variablen ---
+        const PREISE = {
+            "Glühwein": 1.50,
+            "Kinderpunsch": 1.00,
+            "Glühwein m. Schuss": 2.00,
+            "Bratwurst": 2.00,
+            "Grillkäse": 2.00
+        };
+        
+        // Globale Firebase-Variablen, wie im Canvas-Umfeld bereitgestellt
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // Platzhalter-Konfiguration für GitHub Pages / lokale Nutzung, da die Canvas-Umgebungsvariablen 
+        // außerhalb dieses Editors nicht existieren.
+        const defaultFirebaseConfig = {
+            apiKey: "DUMMY_KEY_DEMO_12345",
+            authDomain: "demo-kasse.firebaseapp.com",
+            projectId: "demo-kasse",
+            storageBucket: "demo-kasse.appspot.com",
+            messagingSenderId: "12345",
+            appId: "1:12345:web:12345"
+        };
+        
+        // Nutze die Canvas-Config, falls vorhanden, ansonsten die Platzhalter
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : defaultFirebaseConfig;
+
+        // Prüfen, ob eine gültige Firebase-Konfiguration vorhanden ist (typischerweise in der Canvas-Umgebung)
+        const isFirebaseConfigValid = firebaseConfig.apiKey !== defaultFirebaseConfig.apiKey;
+
+
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userId = null;
+        
+        let bestellung = {}; // Aggregierte Ansicht für den Bon {Produkt: Anzahl}
+        let buchungs_historie = []; // Reihenfolge der einzelnen Buchungen [Produkt1, Produkt2, ...]
+        let gesamt_summe = 0.0;
+        
+        // --- 2. Initialisierung der Oberfläche & Firebase ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderProductButtons();
+            // Starte Firebase-Setup, da dies asynchron ist
+            setupFirebase();
+            
+            // Bindet die Enter-Taste für den gesamten Body, wenn das Dialogfenster nicht aktiv ist.
+            document.body.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter' && document.getElementById('payment-modal').classList.contains('hidden')) {
+                    showPaymentDialog();
+                }
+            });
+        });
+
+        async function setupFirebase() {
+            if (!isFirebaseConfigValid) {
+                // Auf GitHub Pages wird diese Meldung erscheinen. Die App funktioniert lokal, aber ohne Datenbank.
+                console.warn("ACHTUNG: Firebase-Datenbank ist nicht konfiguriert oder die Platzhalter-Werte sind in Gebrauch. Transaktionen werden NICHT gespeichert.");
+                document.getElementById('user-id-display').textContent = 'KEINE DB';
+                document.getElementById('loading-overlay').classList.add('hidden');
+                updateDisplay();
+                return; 
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Benutzer-Authentifizierung: Nutze Custom Token, wenn vorhanden, sonst anonym
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Warte auf den Auth-Status
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('user-id-display').textContent = userId.substring(0, 8) + '...'; // Gekürzte ID im UI
+                        document.getElementById('loading-overlay').classList.add('hidden');
+                        updateDisplay(); // Zeigt die Kasse nach dem Laden an
+                    } else {
+                        // Sollte nicht passieren, wenn die anonyme Anmeldung fehlschlägt
+                        document.getElementById('user-id-display').textContent = 'FEHLER';
+                        document.getElementById('loading-overlay').textContent = 'Fehler beim Anmelden des Benutzers.';
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Initialisierung oder Authentifizierung fehlgeschlagen:", error);
+                document.getElementById('loading-overlay').textContent = `Kritischer Fehler: ${error.message}`;
+            }
+        }
+        
+        function renderProductButtons() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+
+            for (const name in PREISE) {
+                const preis = PREISE[name];
+                const isDrink = name.includes("wein") || name.includes("punsch");
+                
+                // Farbschemata: Rot für Getränke, Dunkelorange/Braun für Essen
+                const bgColor = isDrink ? 'bg-red-700' : 'bg-orange-800'; 
+                const hoverColor = isDrink ? 'hover:bg-red-800' : 'hover:bg-orange-900';
+
+                const button = document.createElement('button');
+                button.className = `product-btn p-3 rounded-lg font-bold text-white shadow-md ${bgColor} ${hoverColor} transition-colors`;
+                button.innerHTML = `${name}<br><span class="text-sm font-normal">(${preis.toFixed(2)} €)</span>`;
+                button.onclick = () => produktBuchen(name);
+                
+                grid.appendChild(button);
+            }
+        }
+
+        // --- 3. Kernfunktionen ---
+
+        function produktBuchen(produktName) {
+            if (isFirebaseConfigValid && !userId) {
+                showInfoModal("Fehler", "Benutzerkonto wird noch geladen. Bitte warten Sie kurz.");
+                return;
+            }
+            const preis = PREISE[produktName];
+            bestellung[produktName] = (bestellung[produktName] || 0) + 1;
+            gesamt_summe += preis;
+            buchungs_historie.push(produktName); 
+            updateDisplay();
+        }
+
+        function undoLastAction() {
+            if (buchungs_historie.length === 0) {
+                showInfoModal("Stornierung", "Es gibt keine Buchung zum Stornieren.");
+                return;
+            }
+
+            const storniertesProdukt = buchungs_historie.pop(); 
+            const preis = PREISE[storniertesProdukt];
+            
+            // Bestand korrigieren
+            bestellung[storniertesProdukt] -= 1;
+            if (bestellung[storniertesProdukt] <= 0) {
+                delete bestellung[storniertesProdukt];
+            }
+                
+            // Gesamtsumme korrigieren
+            gesamt_summe -= preis;
+            
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            document.getElementById('total-display').textContent = `GESAMT: ${gesamt_summe.toFixed(2).replace('.', ',')} €`;
+
+            let bonVorschau = "---------------------------------------\n";
+            for (const name in bestellung) {
+                const anzahl = bestellung[name];
+                const preis = PREISE[name];
+                const gesPreis = anzahl * preis;
+                
+                // Formatierung für Courier/Mono-Font
+                const formattedName = name.padEnd(20);
+                const formattedPreis = preis.toFixed(2).replace('.', ',').padStart(5);
+                const formattedGesPreis = gesPreis.toFixed(2).replace('.', ',').padStart(6);
+                
+                bonVorschau += ` ${anzahl}x ${formattedName} @ ${formattedPreis} = ${formattedGesPreis}\n`; 
+            }
+            bonVorschau += "---------------------------------------";
+            
+            document.getElementById('receipt-content').textContent = bonVorschau;
+        }
+
+        // Neue Funktion: Setzt nur die Daten zurück, ohne Meldung
+        function resetData() {
+            bestellung = {};
+            gesamt_summe = 0.0;
+            buchungs_historie = [];
+            updateDisplay();
+        }
+
+        // Alte Funktion: Setzt Daten zurück und zeigt die Meldung
+        function resetBestellung() {
+            resetData();
+            showInfoModal("Reset", "Bestellung zurückgesetzt. Neue Buchung möglich.");
+        }
+
+        // --- 4. Zahlungsdialog Logik ---
+        
+        function showPaymentDialog() {
+            if (gesamt_summe <= 0) {
+                 showInfoModal("Bon-Erstellung", "Es ist noch nichts gebucht.");
+                 return;
+            }
+            
+            const totalElement = document.getElementById('payment-total');
+            const amountInput = document.getElementById('received-amount');
+            const modal = document.getElementById('payment-modal');
+
+            totalElement.textContent = `Zu zahlen: ${gesamt_summe.toFixed(2).replace('.', ',')} €`;
+            
+            // Feld am Anfang leer lassen
+            amountInput.value = ''; 
+            
+            calculateChange(); // Initialisiert Rückgeld-Anzeige und Button-Status
+            
+            modal.classList.remove('hidden');
+            amountInput.focus();
+        }
+        
+        function hidePaymentDialog() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
+        function calculateChange() {
+            const receivedAmountInput = document.getElementById('received-amount');
+            const changeDisplay = document.getElementById('change-display');
+            const confirmButton = document.getElementById('confirm-payment-button');
+            const gesamt = gesamt_summe;
+            
+            try {
+                // Erlaubt Komma oder Punkt als Dezimaltrennzeichen
+                const input_text = receivedAmountInput.value.replace(',', '.');
+                const erhalten = input_text ? parseFloat(input_text) : 0.0;
+
+                if (isNaN(erhalten)) {
+                     changeDisplay.textContent = "Ungültige Eingabe!";
+                     confirmButton.disabled = true;
+                     return;
+                }
+
+                const rueckgeld = erhalten - gesamt;
+
+                if (rueckgeld >= 0) {
+                    changeDisplay.textContent = `Rückgeld: ${rueckgeld.toFixed(2).replace('.', ',')} €`;
+                    confirmButton.disabled = false;
+                } else {
+                    changeDisplay.textContent = "FEHLBETRAG!";
+                    confirmButton.disabled = true;
+                }
+            } catch (e) {
+                changeDisplay.textContent = "Ungültige Eingabe!";
+                confirmButton.disabled = true;
+            }
+        }
+        
+        // Die extra Erfolgsmeldung nach dem Buchen wird hier entfernt.
+        async function handlePaymentConfirm() {
+            // Führt Zahlung nur aus, wenn der Button nicht deaktiviert ist
+            if (!document.getElementById('confirm-payment-button').disabled) {
+                // logTransaction führt entweder echtes Logging durch ODER gibt true zurück (wenn DB deaktiviert)
+                if (await logTransaction()) { 
+                    hidePaymentDialog();
+                    // Nur Reset, damit die Kasse sofort wieder auf 0 ist.
+                    resetData(); 
+                }
+            }
+        }
+
+        // --- 5. Logging & Bericht (Firestore) ---
+        
+        function getTransactionCollection() {
+            // Privater Pfad für den aktuellen Benutzer: /artifacts/{appId}/users/{userId}/kasse_transaktionen
+            const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
+            return collection(db, path);
+        }
+
+        async function logTransaction() {
+            if (!isFirebaseConfigValid) {
+                 showInfoModal("Bon-Erstellung", "Bon erstellt und Bestellung zurückgesetzt (Kein Datenbank-Logging).");
+                 return true; // Erfolgreich im Sinne der Kassennutzung
+            }
+            if (!userId) {
+                showInfoModal("Fehler", "Keine Benutzer-ID verfügbar. Kann nicht speichern.");
+                return false;
+            }
+
+            const transaction = {
+                timestamp: new Date().toISOString(), // ISO-Format für einfache Sortierung
+                datum: new Date().toLocaleDateString('de-DE'),
+                zeit: new Date().toLocaleTimeString('de-DE'),
+                produkte: { ...bestellung },
+                summe: gesamt_summe
+            };
+            
+            try {
+                await addDoc(getTransactionCollection(), transaction);
+                showInfoModal("Bon-Erstellung", "Bon erstellt, Transaktion in Firebase gespeichert und Bestellung zurückgesetzt.");
+                return true;
+            } catch (error) {
+                console.error("Fehler beim Speichern der Transaktion:", error);
+                showInfoModal("Speicherfehler", "Transaktion konnte nicht gespeichert werden. Bitte prüfen Sie die Konsolen-Fehler und die Firebase-Regeln.");
+                return false;
+            }
+        }
+
+        async function tagesAbschluss() {
+            if (!isFirebaseConfigValid) {
+                showInfoModal("Tagesabschluss", "Der Tagesabschluss ist nur mit einer funktionierenden Firebase-Konfiguration möglich. Im Moment werden keine Daten geloggt.");
+                return;
+            }
+            if (!userId) {
+                showInfoModal("Fehler", "Bitte warten Sie, bis die Benutzerdaten geladen sind.");
+                return;
+            }
+            
+            const transaktionen = [];
+            
+            try {
+                const q = query(getTransactionCollection());
+                const querySnapshot = await getDocs(q);
+                
+                querySnapshot.forEach((doc) => {
+                    transaktionen.push(doc.data());
+                });
+
+            } catch (error) {
+                console.error("Fehler beim Abrufen der Transaktionen:", error);
+                showInfoModal("Ladefehler", "Fehler beim Laden der Verkaufsdaten (Prüfe Firebase-Konfiguration).");
+                return;
+            }
+
+            if (transaktionen.length === 0) {
+                showInfoModal("Tagesabschluss", "Es wurden noch keine Verkäufe geloggt.");
+                return;
+            }
+
+            let gesamteinnahmen = 0.0;
+            let umsatzProProdukt = { ...PREISE };
+            let anzahlProProdukt = { ...PREISE };
+            
+            for (const name in umsatzProProdukt) { umsatzProProdukt[name] = 0.0; }
+            for (const name in anzahlProProdukt) { anzahlProProdukt[name] = 0; }
+
+            // Durchlaufe alle Transaktionen im Log
+            transaktionen.forEach(transaction => {
+                for (const name in transaction.produkte) {
+                    const anzahl = transaction.produkte[name];
+                    const preis = PREISE[name] || 0.0; 
+                    
+                    if (preis > 0) {
+                        umsatzProProdukt[name] += preis * anzahl;
+                        anzahlProProdukt[name] += anzahl;
+                        gesamteinnahmen += preis * anzahl;
+                    }
+                }
+            });
+
+            // Bericht generieren
+            let bericht = "--- TAGESABSCHLUSS BERICHT ---\n";
+            bericht += `Benutzer-ID: ${userId}\n`;
+            bericht += `Transaktionen: ${transaktionen.length}\n`;
+            bericht += `Erstellt am: ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}\n`;
+            bericht += "------------------------------\n";
+            
+            for (const name in PREISE) {
+                const anzahl = anzahlProProdukt[name];
+                const umsatz = umsatzProProdukt[name];
+                
+                if (anzahl > 0) {
+                    const umsatzStr = umsatz.toFixed(2).replace('.', ',');
+                    bericht += ` ${name.padEnd(20)}: ${anzahl}x | ${umsatzStr} €\n`;
+                }
+            }
+            
+            bericht += "------------------------------\n";
+            bericht += `GESAMTEINNAHMEN DES TAGES:\n ${gesamteinnahmen.toFixed(2).replace('.', ',')} €\n`;
+            bericht += "------------------------------\n";
+            
+            showInfoModal("💰 Tagesabschluss Ergebnis", bericht);
+        }
+        
+        // --- 6. Custom Modal (Ersatz für Tkinter-Messagebox) ---
+
+        function showInfoModal(title, content) {
+            document.getElementById('info-title').textContent = title;
+            document.getElementById('info-content').textContent = content;
+            document.getElementById('info-modal').classList.remove('hidden');
+        }
+
+        function hideInfoModal() {
+            document.getElementById('info-modal').classList.add('hidden');
+        }
+
+    </script>
+</body>
+</html>
