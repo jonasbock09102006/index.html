@@ -15,7 +15,6 @@
         /* Custom scrollbar for receipt (optional, but good for UX) */
         #receipt-content {
             overflow-y: auto;
-            /* Passt sich dynamisch der Höhe an, max. 45% der Viewport-Höhe */
             max-height: 45vh; 
         }
         .product-btn {
@@ -63,7 +62,7 @@
     <!-- Geändert zu lg:grid-cols-2 für 50/50 Split auf Desktops/Tablets -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         
-        <!-- Linke Spalte: Produkte & Steuerung (Jetzt lg:col-span-1) -->
+        <!-- Linke Spalte: Produkte & Steuerung -->
         <div class="lg:col-span-1 space-y-4">
             
             <div class="bg-white p-4 rounded-xl shadow-lg">
@@ -76,12 +75,13 @@
 
             <!-- Storno & Reset -->
             <div class="bg-white p-4 rounded-xl shadow-lg flex flex-wrap gap-3 justify-between">
-                <button id="undo-button" onclick="undoLastAction()" 
+                <!-- Inline-Handler entfernt -->
+                <button id="undo-button" 
                         class="product-btn w-full md:w-1/2 p-3 rounded-lg font-bold text-base text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
                     ↩️ Letzte Buchung rückgängig machen
                 </button>
-                <!-- Farbe zu neutralem Grau geändert -->
-                <button id="reset-button" onclick="resetBestellung()" 
+                <!-- Inline-Handler entfernt -->
+                <button id="reset-button" 
                         class="product-btn w-full md:w-[48%] p-3 rounded-lg font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
                     Neue Bestellung / Reset
                 </button>
@@ -89,19 +89,20 @@
             
             <!-- Abschluss Buttons -->
             <div class="flex flex-col gap-3">
-                <button onclick="showPaymentDialog()" 
+                <!-- Inline-Handler entfernt -->
+                <button id="show-payment-button" 
                         class="product-btn w-full p-4 rounded-xl font-extrabold text-xl text-white bg-green-600 hover:bg-green-700 shadow-lg">
                     🧾 Bon erstellen & Buchen
                 </button>
-                <!-- Farbe zu klarem Blau geändert -->
-                <button onclick="tagesAbschluss()" 
+                <!-- Inline-Handler entfernt -->
+                <button id="tages-abschluss-button" 
                         class="product-btn w-full p-4 rounded-xl font-bold text-lg text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
                     💰 Tagesabschluss anzeigen
                 </button>
             </div>
         </div>
 
-        <!-- Rechte Spalte: Bon-Anzeige & Summe (Jetzt lg:col-span-1) -->
+        <!-- Rechte Spalte: Bon-Anzeige & Summe -->
         <div class="lg:col-span-1 bg-white p-4 rounded-xl shadow-lg h-full sticky top-4">
             <h2 class="text-xl font-semibold mb-3 text-gray-700">Aktueller Bon</h2>
             
@@ -119,20 +120,21 @@
     </div>
 
     <!-- Modal für Zahlungsdialog -->
-    <!-- WICHTIG: KEIN INLINE-ONCLICK HIER ODER AUF DEN BUTTONS MEHR! -->
     <div id="payment-modal" class="modal-hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+        <!-- HINWEIS: Das innere Div hat KEINE Klick-Events, da wir nur das Overlay abfangen wollen. -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm" onclick="event.stopPropagation()">
             <h3 class="text-2xl font-bold text-gray-800 mb-4">Zahlung</h3>
             <div id="payment-total" class="text-xl font-bold text-red-700 mb-6 text-center">Zu zahlen: 0.00 €</div>
 
             <label for="received-amount" class="block text-sm font-medium text-gray-700 mb-1">Erhaltene Summe (€):</label>
+            <!-- Inline-Handler entfernt -->
             <input type="text" id="received-amount" placeholder="0,00"
-                   class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-center focus:outline-none focus:ring-2 focus:ring-green-500 mb-4" 
-                   oninput="calculateChange()" onkeyup="if(event.key === 'Enter') handlePaymentConfirm()">
+                   class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-center focus:outline-none focus:ring-2 focus:ring-green-500 mb-4">
 
             <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
 
-            <button id="confirm-payment-button" onclick="handlePaymentConfirm()" disabled
+            <!-- Inline-Handler entfernt -->
+            <button id="confirm-payment-button" disabled
                     class="product-btn w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400 hover:bg-green-600 transition-colors">
                 Zahlung Buchen
             </button>
@@ -144,9 +146,9 @@
     </div>
 
     <!-- Modal für Mitteilungen/Bericht -->
-    <!-- WICHTIG: KEIN INLINE-ONCLICK HIER ODER AUF DEN BUTTONS MEHR! -->
     <div id="info-modal" class="modal-hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+        <!-- HINWEIS: Das innere Div hat KEINE Klick-Events. -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
             <h3 id="info-title" class="text-xl font-bold text-gray-800 mb-3">Mitteilung</h3>
             <pre id="info-content" class="whitespace-pre-wrap text-sm font-mono bg-gray-100 p-3 rounded-lg"></pre>
             <!-- ID zum Binden des Event-Listeners in JS hinzugefügt -->
@@ -210,15 +212,8 @@
             // Starte Firebase-Setup, da dies asynchron ist
             setupFirebase();
             
-            // Setze Event-Listener für Modal-Schließen-Funktionen (Fix für Problem 1)
-            setupModalEventListeners();
-
-            // Bindet die Enter-Taste für den gesamten Body, wenn das Dialogfenster nicht aktiv ist.
-            document.body.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter' && document.getElementById('payment-modal').classList.contains('modal-hidden')) {
-                    showPaymentDialog();
-                }
-            });
+            // NEU: Binde alle Events NUR über JavaScript
+            bindEventListeners();
         });
 
         async function setupFirebase() {
@@ -261,32 +256,49 @@
             }
         }
         
-        function setupModalEventListeners() {
-            // Zahlung Modal
-            const paymentModal = document.getElementById('payment-modal');
-            const cancelPaymentButton = document.getElementById('cancel-payment-button');
+        /**
+         * NEU: Bindet ALLE Klick- und Eingabe-Ereignisse im DOM. 
+         * Löst das Problem mit den nicht funktionierenden Inline-Handlern.
+         */
+        function bindEventListeners() {
+            // Haupt-Aktionen
+            document.getElementById('undo-button').addEventListener('click', undoLastAction);
+            document.getElementById('reset-button').addEventListener('click', resetBestellung);
+            document.getElementById('show-payment-button').addEventListener('click', showPaymentDialog);
+            document.getElementById('tages-abschluss-button').addEventListener('click', tagesAbschluss);
 
-            // Overlay Klick: Prüfen, ob wirklich das Overlay geklickt wurde (und nicht der Dialog selbst)
+            // Zahlungsdialog (Payment Modal)
+            const paymentModal = document.getElementById('payment-modal');
+            const receivedAmountInput = document.getElementById('received-amount');
+            const confirmPaymentButton = document.getElementById('confirm-payment-button');
+            const cancelPaymentButton = document.getElementById('cancel-payment-button');
+            
+            // Event-Delegation für Modalschließung (Overlay Klick)
             paymentModal.addEventListener('click', (e) => {
                 if (e.target === paymentModal) {
                     hidePaymentDialog();
                 }
             });
-            // Abbrechen Button Klick
             cancelPaymentButton.addEventListener('click', hidePaymentDialog);
+
+            // Eingabe-Logik
+            receivedAmountInput.addEventListener('input', calculateChange);
+            receivedAmountInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') handlePaymentConfirm();
+            });
+            confirmPaymentButton.addEventListener('click', handlePaymentConfirm);
 
 
             // Info Modal
             const infoModal = document.getElementById('info-modal');
             const closeInfoButton = document.getElementById('close-info-button');
 
-            // Overlay Klick
+            // Event-Delegation für Modalschließung (Overlay Klick)
             infoModal.addEventListener('click', (e) => {
                 if (e.target === infoModal) {
                     hideInfoModal();
                 }
             });
-            // Schließen Button Klick
             closeInfoButton.addEventListener('click', hideInfoModal);
         }
 
@@ -305,8 +317,9 @@
                 const button = document.createElement('button');
                 button.className = `product-btn p-3 rounded-lg font-bold text-white shadow-md ${bgColor} ${hoverColor} transition-colors`;
                 button.innerHTML = `${name}<br><span class="text-sm font-normal">(${preis.toFixed(2)} €)</span>`;
-                // Inline onclick ist hier akzeptabel, da es sich um die Haupt-Buttons handelt.
-                button.onclick = () => produktBuchen(name);
+                
+                // NEU: Event-Listener wird direkt beim Erstellen des Buttons gebunden!
+                button.addEventListener('click', () => produktBuchen(name));
                 
                 grid.appendChild(button);
             }
@@ -397,18 +410,15 @@
 
             totalElement.textContent = `Zu zahlen: ${gesamt_summe.toFixed(2).replace('.', ',')} €`;
             
-            // Feld am Anfang leeren
+            // Feld am Anfang leeren und Change berechnen
             amountInput.value = ''; 
+            calculateChange(); 
             
-            calculateChange(); // Initialisiert Rückgeld-Anzeige und Button-Status
-            
-            // Korrekte Anzeige über Klasse
             modal.classList.remove('modal-hidden');
             amountInput.focus();
         }
         
         function hidePaymentDialog() {
-            // Korrekte Ausblendung über Klasse
             document.getElementById('payment-modal').classList.add('modal-hidden');
         }
 
@@ -438,7 +448,8 @@
             // Berechnung des Rückgelds und Fixierung auf zwei Nachkommastellen
             const rueckgeld = parseFloat((erhalten - gesamt).toFixed(2));
 
-            // Fix: Eine minimale Toleranz für 0.00, um Floating-Point-Fehler zu vermeiden
+            // Fix: Eine minimale Toleranz (0.0001) für 0.00, um Floating-Point-Fehler zu vermeiden
+            // Nur wenn das erhaltene Geld größer oder gleich dem Gesamtbetrag ist.
             if (rueckgeld >= -0.0001) { 
                 changeDisplay.textContent = `Rückgeld: ${rueckgeld.toFixed(2).replace('.', ',')} €`;
                 // Button aktivieren, wenn die Summe bezahlt wurde
@@ -449,7 +460,7 @@
                 confirmButton.disabled = true;
             }
             
-            // Zusätzliche Deaktivierung, falls der Gesamtbetrag 0 ist (kann nur passieren, wenn das Modal fälschlicherweise geöffnet wird)
+            // Zusätzliche Deaktivierung, falls der Gesamtbetrag 0 ist
             if (gesamt <= 0) {
                  confirmButton.disabled = true;
             }
@@ -591,18 +602,7 @@
             // Korrekte Ausblendung über Klasse
             document.getElementById('info-modal').classList.add('modal-hidden');
         }
-
-        // MUSS explizit in das globale Window-Objekt exportiert werden, damit
-        // die inline-onclick-Handler aus dem HTML-Code die Funktionen finden.
-        window.produktBuchen = produktBuchen; // Für Produkt-Buttons (werden per JS generiert)
-        window.undoLastAction = undoLastAction;
-        window.resetBestellung = resetBestellung;
-        window.showPaymentDialog = showPaymentDialog;
-        window.tagesAbschluss = tagesAbschluss;
-        window.calculateChange = calculateChange;
-        window.handlePaymentConfirm = handlePaymentConfirm;
-        // Die Modal-Hide-Funktionen werden jetzt primär über EventListener gesteuert, 
-        // müssen aber für den Enter-Key Handler im Payment-Dialog global bleiben.
+        
     </script>
 </body>
 </html>
