@@ -13,9 +13,10 @@
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
 
-        /* Numpad Button Style */
+        /* Numpad Button Style (VERGRÖSSERT) */
         .numpad-btn {
-            @apply p-4 rounded-lg font-bold text-2xl shadow-md transition-colors;
+            /* Anpassungen für größere Tasten und bessere Bedienbarkeit */
+            @apply p-6 rounded-xl font-extrabold text-3xl shadow-lg transition-colors;
             line-height: 1; /* Text zentrieren */
         }
         .numpad-btn:active { transform: scale(0.95); }
@@ -123,7 +124,8 @@
 
     <!-- Zahlungs-Modal -->
     <div id="payment-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+        <!-- MAX-WIDTH AUF MAX-W-MD ERHÖHT -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md"> 
             <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Zahlung</h3>
             <div id="payment-total-display" class="text-xl font-bold text-red-700 mb-6 text-center">...</div>
 
@@ -135,7 +137,7 @@
             <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
             
             <!-- Custom Numpad -->
-            <div id="numpad-container" class="grid grid-cols-3 gap-2">
+            <div id="numpad-container" class="grid grid-cols-3 gap-3"> <!-- Gap auch etwas größer -->
                 <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
                 <button onclick="handleNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
                 <button onclick="handleNumpadInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
@@ -148,7 +150,8 @@
                 <button onclick="handleNumpadInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
                 <button onclick="handleNumpadInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
-                <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-xl">C</button>
+                <!-- Die Löschen-Taste ist nun auch größer -->
+                <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button>
                 <button onclick="handleNumpadInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
                 <button onclick="handleNumpadInput(',')" class="numpad-btn bg-gray-200 hover:bg-gray-300">,</button>
             </div>
