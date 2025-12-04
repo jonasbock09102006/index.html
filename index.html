@@ -184,6 +184,12 @@
 
             <div id="change-display" class="text-xl font-extrabold text-blue-600 mb-4 text-center">Rückgeld: 0.00 €</div>
             
+            <div class="grid grid-cols-3 gap-1 mb-3"> 
+                <button onclick="handleQuickPay(5)" class="numpad-btn bg-blue-600 hover:bg-blue-700 text-white">5 €</button>
+                <button onclick="handleQuickPay(10)" class="numpad-btn bg-blue-600 hover:bg-blue-700 text-white">10 €</button>
+                <button onclick="handleQuickPay('exact')" class="numpad-btn bg-blue-600 hover:bg-blue-700 text-white">Exakt</button>
+            </div>
+            
             <div id="numpad-container" class="grid grid-cols-3 gap-1"> 
                 <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
                 <button onclick="handleNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
@@ -574,6 +580,7 @@
             
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2).replace('.', ',') + " €";
             
+            // Setzt auf 0,00 zurück
             currentReceivedString = "0"; 
             document.getElementById('input-received').value = "0,00"; 
             
@@ -584,6 +591,22 @@
 
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
+        }
+
+        // 💡 NEUE FUNKTION: Quick Pay Logik
+        function handleQuickPay(value) {
+            const inputField = document.getElementById('input-received');
+            
+            if (value === 'exact') {
+                // Setze den Betrag exakt auf die Gesamtsumme
+                currentReceivedString = currentTotal.toFixed(2).replace('.', ',');
+            } else {
+                // Setze den Betrag auf 5.00 oder 10.00
+                currentReceivedString = parseFloat(value).toFixed(2).replace('.', ',');
+            }
+
+            inputField.value = currentReceivedString; 
+            calculateChange();
         }
 
         // --- NUMPAD LOGIK (Optimiert) ---
