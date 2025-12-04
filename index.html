@@ -17,14 +17,14 @@
         .product-btn:active { transform: scale(0.98);
          }
 
-        /* Numpad Button Style (QUADRATISCH) */
+        /* Numpad Button Style */
         .numpad-btn {
-            @apply w-full p-1 rounded-xl font-extrabold text-base shadow-lg transition-colors;
+            /* VEREINFACHT: Kleinerer Button, kein Quadrat mehr für die Cash-Eingabe */
+            @apply w-full p-2 rounded-lg font-extrabold text-base shadow-lg transition-colors;
          line-height: 1; 
             display: flex;
             justify-content: center;
             align-items: center;
-        aspect-ratio: 1 / 1;
          }
         .numpad-btn:active { transform: scale(0.95);
          }
@@ -259,7 +259,7 @@
                 </h3>
                 
                 <label class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag</label>
-                <div id="cash-received-display" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-4xl font-extrabold text-right text-gray-800 focus:ring-green-500 focus:border-green-500 bg-white">0,00</div>
+                <div id="cash-received-display" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-3xl font-extrabold text-right text-gray-800 focus:ring-green-500 focus:border-green-500 bg-white">0,00</div>
                 
                 <div class="mt-3 pt-2 border-t flex justify-between items-center">
                     <span class="text-lg font-bold text-gray-700">Rückgeld:</span>
@@ -282,6 +282,11 @@
                     <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
                     <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
                     <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-2xl">.</button> 
+                </div>
+                <div class="mt-3 grid grid-cols-3 gap-2">
+                    <button onclick="setCashExact()" class="numpad-btn bg-blue-500 hover:bg-blue-600 text-white">Exakt</button>
+                    <button onclick="addCashShortcut(5)" class="numpad-btn bg-blue-500 hover:bg-blue-600 text-white">+5 €</button>
+                    <button onclick="addCashShortcut(10)" class="numpad-btn bg-blue-500 hover:bg-blue-600 text-white">+10 €</button>
                 </div>
                 </div>
             <div id="finalize-button-container" class="mt-4">
@@ -389,7 +394,7 @@
      
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
-            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.2 (Verb. Beleg)</div>
+            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.3 (Optimierte Zahlung)</div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -518,7 +523,7 @@
         let DB_STATUS = 'disconnected';
          let currentBestellung = [];
         let currentQuantity = '1';
-        let cashReceivedInput = '0'; // NEU: Für den Cash Numpad im Finalize Modal
+        let cashReceivedInput = '0'; // Wichtig: Beim Öffnen auf '0' setzen
         let products = {};
         let categories = {};
         let userSettings = {};
@@ -945,9 +950,9 @@
                     current += '.';
                 }
             } else if (value.match(/[0-9]/)) {
-                if (current === '0' && value !== '0') {
+                if (current === '0' && value !== '0' && decimalIndex === -1) {
                     current = value;
-                } else if (current === '0' && value === '0') {
+                } else if (current === '0' && value === '0' && decimalIndex === -1) {
                     // Bleibt bei '0'
                 } else {
                     current += value;
@@ -971,6 +976,27 @@
 
             calculateChangeDisplay();
         }
+        
+        // NEUE FUNKTION: Betrag auf Exakt setzen
+        function setCashExact() {
+            // totalBrutto ist eine Zahl, muss in String mit Punkt umgewandelt werden
+            cashReceivedInput = totalBrutto.toFixed(2).replace(',', '.');
+            document.getElementById('cash-received-display').innerText = totalBrutto.toFixed(2).replace('.', ',');
+            calculateChangeDisplay();
+        }
+        
+        // NEUE FUNKTION: Betrag addieren
+        function addCashShortcut(amount) {
+            // Aktuellen Wert holen, in float umwandeln
+            let current = parseFloat(cashReceivedInput) || 0;
+            // Betrag addieren
+            let newTotal = current + amount;
+            // In String mit 2 Nachkommastellen umwandeln
+            cashReceivedInput = newTotal.toFixed(2).replace(',', '.'); 
+            document.getElementById('cash-received-display').innerText = newTotal.toFixed(2).replace('.', ',');
+            calculateChangeDisplay();
+        }
+
 
         function addToBestellung(productId) {
             const product = products[productId];
@@ -1280,10 +1306,9 @@
             totalBrutto = calculateTotalBrutto(); // Gesamtbetrag global speichern
             document.getElementById('finalize-total').innerText = totalBrutto.toFixed(2).replace('.', ',') + ' €';
             
-            // Standardmäßig BAR wählen
-            // Setze den initialen Wert im Numpad auf den Gesamtbetrag (praktisch)
-            cashReceivedInput = totalBrutto.toFixed(2).replace(',', '.'); // Punkt für JS-Rechnung
-            document.getElementById('cash-received-display').innerText = cashReceivedInput.replace('.', ','); // Komma für die Anzeige
+            // WICHTIG: Setze den erhaltenen Betrag auf '0' beim Öffnen
+            cashReceivedInput = '0'; 
+            document.getElementById('cash-received-display').innerText = '0,00'; 
             
             setPaymentMethod('BAR'); 
 
