@@ -98,14 +98,29 @@
          }
             .receipt-print .center { text-align: center;
          }
-            .receipt-print .line { display: flex; justify-content: space-between;
-         margin-bottom: 1px; }
-            .receipt-print .item-name { width: 60%;
-         }
-            .receipt-print .item-price { width: 30%; text-align: right;
-         }
+            /* NEU: Flexbox für die Zeilenstruktur */
+            .receipt-print .line { 
+                display: flex; 
+                justify-content: space-between;
+                margin-bottom: 0px; /* Kein extra Abstand */
+                line-height: 1.2;
+            }
+            .receipt-print .item-name { 
+                /* Platz für Artikelname und Menge */
+                width: 70%;
+                overflow: hidden; 
+                white-space: nowrap;
+            }
+            .receipt-print .item-price { 
+                /* Feste Breite für den Preis, rechtsbündig */
+                width: 30%; 
+                text-align: right;
+            }
             .receipt-print hr { border: 0;
          border-top: 1px dashed #000; margin: 3px 0; }
+            /* NEU: Größere Schrift für wichtige Titel */
+            .receipt-print .font-bold { font-weight: bold; }
+            .receipt-print .text-lg { font-size: 11pt; }
         }
 
     </style>
@@ -273,41 +288,36 @@
                 
                 <div id="cash-finalize-buttons" style="display: block;">
                     <p class="text-sm text-center text-gray-500 mb-2 font-semibold">Transaktion abschließen:</p>
-                    <div class="flex space-x-2">
-                        <button onclick="handleFinalizeAction('BAR', false)" disabled id="btn-cash-no-receipt" class="flex-1 p-3 rounded-xl font-extrabold text-white bg-red-400 shadow-lg transition-colors">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="handleFinalizeAction('BAR', 'none')" disabled id="btn-cash-none" class="col-span-1 p-3 rounded-xl font-extrabold text-white bg-red-400 shadow-lg transition-colors text-sm">
                             Ohne Beleg
                         </button>
-                        <button onclick="handleFinalizeAction('BAR', true)" disabled id="btn-cash-with-receipt" class="flex-1 p-3 rounded-xl font-extrabold text-white bg-green-400 shadow-lg transition-colors">
-                            Mit Beleg drucken
+                        <button onclick="handleFinalizeAction('BAR', 'standard')" disabled id="btn-cash-standard" class="col-span-1 p-3 rounded-xl font-extrabold text-white bg-green-400 shadow-lg transition-colors text-sm">
+                            Standard Bon
+                        </button>
+                        <button onclick="handleFinalizeAction('BAR', 'bewirtung')" disabled id="btn-cash-bewirtung" class="col-span-1 p-3 rounded-xl font-extrabold text-white bg-red-600/70 shadow-lg transition-colors text-sm">
+                            Bewirtungsbeleg
                         </button>
                     </div>
                 </div>
 
                 <div id="card-finalize-buttons" style="display: none;">
-                    <p class="text-lg font-bold text-center text-indigo-700 mb-3">Beleg drucken?</p>
-                    <div class="flex space-x-2">
-                        <button onclick="handleFinalizeAction('KARTE', false)" class="flex-1 p-4 rounded-xl font-extrabold text-white bg-gray-500 hover:bg-gray-600 shadow-lg transition-colors">
+                    <p class="text-lg font-bold text-center text-indigo-700 mb-3">Belegoptionen:</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="handleFinalizeAction('KARTE', 'none')" class="p-3 rounded-xl font-extrabold text-white bg-gray-500 hover:bg-gray-600 shadow-lg transition-colors text-sm">
                             NEIN (Abschließen)
                         </button>
-                        <button onclick="handleFinalizeAction('KARTE', true)" class="flex-1 p-4 rounded-xl font-extrabold text-white bg-green-600 hover:bg-green-700 shadow-lg transition-colors">
-                            JA (Drucken)
+                        <button onclick="handleFinalizeAction('KARTE', 'standard')" class="p-3 rounded-xl font-extrabold text-white bg-green-600 hover:bg-green-700 shadow-lg transition-colors text-sm">
+                            Standard Bon
+                        </button>
+                        <button onclick="handleFinalizeAction('KARTE', 'bewirtung')" class="p-3 rounded-xl font-extrabold text-white bg-red-700 hover:bg-red-800 shadow-lg transition-colors text-sm">
+                            Bewirtungsbeleg
                         </button>
                     </div>
                 </div>
                 
             </div>
-            <h3 class="text-lg font-semibold mb-2 mt-4">Belegoptionen (Zusatzdruck)</h3>
-            <div class="flex space-x-2 mb-4">
-                <button onclick="printReceipt()" class="flex-grow p-3 rounded-xl font-bold text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
-                    Standard-Bon
-                </button>
-                <button onclick="printReceipt(true)" class="flex-grow p-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-md">
-                    Bewirtungsbeleg
-                </button>
-            </div>
-            
-      
-            <div class="text-center">
+            <div class="text-center mt-6">
                 <button onclick="closeModal('finalize-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400 w-full">Abbrechen / Zurück</button>
             </div>
         </div>
@@ -379,7 +389,7 @@
      
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
-            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.1 (Dual Finalize)</div>
+            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.2 (Verb. Beleg)</div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -886,7 +896,7 @@
             showToast('Produkt gelöscht.', 'info');
         }
         
-        // NEU: Funktion zum Aktualisieren des Produktpreises
+        // Funktion zum Aktualisieren des Produktpreises
         function updateProductPrice(id) {
             const input = document.getElementById(`price-input-${id}`);
             const newPrice = parseFloat(input.value);
@@ -923,7 +933,7 @@
             document.getElementById('quantity-display').innerText = currentQuantity;
          }
 
-        // NEU: Logik für den Cash Numpad
+        // Logik für den Cash Numpad
         function handleCashInput(value) {
             let current = cashReceivedInput;
             const decimalIndex = current.indexOf('.');
@@ -1012,7 +1022,8 @@
             return currentBestellung.reduce((total, item) => total + item.brutto, 0);
         }
 
-        function renderReceipt(forPrint = false, isBewirtung = false) {
+        // NEU: renderReceipt akzeptiert nun den Belegtyp als String
+        function renderReceipt(forPrint = false, receiptType = 'standard') { 
             const container = document.getElementById(forPrint ? 'receipt-print-content' : 'receipt-content-interactive');
             let content = '';
             let totalBrutto = calculateTotalBrutto();
@@ -1031,32 +1042,46 @@
                 content = '<p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>';
             } else {
                 if (forPrint) {
-                    // Druckansicht
-                    content += `<div class="center">${userSettings.companyName}</div>`;
+                    // Druckansicht (Verbesserte Formatierung)
+                    
+                    // Hilfsfunktion für Abstandshalter
+                    const lineBreak = "<div>----------------------------------------</div>";
+                    const doubleLineBreak = "<div>========================================</div>";
+                    
+                    content += `<div class="center font-bold">${userSettings.companyName.toUpperCase()}</div>`;
                     content += `<div class="center">${userSettings.address}</div>`;
                     content += `<div class="center">Ust-IdNr.: ${userSettings.taxId}</div>`;
-                    content += `<div class="center">${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}</div>`;
-                    content += "<hr>";
-                    if (isBewirtung) {
-                        content += "<div class='center'>*** BEWIRTUNGSBELEG ***</div>";
-                        content += "<hr>";
-                        // Platzhalter für Bewirtungsdaten
-                        content += "<div>Anlass: ____________</div>";
-                        content += "<div>Ort: ____________</div>";
-                        content += "<div>Teilnehmer: ____________</div>";
-                        content += "<hr>";
-                    }
-                    content += `<div class="line"><strong>Artikel</strong><strong>Preis</strong></div>`;
-                    content += "<hr>";
+                    content += lineBreak;
                     
+                    if (receiptType === 'bewirtung') {
+                        content += "<div class='center font-bold text-lg'>*** BEWIRTUNGSBELEG ***</div>";
+                        content += lineBreak;
+                        // Schönerer Platzhalter für Bewirtungsdaten
+                        content += "<div>Anlass: _________________________________</div>";
+                        content += "<div>Ort: ___________________________________</div>";
+                        content += "<div>Teilnehmer: ______________________________</div>";
+                        content += "<div>Datum der Bewirtung: ____________________</div>";
+                        content += "<div>Unterschrift Gastgeber: ___________________</div>";
+                        content += lineBreak;
+                    }
+
+                    // Kopfzeile Bon
+                    content += `<div class="line"><strong>POS. Bezeichnung</strong><strong class="item-price">Preis €</strong></div>`;
+                    content += lineBreak;
+                    
+                    // Artikel
                     Object.values(itemCounts).forEach(item => {
-                        const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
-                        content += `<div class="line"><span class="item-name">${item.count}x ${item.name}</span><span class="item-price">${price} €</span></div>`;
+                        const priceTotal = (item.brutto * item.count).toFixed(2).replace('.', ',');
+                        // Bessere Ausrichtung für Name und Menge
+                        const nameDisplay = `${item.count}x ${item.name}`;
+                        content += `<div class="line"><span class="item-name">${nameDisplay}</span><span class="item-price">${priceTotal}</span></div>`;
                     });
                     
-                    content += "<hr>";
-                    content += `<div class="line"><strong>GESAMT BRUTTO</strong><strong>${totalBrutto.toFixed(2).replace('.', ',')} €</strong></div>`;
-                    content += "<hr>";
+                    content += lineBreak;
+                    
+                    // Gesamt
+                    content += `<div class="line"><strong>SUMME BRUTTO</strong><strong>${totalBrutto.toFixed(2).replace('.', ',')} €</strong></div>`;
+                    content += doubleLineBreak;
 
                     // Steueraufschlüsselung
                     const taxDetails = {};
@@ -1069,12 +1094,21 @@
                         taxDetails[rate].tax += item.tax;
                     });
                     
+                    content += `<div class="center font-bold">UMSATZSTEUER</div>`;
+                    content += lineBreak.replace(/--/g, '-');
+                    
                     Object.entries(taxDetails).sort(([, a], [, b]) => a.tax - b.tax).forEach(([rate, details]) => {
-                        content += `<div class="line"><span class="item-name">Enth. ${rate} MwSt.</span><span class="item-price">${details.tax.toFixed(2).replace('.', ',')} €</span></div>`;
+                        content += `<div class="line">Netto (${rate}) <span class="item-price">${details.netto.toFixed(2).replace('.', ',')} €</span></div>`;
+                        content += `<div class="line">MwSt. (${rate}) <span class="item-price">${details.tax.toFixed(2).replace('.', ',')} €</span></div>`;
+                        content += lineBreak.replace(/--/g, '-');
                     });
-
-                    content += "<hr>";
-                    content += "<div class='center'>Vielen Dank für Ihren Besuch!</div>";
+                    
+                    content += `<div class="center">----------------------------------------</div>`;
+                    content += `<div class="center">Beleg erstellt am:</div>`;
+                    content += `<div class="center">${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}</div>`;
+                    content += `<div class="center">Transaktion ID: ${new Date().getTime().toString().slice(-6)}</div>`; // Simuliert eine kurze ID
+                    content += `<div class="center font-bold mt-2">Vielen Dank für Ihren Besuch!</div>`;
+                    content += lineBreak;
 
                 } else {
                     // Interaktive Ansicht
@@ -1089,9 +1123,10 @@
                     });
                 }
             }
-            container.innerHTML = content;
             document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
+            container.innerHTML = content;
         }
+
 
         function resetBestellung() {
             currentBestellung = [];
@@ -1118,7 +1153,7 @@
             localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
         }
 
-        // NEU: Setzt die Zahlungsmethode und initialisiert das Modal
+        // Setzt die Zahlungsmethode und initialisiert das Modal
         function setPaymentMethod(method) {
             selectedPaymentMethod = method;
             const btnKarte = document.getElementById('btn-karte');
@@ -1153,15 +1188,17 @@
             calculateChangeDisplay(); 
         }
 
-        // NEU: Berechnet und zeigt das Rückgeld an, und steuert die Cash Finalize Buttons
+        // Berechnet und zeigt das Rückgeld an, und steuert die Cash Finalize Buttons
         function calculateChangeDisplay() {
             // Holen des Werts aus der Numpad-Variable (mit Punkt)
             const received = parseFloat(cashReceivedInput) || 0;
             
             const changeDisplay = document.getElementById('change-display');
-            // NEUE BUTTONS
-            const btnNoReceipt = document.getElementById('btn-cash-no-receipt');
-            const btnWithReceipt = document.getElementById('btn-cash-with-receipt');
+            
+            // NEUE BUTTONS (IDs aktualisiert)
+            const btnNone = document.getElementById('btn-cash-none');
+            const btnStandard = document.getElementById('btn-cash-standard');
+            const btnBewirtung = document.getElementById('btn-cash-bewirtung');
             
             const change = received - totalBrutto;
             
@@ -1172,26 +1209,37 @@
             // Button Aktivierung nur für BAR
             const canFinalizeCash = (selectedPaymentMethod === 'BAR' && change >= 0);
             
-            if (btnNoReceipt) { // Prüfen, ob die Elemente existieren
-                btnNoReceipt.disabled = !canFinalizeCash;
-                btnWithReceipt.disabled = !canFinalizeCash;
+            if (btnNone && btnStandard && btnBewirtung) { // Prüfen, ob die Elemente existieren
+                btnNone.disabled = !canFinalizeCash;
+                btnStandard.disabled = !canFinalizeCash;
+                btnBewirtung.disabled = !canFinalizeCash;
                 
                 if (canFinalizeCash) {
-                    btnNoReceipt.classList.add('bg-red-600', 'hover:bg-red-700');
-                    btnNoReceipt.classList.remove('bg-red-400');
-                    btnWithReceipt.classList.add('bg-green-600', 'hover:bg-green-700');
-                    btnWithReceipt.classList.remove('bg-green-400');
+                    // Aktiviere Buttons
+                    btnNone.classList.add('bg-red-600', 'hover:bg-red-700');
+                    btnNone.classList.remove('bg-red-400');
+                    
+                    btnStandard.classList.add('bg-green-600', 'hover:bg-green-700');
+                    btnStandard.classList.remove('bg-green-400');
+                    
+                    btnBewirtung.classList.add('bg-red-700', 'hover:bg-red-800');
+                    btnBewirtung.classList.remove('bg-red-600/70');
                 } else {
-                    btnNoReceipt.classList.add('bg-red-400');
-                    btnNoReceipt.classList.remove('bg-red-600', 'hover:bg-red-700');
-                    btnWithReceipt.classList.add('bg-green-400');
-                    btnWithReceipt.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    // Deaktiviere Buttons
+                    btnNone.classList.add('bg-red-400');
+                    btnNone.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    
+                    btnStandard.classList.add('bg-green-400');
+                    btnStandard.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    
+                    btnBewirtung.classList.add('bg-red-600/70');
+                    btnBewirtung.classList.remove('bg-red-700', 'hover:bg-red-800');
                 }
             }
         }
         
         // NEU: Kombinierte Funktion zum Abschließen und optionalen Drucken
-        function handleFinalizeAction(method, printReceiptBool) {
+        function handleFinalizeAction(method, receiptType) {
             if (method === 'BAR') {
                 const received = parseFloat(cashReceivedInput) || 0;
                 const change = received - totalBrutto;
@@ -1200,17 +1248,25 @@
                     return;
                 }
                 showToast(`Transaktion (BAR) abgeschlossen! Rückgeld: ${change.toFixed(2).replace('.', ',')} €`, 'success');
-                // Wenn Druck gewünscht ist, drucken wir VOR der Finalisierung
-                if (printReceiptBool) {
-                    printReceipt(); 
+                
+                // Drucklogik
+                if (receiptType === 'standard') {
+                    printReceipt('standard'); 
+                } else if (receiptType === 'bewirtung') {
+                    printReceipt('bewirtung');
                 }
+                
                 finalizeTransaction('BAR'); 
             } else if (method === 'KARTE') {
                 showToast('Transaktion (KARTE) abgeschlossen!', 'success');
-                // Wenn Druck gewünscht ist, drucken wir VOR der Finalisierung
-                if (printReceiptBool) {
-                    printReceipt(); 
+                
+                // Drucklogik
+                if (receiptType === 'standard') {
+                    printReceipt('standard'); 
+                } else if (receiptType === 'bewirtung') {
+                    printReceipt('bewirtung');
                 }
+                
                 finalizeTransaction('KARTE');
             }
         }
@@ -1260,20 +1316,21 @@
             showLoading(false);
          }
 
-        function printReceipt(isBewirtung = false) {
+        // NEU: printReceipt nimmt den Belegtyp entgegen
+        function printReceipt(receiptType = 'standard') { 
             if (currentBestellung.length === 0) {
                 showToast('Keine Artikel für den Beleg.', 'error');
                 return;
-         }
+            }
             // Erzeuge ein temporäres Element für den Druck
             const printArea = document.createElement('div');
             printArea.className = 'receipt-print';
             printArea.id = 'receipt-print-area';
-         const contentContainer = document.createElement('div');
+            const contentContainer = document.createElement('div');
             contentContainer.id = 'receipt-print-content';
             printArea.appendChild(contentContainer);
             document.body.appendChild(printArea);
-            renderReceipt(true, isBewirtung); // Rendert den Inhalt in den printArea
+            renderReceipt(true, receiptType); // Rendert den Inhalt in den printArea
             window.print();
             document.body.removeChild(printArea);
          }
