@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glühweinstand Kasse (E-Mail/Passwort)</title>
+    <title>Glühweinstand Kasse (Bewirtungsbeleg)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Grundlegendes Styling */
@@ -69,7 +69,7 @@
         .toast-error { @apply bg-red-600; }
         .toast-info { @apply bg-blue-600; }
 
-        /* NEU: Druck-Styles für den Kassenzettel (optional, falls Browserfenster geöffnet wird) */
+        /* NEU: Druck-Styles für Kassenbondrucker (Monospace) */
         @media print {
             body * {
                 visibility: hidden;
@@ -81,10 +81,19 @@
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 80mm; 
-                font-family: monospace;
-                font-size: 10pt;
+                width: 80mm; /* Standard-Bondruckerbreite */
+                font-family: 'Consolas', 'Courier New', monospace; /* Monospace für Spaltenausrichtung */
+                font-size: 9pt; /* Kleinere Schrift für Bons */
+                color: #000;
+                padding: 0;
+                margin: 0;
             }
+            .receipt-print strong { font-weight: bold; }
+            .receipt-print .center { text-align: center; }
+            .receipt-print .line { display: flex; justify-content: space-between; margin-bottom: 1px; }
+            .receipt-print .item-name { width: 60%; }
+            .receipt-print .item-price { width: 30%; text-align: right; }
+            .receipt-print hr { border: 0; border-top: 1px dashed #000; margin: 3px 0; }
         }
 
     </style>
@@ -224,14 +233,33 @@
             <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Zahlung abschließen</h3>
             <div id="finalize-total-display" class="text-lg font-bold text-red-700 mb-4 text-center">...</div>
 
-            <button onclick="openPaymentModal(true)" class="w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 mb-2 shadow-lg">
-                Mit Kassenzettel
+            <button onclick="openBewirtungModal()" class="w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 mb-2 shadow-lg">
+                Mit Kassenzettel (Bewirtungsbeleg)
             </button>
             <button onclick="openPaymentModal(false)" class="w-full p-3 rounded-lg font-bold text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
                 Ohne Kassenzettel
             </button>
 
             <button onclick="closeModal('finalize-modal')" class="mt-4 w-full p-1 text-xs text-gray-500">Abbrechen</button>
+        </div>
+    </div>
+    
+    <div id="bewirtung-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-sm"> 
+            <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Bewirtungsdetails</h3>
+            <p class="text-sm text-gray-600 mb-4">Erforderlich für den steuerlichen Bewirtungsbeleg.</p>
+            
+            <label for="bewirtung-host" class="block text-sm font-medium text-gray-700">Gastgeber (Bewirtender):</label>
+            <input type="text" id="bewirtung-host" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm mb-3" placeholder="Vorname Nachname">
+            
+            <label for="bewirtung-reason" class="block text-sm font-medium text-gray-700">Anlass der Bewirtung (Geschäftszweck):</label>
+            <textarea id="bewirtung-reason" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm h-16 mb-4" placeholder="z.B. Kundengespräch mit Fa. Mustermann zur Jahresplanung"></textarea>
+
+            <button onclick="confirmBewirtungDetails()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 mb-2 shadow-lg">
+                Weiter zur Zahlung
+            </button>
+            <button onclick="closeModal('bewirtung-modal'); openFinalizeModal();" class="w-full p-1 text-xs text-gray-500">Abbrechen</button>
         </div>
     </div>
 
@@ -355,6 +383,7 @@
         // NEU: Verwenden Sie Brutto- und Steuerdetails
         let currentTotalGross = 0.0; 
         let currentTaxDetails = {}; // { '19%': { net: 0, tax: 0 }, '7%': { net: 0, tax: 0 } }
+        let bewirtungData = null; // Speichert Bewirtungsdetails temporär
         
         let currentReceivedString = "0"; 
 
@@ -362,6 +391,14 @@
         const VAT_RATES = {
             standard: 0.19, // 19%
             reduced: 0.07   // 7%
+        };
+        
+        // NEU: HARTE CODIERTE FIRMENINFORMATIONEN FÜR DEN BEWIRTUNGSBELEG
+        const FIRMA_DETAILS = {
+            NAME: "Glühweinstand GmbH & Co. KG",
+            ADRESSE: "Hauptstraße 12, 99084 Erfurt",
+            STEUER_NR: "DE987654321", // USt-IdNr.
+            TELEFON: "0361/1234567"
         };
 
 
@@ -392,7 +429,7 @@
             } else { 
                 kasseContent.style.display = 'none';
                 loginModal.style.display = 'flex'; // Zeigt das Login-Modal
-                authInfo.innerHTML = 'Kasse v1.4 (mit USt)';
+                authInfo.innerHTML = 'Kasse v1.5 (mit Bewirtungsbeleg)';
                 document.getElementById('db-status').style.display = 'none';
                 window.setDBStatus(false, "Offline"); // Setzt DB-Status zurück
                 window.resetBestellung();
@@ -647,7 +684,7 @@
             })).sort((a, b) => a.name.localeCompare(b.name));
             
             if (productsArray.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center">Noch keine Produkte angelegt.</p>';
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center text-sm">Noch keine Produkte angelegt.</p>';
                 return;
             }
 
@@ -774,13 +811,46 @@
             document.getElementById('finalize-total-display').innerText = "Gesamt: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
             document.getElementById('finalize-modal').style.display = 'flex';
         }
+        
+        // NEU: Öffnet das Bewirtungs-Modal
+        function openBewirtungModal() {
+            closeModal('finalize-modal');
+            document.getElementById('bewirtung-modal').style.display = 'flex';
+            // Vorbelegung mit Standardwerten oder leeren
+            document.getElementById('bewirtung-host').value = '';
+            document.getElementById('bewirtung-reason').value = '';
+        }
+        
+        // NEU: Bestätigt Bewirtungs-Details und geht zur Zahlung
+        function confirmBewirtungDetails() {
+            const host = document.getElementById('bewirtung-host').value.trim();
+            const reason = document.getElementById('bewirtung-reason').value.trim();
+
+            if (!host || !reason) {
+                return showInfo("Eingabe fehlt", "Bitte geben Sie den Gastgeber und den Anlass der Bewirtung ein.");
+            }
+
+            bewirtungData = { host, reason }; // Speichert die Daten temporär
+            openPaymentModal(true); // Ruft Zahlung mit Druck-Flag auf
+        }
 
         // Geändert: Öffnet das Zahlungs-Modal
         function openPaymentModal(printReceipt) { 
             closeModal('finalize-modal'); 
+            closeModal('bewirtung-modal'); // Sicherstellen, dass Bewirtung-Modal geschlossen wird
             
             // Speichert die Entscheidung für die Transaktion
             document.getElementById('payment-modal').dataset.printReceipt = printReceipt; 
+
+            // Wenn Drucken, speichere Bewirtungsdaten im Dataset (nur falls vorhanden)
+            if (printReceipt && bewirtungData) {
+                document.getElementById('payment-modal').dataset.host = bewirtungData.host;
+                document.getElementById('payment-modal').dataset.reason = bewirtungData.reason;
+            } else {
+                // Setze auf leer, wenn kein Druck (oder bewirtungData nicht gesetzt)
+                document.getElementById('payment-modal').dataset.host = '';
+                document.getElementById('payment-modal').dataset.reason = '';
+            }
 
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
             
@@ -884,8 +954,10 @@
                 vatRate: USER_PRODUCTS[name]?.vatRate || VAT_RATES.standard // NEU
             }));
             
-            // Liest die Druck-Entscheidung aus dem Modal-Dataset
+            // Liest die Druck-Entscheidung und die Bewirtungsdetails aus dem Modal-Dataset
             const printReceipt = document.getElementById('payment-modal').dataset.printReceipt === 'true'; 
+            const host = document.getElementById('payment-modal').dataset.host || 'Nicht angegeben';
+            const reason = document.getElementById('payment-modal').dataset.reason || 'Nicht angegeben';
 
             let receivedAmount = 0;
             let changeAmount = 0;
@@ -910,12 +982,14 @@
                 timestamp: new Date().toISOString()
             };
 
-            // NEU: Kassenzettel drucken
+            // NEU: Kassenzettel drucken (mit Bewirtungsdetails)
             if (printReceipt) {
-                printKassenzettel(transactionData);
+                printKassenzettel(transactionData, { host, reason });
             }
 
             resetBestellung();
+            bewirtungData = null; // Globale Variable zurücksetzen
+
             if (window.cloudSaveFunction) {
                 window.cloudSaveFunction(transactionData); 
             } else {
@@ -923,29 +997,36 @@
             }
         }
         
-        // NEU: Kassenzettel Druckfunktion
-        function printKassenzettel(transactionData) {
+        // NEU: Kassenzettel Druckfunktion, optimiert als Bewirtungsbeleg
+        function printKassenzettel(transactionData, bewirtungDetails) {
             
+            const FIRMA_NAME = FIRMA_DETAILS.NAME;
+            const FIRMA_ADRESSE = FIRMA_DETAILS.ADRESSE;
+            const FIRMA_STEUER_NR = FIRMA_DETAILS.STEUER_NR; 
+            const FIRMA_TELEFON = FIRMA_DETAILS.TELEFON;
+            
+            // Erstellt den Druck-Inhalt im Monospace-Stil
             let receiptHTML = `
-                <style>
-                    body { font-family: monospace; }
-                    .receipt { width: 80mm; font-size: 10px; line-height: 1.3; padding: 5px; margin: 0 auto; }
-                    .header, .footer { text-align: center; margin-bottom: 5px; }
-                    .line { display: flex; justify-content: space-between; margin-bottom: 1px; }
-                    .item-list { margin-bottom: 5px; border-top: 1px dashed #000; padding-top: 5px;}
-                    .total { font-weight: bold; font-size: 11px; border-top: 1px dashed #000; padding-top: 5px; margin-top: 5px; }
-                    .vat-summary { font-size: 9px; margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px; }
-                    .item-name { width: 60%; }
-                    .item-price { width: 30%; text-align: right; }
-                    .center { text-align: center; }
-                </style>
-                <div class="receipt">
-                    <div class="header">
-                        <strong>Glühweinstand Kasse</strong><br>
-                        ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}<br>
-                        <div class="center">------------------------------------</div>
-                        <br>
+                <div class="receipt-print">
+                    <div class="header center">
+                        <strong style="font-size: 11pt;">${FIRMA_NAME}</strong><br>
+                        ${FIRMA_ADRESSE}<br>
+                        USt-IdNr: ${FIRMA_STEUER_NR}<br>
+                        Tel: ${FIRMA_TELEFON}<br>
+                        <hr>
+                        <strong style="font-size: 10pt;">BEWIRTUNGSBELEG</strong><br>
+                        Datum: ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}<br>
+                        <hr>
+                        <div class="line" style="font-size: 8pt; margin-bottom: 2px;">
+                            <span class="item-name">Gastgeber:</span> 
+                            <span class="item-price">${bewirtungDetails.host}</span>
+                        </div>
+                        <div style="font-size: 8pt; text-align: left; margin-bottom: 5px;">
+                            Anlass: ${bewirtungDetails.reason}<br>
+                        </div>
+                        <hr>
                     </div>
+                    
                     <div class="item-list">
             `;
             
@@ -974,31 +1055,33 @@
             
             receiptHTML += `
                     </div>
-                    <div class="total line">
-                        <span>GESAMT BRUTTO:</span>
-                        <span>${transactionData.total.toFixed(2).replace('.', ',')} €</span>
-                    </div>
+                    <hr>
                     <div class="line">
+                        <strong>GESAMT BRUTTO:</strong>
+                        <strong style="font-size: 11pt;">${transactionData.total.toFixed(2).replace('.', ',')} €</strong>
+                    </div>
+                    <hr>
+                    <div class="line" style="font-size: 9pt;">
                         <span>Zahlungsart:</span>
                         <span>${transactionData.paymentType === 'cash' ? 'BAR' : 'KARTE'}</span>
                     </div>
-                    <div class="line">
+                    <div class="line" style="font-size: 9pt;">
                         <span>Gegeben:</span>
                         <span>${transactionData.received.toFixed(2).replace('.', ',')} €</span>
                     </div>
-                    <div class="line">
+                    <div class="line" style="font-size: 9pt;">
                         <span>Rückgeld:</span>
                         <span>${transactionData.change.toFixed(2).replace('.', ',')} €</span>
                     </div>
                     
-                    <div class="vat-summary">
-                        <div class="center">------------------------------------</div>
-                        <strong>Steuerzusammenfassung (Brutto = Netto + Steuer):</strong><br>
+                    <div class="vat-summary" style="font-size: 8pt; margin-top: 5px;">
+                        <div class="center"><hr></div>
+                        <strong>STEUERAUFSCHLÜSSELUNG:</strong><br>
                         
                         <div class="line"><span>NETTO Gesamt:</span> <span>${totalNet.toFixed(2).replace('.', ',')} €</span></div>
                         <div class="line"><span>STEUER Gesamt:</span> <span>${totalTax.toFixed(2).replace('.', ',')} €</span></div>
                         
-                        <div class="center">------------------------------------</div>
+                        <div class="center">-- Details --</div>
             `;
             
             // Detaillierte Steuer-Aufschlüsselung im Footer
@@ -1013,24 +1096,32 @@
             
             receiptHTML += `
                     </div>
-                    <div class="footer">
-                        <div class="center">------------------------------------</div>
+                    <div class="footer center" style="margin-top: 10px;">
+                        <hr>
+                        <strong style="font-size: 8pt;">Unterschrift des Gastgebers/Bewirteten:</strong><br>
+                        <br>
+                        __________________________________<br>
+                        (Ort, Datum und Unterschrift)<br>
+                        <hr>
                         Vielen Dank für Ihren Besuch!
                     </div>
                 </div>
             `;
             
-            // Generische Druckfunktion
-            const printWindow = window.open('', '', 'height=500,width=400');
-            printWindow.document.write('<html><head><title>Kassenzettel</title></head><body>');
+            // Generische Druckfunktion für Kassenbondrucker
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>Bewirtungsbeleg</title>');
+            // Kopiert die Druck-Styles in das neue Fenster
+            printWindow.document.write('<style>@media print {' + document.querySelector('style').textContent.match(/@media print\s*{[^}]*}/s)[0].replace(/@media print\s*{/g, '').replace(/}$/g, '') + '}</style>');
+            printWindow.document.write('</head><body>');
             printWindow.document.write(receiptHTML);
             printWindow.document.write('</body></html>');
             printWindow.document.close();
             
             setTimeout(() => {
                 printWindow.print();
-                printWindow.close();
-            }, 500);
+                // printWindow.close(); // Auskommentiert, damit der Nutzer ihn bei Bedarf speichern kann
+            }, 300); // Kurze Verzögerung, um Rendering zu ermöglichen
         }
 
         // runDailyReport erhält 'type' (report/csv) und NEU: 'selectedDate'
@@ -1505,7 +1596,7 @@
                 
                 report += "Verkaufte Artikel:\n";
                 
-                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(b.name));
                 for(const [name, stats] of sortedProducts) {
                     report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} € Brutto)\n`;
                 }
