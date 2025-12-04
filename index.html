@@ -541,6 +541,13 @@
             document.getElementById('info-modal').classList.add('hidden');
         }
 
+        // NEUE ZUWEISUNGEN: MUSS explizit in das globale Window-Objekt exportiert werden, damit
+        // die inline-onclick-Handler aus dem HTML-Code die Funktionen finden.
+        window.undoLastAction = undoLastAction;
+        window.resetBestellung = resetBestellung;
+        window.showPaymentDialog = showPaymentDialog;
+        window.tagesAbschluss = tagesAbschluss;
+        
     </script>
 </body>
 </html>
