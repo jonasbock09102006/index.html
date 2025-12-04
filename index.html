@@ -120,7 +120,7 @@
     </div>
 
     <div id="login-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-90 z-90 flex items-center justify-center p-4">
+    class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
             <h1 class="text-3xl font-bold text-center text-red-700 mb-2">Glühwein Kasse</h1>
             <p class="text-sm text-center text-gray-500 mb-6">Bitte mit Ihren Zugangsdaten anmelden.</p>
@@ -147,7 +147,7 @@
     </div>
 
     <div id="registration-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-90 z-90 flex items-center justify-center p-4">
+    class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
             <h2 class="text-2xl font-bold text-center text-indigo-700 mb-4">Konto erstellen</h2>
             <form id="register-form" onsubmit="event.preventDefault(); handleRegisterSubmit()">
@@ -167,7 +167,7 @@
         </div>
     </div>
 
-    <div id="product-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+    <div id="product-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl font-bold mb-4 text-indigo-700">Produkt- und Kategorie-Verwaltung</h2>
             
@@ -205,7 +205,7 @@
         </div>
     </div>
 
-    <div id="finalize-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+    <div id="finalize-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
             <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
             
@@ -240,7 +240,7 @@
         </div>
     </div>
 
-    <div id="transaction-reversal-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+    <div id="transaction-reversal-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl font-bold mb-4 text-red-700">Letzte Transaktionen stornieren</h2>
             <div id="transaction-list" class="space-y-3 mb-4">
@@ -252,7 +252,7 @@
         </div>
     </div>
 
-    <div id="settings-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+    <div id="settings-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
             <h2 class="text-xl font-bold mb-4 text-yellow-700">Einstellungen (Belegkopf)</h2>
             <form id="settings-form">
@@ -280,7 +280,7 @@
         </div>
     </div>
 
-    <div id="info-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+    <div id="info-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 id="info-title" class="text-xl font-bold mb-4 text-blue-700">Information</h2>
             <pre id="info-text" class="whitespace-pre-wrap font-mono text-sm bg-gray-100 p-3 rounded-lg overflow-x-auto"></pre>
@@ -440,8 +440,12 @@
         function toggleReceiptColumn(show) {
             const column = document.getElementById('receipt-column');
             if (column) {
-                // '' setzt den Display-Style zurück, sodass die CSS-Grid-Eigenschaft greift
-                column.style.display = show ? '' : 'none'; 
+                // KORREKTUR: Verwende classList.add/remove('hidden') für robustes Ausblenden
+                if (show) {
+                    column.classList.remove('hidden');
+                } else {
+                    column.classList.add('hidden');
+                }
             }
         }
 
