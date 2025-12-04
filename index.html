@@ -8,16 +8,20 @@
     <style>
         /* Grundlegendes Styling */
         body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
-        /* Höhe der Beleg-Anzeige begrenzen */
-        #receipt-content { overflow-y: auto; max-height: 45vh; }
+        /* Höhe der Beleg-Anzeige weiter begrenzen */
+        #receipt-content { overflow-y: auto; max-height: 40vh; } 
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
 
-        /* NEU: Numpad Button Style (SCHMAL UND SEHR HOCH) */
+        /* Numpad Button Style (QUADRATISCH) */
         .numpad-btn {
-            /* Geändert: Weniger breit (px-4) und viel höher (py-12) für den 2,5x Effekt */
-            @apply px-4 py-12 rounded-xl font-extrabold text-3xl shadow-lg transition-colors;
-            line-height: 1; /* Text zentrieren */
+            /* Geändert: Padding p-2 -> p-1 und Schriftgröße text-lg -> text-base für kleinere Blöcke */
+            @apply w-full p-1 rounded-xl font-extrabold text-base shadow-lg transition-colors;
+            line-height: 1; /* Für bessere Zentrierung */
+            display: flex; /* Für bessere Zentrierung */
+            justify-content: center;
+            align-items: center;
+            aspect-ratio: 1 / 1; /* Erzwingt eine quadratische Form */
         }
         .numpad-btn:active { transform: scale(0.95); }
 
@@ -50,7 +54,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen p-2 md:p-6 bg-red-500/10">
+<body class="min-h-screen p-4 md:p-4 bg-red-500/10">
 
     <!-- Loading Screen (Wird beim erfolgreichen Login ausgeblendet) -->
     <div id="loading-overlay">
@@ -64,58 +68,57 @@
     <div id="kasse-content" style="display: none;">
 
         <!-- Status Leiste und Titel -->
-        <header class="flex justify-between items-center mb-4">
+        <header class="flex justify-between items-center mb-3">
             <!-- DB Status Indikator -->
-            <div id="db-status" class="text-xs font-bold p-2 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
+            <div id="db-status" class="text-xs font-bold p-1.5 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
                 Datenbankmodul lädt...
             </div>
-            <h1 class="text-3xl font-bold text-center text-red-700">Glühweinstand 🍷</h1>
+            <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand 🍷</h1>
             <!-- Logout / User Info -->
             <div id="auth-info" class="text-xs text-gray-500 text-right"></div>
         </header>
 
         <!-- Haupt-App-Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             
             <!-- Linke Seite: Eingabe und Steuerung -->
-            <div class="lg:col-span-1 space-y-4">
-                <div class="bg-white p-4 rounded-xl shadow-lg">
-                    <h2 class="text-xl font-semibold mb-3 text-red-800">Produkte buchen</h2>
+            <div class="lg:col-span-1 space-y-3">
+                <div class="bg-white p-3 rounded-xl shadow-lg">
+                    <h2 class="text-lg font-semibold mb-2 text-red-800">Produkte buchen</h2>
                     <!-- Dynamisches Produkt-Grid -->
-                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
                         <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
                     </div>
                 </div>
 
-                <div class="bg-white p-4 rounded-xl shadow-lg flex flex-wrap gap-3 justify-between">
-                    <button onclick="undoLastAction()" class="product-btn w-full md:w-1/2 p-3 rounded-lg font-bold text-base text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
+                <div class="bg-white p-3 rounded-xl shadow-lg flex flex-wrap gap-2 justify-between">
+                    <button onclick="undoLastAction()" class="product-btn w-full md:w-1/2 p-2 rounded-lg font-bold text-sm text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
                         ↩️ Storno (Letzte)
                     </button>
-                    <button onclick="resetBestellung()" class="product-btn w-full md:w-[48%] p-3 rounded-lg font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
+                    <button onclick="resetBestellung()" class="product-btn w-full md:w-[48%] p-2 rounded-lg font-bold text-sm text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
                         Neue Bestellung
                     </button>
                 </div>
                 
-                <div class="flex flex-col gap-3">
-                    <button onclick="openPaymentModal()" class="product-btn w-full p-4 rounded-xl font-extrabold text-xl text-white bg-green-600 hover:bg-green-700 shadow-lg">
+                <div class="flex flex-col gap-2">
+                    <button onclick="openPaymentModal()" class="product-btn w-full p-3 rounded-xl font-extrabold text-lg text-white bg-green-600 hover:bg-green-700 shadow-lg">
                         🧾 Bon & Buchen
                     </button>
-                    <!-- Button für Produktverwaltung -->
-                    <button onclick="openProductModal()" class="product-btn w-full p-4 rounded-xl font-bold text-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
+                    <button onclick="openProductModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
                         ⚙️ Produkte verwalten
                     </button>
-                    <button onclick="runDailyReport()" class="product-btn w-full p-4 rounded-xl font-bold text-lg text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
+                    <button onclick="runDailyReport()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
                         💰 Tagesabschluss
                     </button>
                 </div>
             </div>
 
             <!-- Rechte Seite: Anzeige -->
-            <div class="lg:col-span-1 bg-white p-4 rounded-xl shadow-lg h-full sticky top-4">
-                <h2 class="text-xl font-semibold mb-3 text-gray-700">Aktueller Bon</h2>
-                <div id="receipt-content" class="bg-gray-50 p-3 rounded-lg text-sm font-mono whitespace-pre text-gray-700 border border-gray-200 min-h-[200px]"></div>
-                <div class="mt-4 pt-4 border-t-2 border-red-700">
-                    <div id="total-display" class="text-3xl font-extrabold text-right text-red-700">GESAMT: 0.00 €</div>
+            <div class="lg:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3">
+                <h2 class="text-lg font-semibold mb-2 text-gray-700">Aktueller Bon</h2>
+                <div id="receipt-content" class="bg-gray-50 p-2 rounded-lg text-xs font-mono whitespace-pre text-gray-700 border border-gray-200 min-h-[150px]"></div>
+                <div class="mt-3 pt-3 border-t-2 border-red-700">
+                    <div id="total-display" class="text-2xl font-extrabold text-right text-red-700">GESAMT: 0.00 €</div>
                 </div>
             </div>
         </div>
@@ -124,22 +127,20 @@
 
     <!-- Zahlungs-Modal -->
     <div id="payment-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <!-- MAX-WIDTH AUF MAX-W-MD ERHÖHT -->
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md"> 
-            <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Zahlung</h3>
-            <div id="payment-total-display" class="text-xl font-bold text-red-700 mb-6 text-center">...</div>
+        <!-- MAX-WIDTH BLEIBT AUF MAX-W-XS (320px) -->
+        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
+            <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Zahlung</h3>
+            <div id="payment-total-display" class="text-lg font-bold text-red-700 mb-4 text-center">...</div>
 
             <label class="block text-sm font-medium text-gray-700 mb-1 text-center">Erhalten (€):</label>
-            <!-- WICHTIG: inputmode="none" und readonly, um die native Tastatur zu verhindern -->
             <input type="text" id="input-received" readonly placeholder="0,00" value="0,00" 
-                   class="w-full px-4 py-3 border-2 border-green-600 rounded-lg text-3xl font-mono text-center mb-4 bg-gray-50 text-gray-800">
+                   class="w-full px-3 py-2 border-2 border-green-600 rounded-lg text-2xl font-mono text-center mb-3 bg-gray-50 text-gray-800">
 
-            <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
+            <div id="change-display" class="text-xl font-extrabold text-blue-600 mb-4 text-center">Rückgeld: 0.00 €</div>
             
-            <!-- Custom Numpad -->
-            <div id="numpad-container" class="grid grid-cols-3 gap-3"> <!-- Gap auch etwas größer -->
-                <!-- Alle Tasten verwenden nun die großzügige .numpad-btn Klasse mit den neuen Maßen -->
-                <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-1000 hover:bg-gray-1000">7</button>
+            <!-- Custom Numpad: Gap bleibt bei gap-1 -->
+            <div id="numpad-container" class="grid grid-cols-3 gap-1"> 
+                <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
                 <button onclick="handleNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
                 <button onclick="handleNumpadInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
                 
@@ -157,57 +158,58 @@
             </div>
             <!-- Ende Custom Numpad -->
 
-            <button id="btn-confirm-pay" onclick="finishTransaction()" disabled class="mt-6 w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400">
+            <button id="btn-confirm-pay" onclick="finishTransaction()" disabled class="mt-3 w-full p-2 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400">
                 Zahlung Buchen
             </button>
-            <button onclick="closeModal('payment-modal')" class="mt-3 w-full p-2 text-sm text-gray-500">Abbrechen</button>
+            <button onclick="closeModal('payment-modal')" class="mt-1 w-full p-1 text-xs text-gray-500">Abbrechen</button>
         </div>
     </div>
 
-    <!-- Produktverwaltung Modal -->
+    <!-- Produktverwaltung Modal (Paddings und Font Sizes reduziert) -->
     <div id="product-management-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold text-indigo-700 mb-4">Produkte verwalten</h3>
+        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold text-indigo-700 mb-3">Produkte verwalten</h3>
             
             <!-- Produkt Hinzufügen Formular -->
-            <form id="product-form" class="bg-gray-100 p-4 rounded-lg mb-6 shadow-inner" onsubmit="event.preventDefault(); handleProductFormSubmit()">
-                <h4 class="text-lg font-semibold mb-3">Neues Produkt hinzufügen</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <form id="product-form" class="bg-gray-100 p-3 rounded-lg mb-5 shadow-inner" onsubmit="event.preventDefault(); handleProductFormSubmit()">
+                <h4 class="text-base font-semibold mb-2">Neues Produkt hinzufügen</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Name:</label>
-                        <input type="text" id="product-name" required class="w-full px-3 py-2 border rounded-lg" placeholder="z.B. Heiße Schokolade">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Name:</label>
+                        <input type="text" id="product-name" required class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="z.B. Heiße Schokolade">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Preis (€):</label>
-                        <input type="number" step="0.01" id="product-price" required class="w-full px-3 py-2 border rounded-lg" placeholder="1.50">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Preis (€):</label>
+                        <input type="number" step="0.01" id="product-price" required class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="1.50">
                     </div>
-                    <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 self-end">
+                    <button type="submit" class="w-full p-2 rounded-lg font-bold text-sm text-white bg-green-600 hover:bg-green-700 self-end">
                         Produkt speichern
                     </button>
                 </div>
             </form>
 
             <!-- Liste der aktuellen Produkte -->
-            <h4 class="text-lg font-semibold mb-3">Deine Produkte (Klicken Sie auf den Stift zum Bearbeiten)</h4>
-            <div id="product-list-container" class="space-y-2">
+            <h4 class="text-base font-semibold mb-2">Deine Produkte (Klicken Sie auf den Stift zum Bearbeiten)</h4>
+            <div id="product-list-container" class="space-y-1.5 text-sm">
                 <p class="text-gray-500">Lade Produkte...</p>
             </div>
 
-            <button onclick="closeModal('product-management-modal')" class="mt-6 w-full p-3 text-sm font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg">Schließen</button>
+            <button onclick="closeModal('product-management-modal')" class="mt-4 w-full p-2 text-sm font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg">Schließen</button>
         </div>
     </div>
 
-    <!-- Info Modal -->
+    <!-- Info Modal (Paddings und Font Sizes reduziert) -->
     <div id="info-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-            <h3 id="info-title" class="text-xl font-bold text-gray-800 mb-3">Info</h3>
-            <pre id="info-text" class="whitespace-pre-wrap text-sm font-mono bg-gray-100 p-3 rounded-lg"></pre>
-            <button onclick="closeModal('info-modal')" class="mt-5 w-full p-3 rounded-lg font-bold text-red-500">Schließen</button>
+        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 id="info-title" class="text-lg font-bold text-gray-800 mb-2">Info</h3>
+            <pre id="info-text" class="whitespace-pre-wrap text-xs font-mono bg-gray-100 p-2 rounded-lg"></pre>
+            <button onclick="closeModal('info-modal')" class="mt-4 w-full p-2 rounded-lg font-bold text-red-500">Schließen</button>
         </div>
     </div>
 
     <!-- 
       TEIL 1: DAS KASSEN-GEHIRN (CLIENT-SEITIGE LOGIK) 
+      (Funktionen sind hier global verfügbar)
     -->
     <script>
         // --- Globale Status Variablen ---
@@ -221,7 +223,6 @@
         
         // --- Startet sofort ---
         window.onload = function() {
-            // Beim Start wird das Laden angezeigt (siehe HTML)
             renderButtons();
             updateUI();
         };
@@ -234,20 +235,19 @@
             const authInfo = document.getElementById('auth-info');
 
             if (state === 'logged_in') {
-                kasseContent.style.display = 'block'; // Inhalt anzeigen
-                loadingOverlay.style.display = 'none'; // Lade-Overlay ausblenden
+                kasseContent.style.display = 'block'; 
+                loadingOverlay.style.display = 'none'; 
                 authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Session beenden</button>`;
                 document.getElementById('db-status').style.display = 'block';
-            } else { // 'loading' oder 'logged_out'
+            } else { 
                 kasseContent.style.display = 'none';
-                loadingOverlay.style.display = 'flex'; // Lade-Overlay anzeigen
+                loadingOverlay.style.display = 'flex'; 
                 authInfo.innerHTML = 'Kasse v1.2';
             }
         }
         
         // --- Auth Steuerung Funktionen ---
         
-        // Jetzt nur noch zum Beenden der anonymen Session
         function handleSignOut() {
             if (!window.authService) return;
             window.authService.signOut();
@@ -261,19 +261,17 @@
             statusElement.innerText = message;
 
             if (isActive) {
-                statusElement.className = "text-xs font-bold p-2 rounded-lg bg-green-600 text-white shadow-sm";
+                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-green-600 text-white shadow-sm";
             } else if (message.includes("Konfiguration fehlt") || message.includes("API Key fehlt")) {
-                statusElement.className = "text-xs font-bold p-2 rounded-lg bg-red-800 text-white shadow-sm";
+                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-800 text-white shadow-sm";
             } else {
-                statusElement.className = "text-xs font-bold p-2 rounded-lg bg-red-500 text-white shadow-sm";
+                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 text-white shadow-sm";
             }
         }
 
-        // --- Kasse UI Funktionen (unverändert) ---
+        // --- Kasse UI Funktionen ---
         function setProducts(products) {
-            // Firestore liefert ein Array von Produkten, wandeln es in ein Objekt um
             USER_PRODUCTS = products.reduce((acc, product) => {
-                // Preise als Float speichern, aber nur, wenn gültig
                 const price = parseFloat(product.price);
                 if (!isNaN(price) && price > 0) {
                      acc[product.name] = { price: price, id: product.id }; 
@@ -281,7 +279,7 @@
                 return acc;
             }, {});
             renderButtons();
-            renderProductList(); // Aktualisiert die Liste im Verwaltungs-Modal
+            renderProductList(); 
         }
 
         function renderButtons() {
@@ -290,7 +288,7 @@
             
             const productKeys = Object.keys(USER_PRODUCTS);
             if (productKeys.length === 0) {
-                 container.innerHTML = '<p class="text-gray-500 col-span-full text-center">Keine Produkte gefunden. Bitte erst welche über "Produkte verwalten" hinzufügen.</p>';
+                 container.innerHTML = '<p class="text-gray-500 col-span-full text-center text-sm">Keine Produkte gefunden. Bitte erst welche über "Produkte verwalten" hinzufügen.</p>';
                  return;
             }
 
@@ -298,12 +296,11 @@
                 const product = USER_PRODUCTS[name];
                 let price = product.price;
 
-                // Simple Farbwahl basierend auf Namen
                 let colorClass = (name.toLowerCase().includes("wein") || name.toLowerCase().includes("punsch")) ? "bg-red-700 hover:bg-red-800" : "bg-orange-800 hover:bg-orange-900";
                 
                 let btn = document.createElement('button');
-                btn.className = `product-btn p-3 rounded-lg font-bold text-white shadow-md transition-colors ${colorClass}`;
-                btn.innerHTML = `${name}<br><span class="text-sm font-normal">(${price.toFixed(2).replace('.', ',')} €)</span>`;
+                btn.className = `product-btn p-2 rounded-lg font-bold text-sm text-white shadow-md transition-colors ${colorClass}`;
+                btn.innerHTML = `${name}<br><span class="text-xs font-normal">(${price.toFixed(2).replace('.', ',')} €)</span>`;
                 btn.onclick = function() { addToCart(name); };
                 container.appendChild(btn);
             }
@@ -318,7 +315,7 @@
             currentOrder[name]++;
             orderHistory.push(name);
             currentTotal += price;
-            currentTotal = Math.round(currentTotal * 100) / 100; // Rundungsfehler korrigieren
+            currentTotal = Math.round(currentTotal * 100) / 100; 
             updateUI();
         }
 
@@ -358,7 +355,7 @@
             document.getElementById('receipt-content').innerText = text;
         }
 
-        // --- Produktverwaltung Logik (unverändert) ---
+        // --- Produktverwaltung Logik ---
 
         function openProductModal() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
@@ -384,24 +381,24 @@
             productsArray.forEach(product => {
                 const id = product.id;
                 const div = document.createElement('div');
-                div.className = 'flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-gray-200';
+                div.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow-sm border border-gray-200';
                 
                 const priceElementId = `price-display-${id}`;
 
                 div.innerHTML = `
-                    <span class="font-semibold text-gray-800 w-1/3">${product.name}</span>
+                    <span class="font-semibold text-gray-800 text-sm w-1/3">${product.name}</span>
                     
-                    <div id="${priceElementId}" class="flex items-center space-x-2 w-1/3 justify-end min-w-[120px]">
-                        <span class="text-lg font-bold text-red-600">${product.price.toFixed(2).replace('.', ',')} €</span>
+                    <div id="${priceElementId}" class="flex items-center space-x-2 w-1/3 justify-end min-w-[100px]">
+                        <span class="text-base font-bold text-red-600">${product.price.toFixed(2).replace('.', ',')} €</span>
                         <button onclick="toggleEditPrice('${id}', '${product.price}')" 
                                 class="p-1 text-sm text-gray-700 hover:text-indigo-600 transition-colors">
                             ✏️
                         </button>
                     </div>
 
-                    <div class="flex space-x-2 w-1/4 justify-end min-w-[80px]">
+                    <div class="flex space-x-1 w-1/4 justify-end min-w-[70px]">
                         <button onclick="confirmDeleteProduct('${id}', '${product.name}')" 
-                                class="p-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+                                class="p-1 text-xs text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
                             Löschen
                         </button>
                     </div>
@@ -415,7 +412,7 @@
             
             if (container.querySelector('input')) {
                 container.innerHTML = `
-                    <span class="text-lg font-bold text-red-600">${parseFloat(currentPrice).toFixed(2).replace('.', ',')} €</span>
+                    <span class="text-base font-bold text-red-600">${parseFloat(currentPrice).toFixed(2).replace('.', ',')} €</span>
                     <button onclick="toggleEditPrice('${id}', '${currentPrice}')" 
                             class="p-1 text-sm text-gray-700 hover:text-indigo-600 transition-colors">
                         ✏️
@@ -426,9 +423,9 @@
             
             container.innerHTML = `
                 <input type="number" id="edit-price-${id}" value="${parseFloat(currentPrice).toFixed(2)}" 
-                       step="0.01" class="w-20 px-1 py-0.5 border rounded text-right text-base font-mono">
+                       step="0.01" class="w-16 px-1 py-0.5 border rounded text-right text-sm font-mono">
                 <button onclick="saveProductPrice('${id}')" 
-                        class="p-1 text-sm text-white bg-green-500 hover:bg-green-600 rounded whitespace-nowrap">
+                        class="p-1 text-xs text-white bg-green-500 hover:bg-green-600 rounded whitespace-nowrap">
                     💾 Speichern
                 </button>
             `;
@@ -488,7 +485,6 @@
             
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2).replace('.', ',') + " €";
             
-            // Setze den Input-Wert auf "0,00" und rufe calculateChange auf
             document.getElementById('input-received').value = "0,00";
             calculateChange();
             
@@ -499,37 +495,31 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // --- NEUE NUMPAD LOGIK ---
+        // --- NUMPAD LOGIK ---
         function handleNumpadInput(key) {
             const inputField = document.getElementById('input-received');
-            let currentValue = inputField.value.replace(',', ''); // Entferne Komma für interne Logik
+            let currentValue = inputField.value.replace(',', ''); 
 
             if (key === 'clear') {
                 inputField.value = "0,00";
             } else if (key === ',') {
-                // Wenn noch kein Komma vorhanden, füge es nach den ersten Ziffern ein
                 if (!inputField.value.includes(',')) {
-                    // Entferne führende "0" oder "0,"
                     if (currentValue === "000") currentValue = "";
 
-                    // Konvertiere zu Cent-Betrag, füge , hinzu
                     let cents = currentValue.padStart(3, '0').slice(0, -2);
                     let decimals = currentValue.padStart(3, '0').slice(-2);
                     
                     inputField.value = `${cents},${decimals}`;
                 }
-            } else { // Ist eine Ziffer 0-9
-                // Entferne die führende "0" oder "0," wenn man tippt
+            } else { 
                 if (currentValue === "000" || inputField.value === "0,00") {
                     currentValue = key;
                 } else {
                     currentValue += key;
                 }
 
-                // Begrenze auf maximal 8 Ziffern insgesamt
                 if (currentValue.length > 8) currentValue = currentValue.substring(currentValue.length - 8);
 
-                // Formatiere den Wert (letzte zwei Ziffern als Dezimalstellen)
                 let integerPart = currentValue.length > 2 ? currentValue.slice(0, -2) : "0";
                 let decimalPart = currentValue.length > 1 ? currentValue.slice(-2) : "0" + currentValue.slice(-1);
                 
@@ -540,7 +530,6 @@
         }
 
         function calculateChange() {
-            // Lese Wert und ersetze Komma durch Punkt für das Parsen
             let val = document.getElementById('input-received').value.replace(',', '.'); 
             let received = parseFloat(val);
             let btn = document.getElementById('btn-confirm-pay');
@@ -553,7 +542,7 @@
             }
 
             let change = received - currentTotal;
-            change = Math.round(change * 100) / 100; // Rundungsfehler korrigieren
+            change = Math.round(change * 100) / 100; 
 
             if (change >= -0.01) { 
                 display.innerText = "Rückgeld: " + change.toFixed(2).replace('.', ',') + " €";
@@ -564,7 +553,7 @@
             }
         }
 
-        // --- Transaktions Logik (unverändert) ---
+        // --- Transaktions Logik ---
         function finishTransaction() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if(document.getElementById('btn-confirm-pay').disabled) return;
@@ -582,8 +571,8 @@
             let transactionData = {
                 items: itemsWithPrice,
                 total: currentTotal,
-                received: receivedAmount, // Speichere auch den erhaltenen Betrag
-                change: receivedAmount - currentTotal, // Speichere das Rückgeld
+                received: receivedAmount, 
+                change: receivedAmount - currentTotal, 
                 timestamp: new Date().toISOString()
             };
 
@@ -624,7 +613,7 @@
             getAuth, 
             onAuthStateChanged,
             signInWithCustomToken, 
-            signInAnonymously,     // <-- Jetzt anonyme Anmeldung
+            signInAnonymously,     
             signOut                         
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
@@ -652,7 +641,6 @@
         };
         // =================================================================
         
-        // Verwenden Sie die globalen Canvas-Variablen, falls vorhanden, sonst Fallback
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'external-kasse-glühwein';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : PLACEHOLDER_FIREBASE_CONFIG;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
@@ -662,7 +650,6 @@
         let unsubscribeProducts = null; 
         let isDefaultProductsAdded = false;
 
-        // Standard-Produkte für neue Benutzer
         const DEFAULT_PRODUCTS = [
             { name: "Glühwein", price: 3.50 },
             { name: "Kinderpunsch", price: 2.50 },
@@ -683,37 +670,30 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Mache die SignOut-Funktion global verfügbar
                 window.authService = {
-                    signOut: signOutUser // Nur Abmeldung ist notwendig
+                    signOut: signOutUser 
                 };
                 
                 window.isDBReady = true;
                 window.setDBStatus(false, "Verbinde...");
 
-                // Auth Listener: Reagiert auf erfolgreichen Login/Logout
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // --- Erfolgreich angemeldet (egal ob Custom Token oder Anonym) ---
                         userId = user.uid;
-                        // Anzeigename für die UI
                         const userDisplay = user.isAnonymous ? `Anonyme Kasse (${userId.substr(0, 8)}...)` : `Kasse (${userId.substr(0, 8)}...)`;
                         
                         console.log(`Auth-Status: Angemeldet als ${userDisplay}`);
 
-                        // Starte den Produkt-Listener für diesen Benutzer
                         setupProductsListener(userId);
 
                         window.setDBStatus(true, `Online (ID: ${userId.substr(0, 8)}...)`);
                         window.updateAppView('logged_in', userDisplay);
                         
-                        // Mache Datenbankfunktionen global zugänglich
                         window.cloudSaveFunction = saveToCloud;
                         window.cloudReportFunction = generateReport;
                         window.productsDB = productsDB; 
 
                     } else {
-                        // --- Abgemeldet / Nicht angemeldet ---
                         if (unsubscribeProducts) {
                             unsubscribeProducts();
                             unsubscribeProducts = null;
@@ -729,7 +709,6 @@
                         window.cloudReportFunction = null;
                         window.productsDB = null;
 
-                        // VERSUCHE EINE NEUE ANONYME ANMELDUNG
                         await signInAnonymously(auth).catch(e => {
                             console.error("Anonyme Anmeldung fehlgeschlagen:", e);
                             window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
@@ -737,16 +716,12 @@
                     }
                 });
 
-                // Trigger Auth: Entweder mit Canvas Token oder direkt anonym
                 if (initialAuthToken) {
-                    // Falls ein Token von der Umgebung kommt, versuchen wir den Custom Login
                     await signInWithCustomToken(auth, initialAuthToken).catch(e => {
                          console.warn("Auth: Custom Token Login fehlgeschlagen. Versuche anonyme Anmeldung.");
-                         // Bei Fehler fallback auf anonym
                          signInAnonymously(auth); 
                     });
                 } else {
-                    // Wenn kein Token vorhanden, starte direkt die anonyme Anmeldung
                     await signInAnonymously(auth).catch(e => {
                          console.error("Anonyme Anmeldung fehlgeschlagen:", e);
                     });
@@ -774,7 +749,7 @@
             }
         }
 
-        // --- Produkt-Management Logik (Unverändert) ---
+        // --- Produkt-Management Logik ---
 
         const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
 
@@ -789,7 +764,6 @@
                     ...doc.data()
                 }));
                 
-                // Füge Standardprodukte nur einmal hinzu, wenn keine vorhanden sind
                 if (products.length === 0 && !isDefaultProductsAdded) {
                      await addDefaultProductsIfEmpty(id);
                      isDefaultProductsAdded = true; 
@@ -856,7 +830,7 @@
             }
         };
 
-        // --- Transaktions Logik (Unverändert) ---
+        // --- Transaktions Logik ---
 
         async function saveToCloud(data) {
             if (!userId || !db) return;
@@ -908,9 +882,16 @@
             }
         }
 
-        // Starte die Initialisierung der DB und des Auth Listeners
+        function showInfo(title, text) {
+            document.getElementById('info-title').innerText = title;
+            document.getElementById('info-text').innerText = text;
+            document.getElementById('info-modal').style.display = 'flex';
+        }
+        
+        // --- STARTE DIE DB INITIALISIERUNG HIER DIREKT ---
         window.updateAppView('loading');
         initDB();
+
     </script>
 </body>
 </html>
