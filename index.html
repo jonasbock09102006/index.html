@@ -13,10 +13,11 @@
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
 
-        /* Numpad Button Style (EINHEITLICH GROSS) */
+        /* Numpad Button Style (EINHEITLICH GROSS - JETZT NOCH GRÖSSER) */
         .numpad-btn {
             /* Anpassungen für größere Tasten und bessere Bedienbarkeit */
-            @apply p-6 rounded-xl font-extrabold text-3xl shadow-lg transition-colors;
+            /* P-7 ist jetzt noch größer für eine bessere Berührungserkennung */
+            @apply p-7 rounded-xl font-extrabold text-3xl shadow-lg transition-colors;
             line-height: 1; /* Text zentrieren */
         }
         .numpad-btn:active { transform: scale(0.95); }
@@ -138,6 +139,7 @@
             
             <!-- Custom Numpad -->
             <div id="numpad-container" class="grid grid-cols-3 gap-3"> <!-- Gap auch etwas größer -->
+                <!-- Alle Tasten verwenden nun die großzügige .numpad-btn Klasse -->
                 <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
                 <button onclick="handleNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
                 <button onclick="handleNumpadInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
@@ -150,7 +152,6 @@
                 <button onclick="handleNumpadInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
                 <button onclick="handleNumpadInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
-                <!-- Die Löschen-Taste ist nun auch größer und ohne redundante text-3xl Klasse -->
                 <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
                 <button onclick="handleNumpadInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
                 <button onclick="handleNumpadInput(',')" class="numpad-btn bg-gray-200 hover:bg-gray-300">,</button>
