@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glühweinstand Kasse Mobile (Robustes Auth)</title>
+    <title>Glühweinstand Kasse (Anonyme Anmeldung)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Grundlegendes Styling */
@@ -28,42 +28,7 @@
     </header>
 
     <!-- 
-        AUTHENTIFIZIERUNGSBEREICH: Wird nur angezeigt, wenn der Benutzer nicht angemeldet ist
-    -->
-    <div id="auth-section" class="flex justify-center items-center h-[70vh] w-full" style="display: none;">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Anmeldung / Registrierung</h2>
-            
-            <form id="login-form" onsubmit="event.preventDefault(); handleSignIn()">
-                <div class="mb-4">
-                    <label for="email" class="block text-sm font-medium text-gray-700">E-Mail</label>
-                    <input type="email" id="email" required class="w-full mt-1 p-3 border border-gray-300 rounded-lg shadow-sm" placeholder="deine@email.de">
-                </div>
-                <div class="mb-6">
-                    <label for="password" class="block text-sm font-medium text-gray-700">Passwort</label>
-                    <input type="password" id="password" required class="w-full mt-1 p-3 border border-gray-300 rounded-lg shadow-sm" placeholder="mindestens 6 Zeichen">
-                </div>
-
-                <div class="flex space-x-3">
-                    <button type="submit" class="flex-1 p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-md transition-colors">
-                        Anmelden
-                    </button>
-                    <button type="button" onclick="handleSignUp()" class="flex-1 p-3 rounded-lg font-bold text-gray-800 bg-gray-200 hover:bg-gray-300 shadow-md transition-colors">
-                        Registrieren
-                    </button>
-                </div>
-                <!-- Hier wird der Fehler von Firebase angezeigt! -->
-                <p id="auth-error-message" class="text-red-600 text-sm mt-4 p-2 bg-red-100 border border-red-300 rounded text-center font-semibold" style="display: none;"></p>
-                <p class="text-xs text-gray-500 mt-4 text-center">
-                    Falls das Problem weiterhin besteht, überprüfe bitte die "Email/Password" Methode in der Firebase Konsole.
-                </p>
-            </form>
-        </div>
-    </div>
-
-
-    <!-- 
-        HAUPT-KASSEN-LAYOUT: Wird nur angezeigt, wenn der Benutzer angemeldet ist 
+        HAUPT-APP: Wird automatisch geladen, sobald die anonyme Anmeldung abgeschlossen ist.
     -->
     <div id="main-app" style="display: none;">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
@@ -180,12 +145,11 @@
         // --- Globale Status Variablen ---
         let kasseActive = false;
         let USER_PRODUCTS = {}; 
-        let isDBReady = false; // NEU: Globaler Flag für Datenbank-Bereitschaft
+        let isDBReady = false; 
 
         let currentOrder = {};
         let orderHistory = [];
         let currentTotal = 0.0;
-        let authService = null; 
         
         // --- Startet sofort ---
         window.onload = function() {
@@ -193,68 +157,29 @@
             updateUI();
         };
 
-        // Hilfsfunktion zur Anzeige von Auth-Fehlern im Formular
-        function showAuthError(message) {
-            const errorElement = document.getElementById('auth-error-message');
-            errorElement.innerText = message;
-            errorElement.style.display = 'block';
-            setTimeout(() => errorElement.style.display = 'none', 7000); // Längere Anzeigezeit
-        }
         
         // --- UI Ansichtskontrolle ---
-        function updateAppView(state, userEmail = '') {
-            const authSection = document.getElementById('auth-section');
+        function updateAppView(state, userDisplay = '') {
             const mainApp = document.getElementById('main-app');
             const authInfo = document.getElementById('auth-info');
 
             if (state === 'logged_in') {
-                authSection.style.display = 'none';
-                mainApp.style.display = 'grid'; // Ändere auf grid, da es ein Grid-Layout ist
-                authInfo.innerHTML = `Eingeloggt als: <b>${userEmail}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Logout</button>`;
+                mainApp.style.display = 'grid'; 
+                authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Session beenden</button>`;
                 document.getElementById('db-status').style.display = 'block';
-            } else if (state === 'logged_out') {
-                authSection.style.display = 'flex';
+            } else { // 'loading' oder 'logged_out'
                 mainApp.style.display = 'none';
                 authInfo.innerHTML = 'Kasse v1.2';
-                document.getElementById('db-status').style.display = 'none';
-                // Auth Fehlermeldung zurücksetzen
-                document.getElementById('auth-error-message').style.display = 'none';
-            } else { // 'loading'
-                authSection.style.display = 'flex';
-                mainApp.style.display = 'none';
-                authInfo.innerHTML = 'Lade...';
-                document.getElementById('db-status').style.display = 'block';
             }
         }
         
         // --- Auth Steuerung Funktionen ---
         
-        function handleSignIn() {
-            // NEUE PRÜFUNG: Ist die Datenbank wirklich bereit?
-            if (!isDBReady || !authService) return showAuthError("Datenbankmodul lädt noch. Bitte kurz warten und erneut klicken.");
-            document.getElementById('auth-error-message').style.display = 'none';
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            authService.signIn(email, password);
-        }
-
-        function handleSignUp() {
-            // NEUE PRÜFUNG: Ist die Datenbank wirklich bereit?
-            if (!isDBReady || !authService) return showAuthError("Datenbankmodul lädt noch. Bitte kurz warten und erneut klicken.");
-            document.getElementById('auth-error-message').style.display = 'none';
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            if(password.length < 6) {
-                 return showAuthError("Passwort muss mindestens 6 Zeichen lang sein.");
-            }
-            authService.signUp(email, password);
-        }
-
+        // Jetzt nur noch zum Beenden der anonymen Session
         function handleSignOut() {
-            if (!authService) return;
-            authService.signOut();
+            if (!window.authService) return;
+            window.authService.signOut();
         }
-
 
         // --- Status UI Funktionen ---
         function setDBStatus(isActive, message) {
@@ -272,7 +197,7 @@
             }
         }
 
-        // --- Kasse UI Funktionen ---
+        // --- Kasse UI Funktionen (unverändert) ---
         function setProducts(products) {
             // Firestore liefert ein Array von Produkten, wandeln es in ein Objekt um
             USER_PRODUCTS = products.reduce((acc, product) => {
@@ -361,7 +286,7 @@
             document.getElementById('receipt-content').innerText = text;
         }
 
-        // --- Produktverwaltung Logik ---
+        // --- Produktverwaltung Logik (unverändert) ---
 
         function openProductModal() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
@@ -373,7 +298,6 @@
             const container = document.getElementById('product-list-container');
             container.innerHTML = ''; 
 
-            // Konvertiere das USER_PRODUCTS Objekt in ein Array für die Liste
             const productsArray = Object.keys(USER_PRODUCTS).map(name => ({
                 name: name,
                 price: USER_PRODUCTS[name].price,
@@ -390,7 +314,6 @@
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-gray-200';
                 
-                // Dynamischer Inhalt für Preis-Anzeige/Eingabe
                 const priceElementId = `price-display-${id}`;
 
                 div.innerHTML = `
@@ -415,15 +338,10 @@
             });
         }
         
-        /**
-         * Schaltet zwischen Preis-Anzeige und Preis-Eingabe um.
-         */
         function toggleEditPrice(id, currentPrice) {
             const container = document.getElementById(`price-display-${id}`);
             
-            // Wenn wir bereits im Bearbeitungsmodus sind, beende ihn und zeige Preis
             if (container.querySelector('input')) {
-                // Hier wird der Preis erneut gerendert, um den Bearbeitungsmodus zu verlassen
                 container.innerHTML = `
                     <span class="text-lg font-bold text-red-600">${parseFloat(currentPrice).toFixed(2).replace('.', ',')} €</span>
                     <button onclick="toggleEditPrice('${id}', '${currentPrice}')" 
@@ -434,7 +352,6 @@
                 return;
             }
             
-            // Inhalt für den Bearbeitungsmodus setzen
             container.innerHTML = `
                 <input type="number" id="edit-price-${id}" value="${parseFloat(currentPrice).toFixed(2)}" 
                        step="0.01" class="w-20 px-1 py-0.5 border rounded text-right text-base font-mono">
@@ -446,23 +363,17 @@
             document.getElementById(`edit-price-${id}`).focus();
         }
 
-        /**
-         * Speichert den neuen Preis über die Datenbankfunktion.
-         */
         function saveProductPrice(id) {
             const input = document.getElementById(`edit-price-${id}`);
-            // Ersetze Komma durch Punkt für korrekte parseFloat Konvertierung
             const newPrice = parseFloat(input.value.replace(',', '.'));
 
             if (isNaN(newPrice) || newPrice <= 0) {
-                // Finde den aktuellen Preis aus dem globalen State, um ihn wieder anzuzeigen
                 const currentProduct = Object.values(USER_PRODUCTS).find(p => p.id === id);
                 if (currentProduct) toggleEditPrice(id, currentProduct.price);
                 return showInfo("Eingabefehler", "Bitte einen gültigen Preis > 0 eingeben.");
             }
             
             if (window.productsDB) {
-                // Rufe die neue DB-Update-Funktion auf
                 window.productsDB.updateProductPrice(id, newPrice);
             } else {
                 showInfo("Fehler", "Datenbankverbindung nicht verfügbar.");
@@ -474,7 +385,6 @@
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
             
             const name = document.getElementById('product-name').value.trim();
-            // Ersetze Komma durch Punkt für korrekte Float-Konvertierung
             const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
             
             if (name === "" || isNaN(price) || price <= 0) {
@@ -484,13 +394,11 @@
             const productData = { name: name, price: price };
             window.productsDB.saveProduct(productData);
             
-            // Formular zurücksetzen
             document.getElementById('product-form').reset();
             document.getElementById('product-name').focus();
         }
 
         function confirmDeleteProduct(id, name) {
-            // Verwende window.confirm als Ersatz für ein benutzerdefiniertes Modal
             if (window.confirm(`Soll das Produkt "${name}" wirklich gelöscht werden?`)) { 
                 if (window.productsDB) {
                     window.productsDB.deleteProduct(id);
@@ -501,7 +409,7 @@
         }
 
 
-        // --- Allgemeine Modal Logik ---
+        // --- Allgemeine Modal Logik (unverändert) ---
         function openPaymentModal() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (currentTotal <= 0) return showInfo("Info", "Bitte erst etwas buchen.");
@@ -518,7 +426,6 @@
         }
 
         function calculateChange() {
-            // Ersetze Komma durch Punkt für korrekte Berechnung
             let val = document.getElementById('input-received').value.replace(',', '.');
             let received = parseFloat(val);
             let btn = document.getElementById('btn-confirm-pay');
@@ -531,10 +438,9 @@
             }
 
             let change = received - currentTotal;
-            // Rundungsfehler bei 0.00 beheben
             change = Math.round(change * 100) / 100; 
 
-            if (change >= -0.01) { // Erlaube 1 Cent Toleranz
+            if (change >= -0.01) { 
                 display.innerText = "Rückgeld: " + change.toFixed(2).replace('.', ',') + " €";
                 btn.disabled = false;
             } else {
@@ -543,14 +449,13 @@
             }
         }
 
-        // --- Transaktions Logik ---
+        // --- Transaktions Logik (unverändert) ---
         function finishTransaction() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if(document.getElementById('btn-confirm-pay').disabled) return;
 
             closeModal('payment-modal');
             
-            // Bereite die Daten für die Speicherung vor
             const itemsWithPrice = Object.entries(currentOrder).map(([name, count]) => ({
                 name: name,
                 count: count,
@@ -567,8 +472,9 @@
 
             if (window.cloudSaveFunction) {
                 window.cloudSaveFunction(transactionData);
+                showInfo("Erfolgreich", "Transaktion wurde gebucht.");
             } else {
-                showInfo("Offline", "Gebucht! (Lokal gespeichert, aber nicht in der Cloud)");
+                showInfo("Offline", "Gebucht! (Datenbank nicht verbunden)");
             }
         }
 
@@ -599,8 +505,7 @@
             getAuth, 
             onAuthStateChanged,
             signInWithCustomToken, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword,     
+            signInAnonymously,     // <-- Jetzt anonyme Anmeldung
             signOut                         
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
@@ -634,7 +539,7 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 
-        let db, auth, userId, userEmail;
+        let db, auth, userId;
         let unsubscribeProducts = null; 
         let isDefaultProductsAdded = false;
 
@@ -647,11 +552,10 @@
         ];
 
         async function initDB() {
-            // Prüft, ob ein API Key gesetzt ist 
             if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("HIER")) { 
                 window.setDBStatus(false, "DB-Fehler (API Key fehlt). Bitte Firebase Config einfügen!");
                 window.updateAppView('logged_out');
-                window.isDBReady = false; // Initialisierungsfehler
+                window.isDBReady = false; 
                 return;
             }
             
@@ -660,29 +564,29 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Mache die Auth-Funktionen global verfügbar
+                // Mache die SignOut-Funktion global verfügbar
                 window.authService = {
-                    signIn: signIn,
-                    signUp: signUp,
-                    signOut: signOutUser
+                    signOut: signOutUser // Nur Abmeldung ist notwendig
                 };
                 
-                // HIER: Setzen des Ready-Flags, da Auth-Funktionen jetzt definiert sind.
                 window.isDBReady = true;
+                window.setDBStatus(false, "Verbinde...");
 
                 // Auth Listener: Reagiert auf erfolgreichen Login/Logout
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // --- Erfolgreich angemeldet ---
+                        // --- Erfolgreich angemeldet (egal ob Custom Token oder Anonym) ---
                         userId = user.uid;
-                        userEmail = user.email || "Unbekannt";
-                        const statusMessage = `Online (ID: ${userId.substr(0, 8)}...)`;
+                        // Anzeigename für die UI
+                        const userDisplay = user.isAnonymous ? `Anonyme Kasse (${userId.substr(0, 8)}...)` : `Kasse (${userId.substr(0, 8)}...)`;
+                        
+                        console.log(`Auth-Status: Angemeldet als ${userDisplay}`);
 
                         // Starte den Produkt-Listener für diesen Benutzer
                         setupProductsListener(userId);
 
-                        window.setDBStatus(true, statusMessage);
-                        window.updateAppView('logged_in', userEmail);
+                        window.setDBStatus(true, `Online (ID: ${userId.substr(0, 8)}...)`);
+                        window.updateAppView('logged_in', userDisplay);
                         
                         // Mache Datenbankfunktionen global zugänglich
                         window.cloudSaveFunction = saveToCloud;
@@ -695,83 +599,67 @@
                             unsubscribeProducts();
                             unsubscribeProducts = null;
                         }
+                        console.log("Auth-Status: Abgemeldet");
                         userId = null;
-                        userEmail = null;
                         isDefaultProductsAdded = false;
                         window.setProducts([]); 
                         window.setDBStatus(false, "Offline");
                         window.updateAppView('logged_out');
                         
-                        // Datenbankfunktionen zurücksetzen
                         window.cloudSaveFunction = null;
                         window.cloudReportFunction = null;
                         window.productsDB = null;
+
+                        // VERSUCHE EINE NEUE ANONYME ANMELDUNG, falls nicht gerade abgemeldet wird
+                        // (Ein Custom Token wäre bereits oben im 'if (initialAuthToken)' Block verarbeitet worden)
+                        if (!auth.currentUser) {
+                           await signInAnonymously(auth).catch(e => {
+                                console.error("Anonyme Anmeldung fehlgeschlagen:", e);
+                                window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
+                            });
+                        }
                     }
                 });
 
-                // Versuche, mit dem initial Auth Token einzuloggen, falls im Canvas
+                // Versuche zuerst, mit dem initial Auth Token einzuloggen (für Canvas Umgebung)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken).catch(e => {
-                         console.warn("Custom Token Login fehlgeschlagen, Nutzer muss sich anmelden.", e);
-                         // Bei Fehler mit Custom Token einfach abwarten, bis sich der Nutzer normal anmeldet
+                         console.warn("Auth: Custom Token Login fehlgeschlagen. Versuche anonyme Anmeldung.");
                     });
+                } else {
+                    // Wenn kein Token vorhanden, starte direkt die anonyme Anmeldung
+                    // (Falls nicht bereits durch onAuthStateChanged getriggert)
+                    if (!auth.currentUser) {
+                         await signInAnonymously(auth).catch(e => {
+                            console.error("Anonyme Anmeldung fehlgeschlagen:", e);
+                            window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
+                         });
+                    }
                 }
 
             } catch (e) {
-                console.error("Datenbank-Initialisierungsfehler:", e);
+                console.error("DB INIT FEHLER:", e);
                 window.setDBStatus(false, "Fehler beim Start der Kasse");
                 window.showInfo("Fehler", "Datenbank konnte nicht initialisiert werden: " + e.message);
                 window.updateAppView('logged_out');
-                window.isDBReady = false; // Setze den Status bei Fehler
+                window.isDBReady = false; 
             }
         }
 
-        // --- Firebase Auth Implementierung ---
-
-        async function signIn(email, password) {
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged übernimmt die UI Aktualisierung
-            } catch (error) {
-                console.error("Login Fehler:", error);
-                // WICHTIG: Fehler direkt im Login-Feld anzeigen
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                    window.showAuthError("Anmeldedaten falsch. Bitte E-Mail und Passwort prüfen oder neu registrieren.");
-                } else {
-                    window.showAuthError(`Anmeldefehler: ${error.message} (Code: ${error.code}). Prüfen Sie die 'Email/Password' Auth-Methode in Firebase!`);
-                }
-            }
-        }
-
-        async function signUp(email, password) {
-            try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                // onAuthStateChanged übernimmt die UI Aktualisierung
-                window.showInfo("Erfolgreich", "Registrierung erfolgreich! Du bist jetzt eingeloggt.");
-            } catch (error) {
-                console.error("Registrierungsfehler:", error);
-                // WICHTIG: Fehler direkt im Login-Feld anzeigen
-                 if (error.code === 'auth/email-already-in-use') {
-                    window.showAuthError("Diese E-Mail wird bereits verwendet. Bitte melde dich an.");
-                } else {
-                    window.showAuthError(`Registrierungsfehler: ${error.message} (Code: ${error.code}). Prüfen Sie die 'Email/Password' Auth-Methode in Firebase!`);
-                }
-            }
-        }
+        // --- Firebase Auth Implementierung (Nur SignOut) ---
 
         async function signOutUser() {
             try {
                 await signOut(auth);
-                // onAuthStateChanged übernimmt die UI Aktualisierung
-                window.resetBestellung(); // Lokale Bestellung leeren
-                window.showInfo("Abmeldung", "Du wurdest erfolgreich abgemeldet.");
+                window.resetBestellung(); 
+                window.showInfo("Abmeldung", "Die Session wurde beendet.");
             } catch (error) {
                 console.error("Logout Fehler:", error);
                 window.showInfo("Abmeldefehler", "Fehler beim Abmelden: " + error.message);
             }
         }
 
-        // --- Produkt-Management Logik ---
+        // --- Produkt-Management Logik (Unverändert) ---
 
         const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
 
@@ -803,7 +691,6 @@
         async function addDefaultProductsIfEmpty(id) {
              const productsCol = collection(db, getProductsPath(id));
              for (const product of DEFAULT_PRODUCTS) {
-                 // ACHTUNG: Preise werden als Strings mit 2 Nachkommastellen gespeichert
                  await addDoc(productsCol, { name: product.name, price: product.price.toFixed(2) });
              }
         }
@@ -829,30 +716,22 @@
                     window.showInfo("Fehler", "Produkt konnte nicht gelöscht werden.");
                 }
             },
-            /**
-             * Aktualisiert nur den Preis eines bestehenden Produkts.
-             */
             updateProductPrice: async (productId, newPrice) => {
                 if (!userId || !db) return;
                 try {
-                    // Preis auf 2 Nachkommastellen formatieren
                     const priceString = parseFloat(newPrice).toFixed(2);
                     const productDocRef = doc(db, getProductsPath(userId), productId);
                     
-                    // Verwende updateDoc, um nur das 'price'-Feld zu ändern
                     await updateDoc(productDocRef, {
                         price: priceString 
                     });
-                    // Der onSnapshot Listener aktualisiert die UI automatisch, wenn der Speicherprozess abgeschlossen ist.
-                    // Die UI zeigt den Erfolg jetzt direkt über showInfo an
+                    
                     window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceString} €)`);
 
-                    // Manuelles zurücksetzen des Bearbeitungsmodus in der UI
                     const currentProduct = Object.values(window.USER_PRODUCTS).find(p => p.id === productId);
                     if (currentProduct) {
-                         // setze den aktuellen Preis für die UI, damit toggleEditPrice ihn korrekt rendert
                          currentProduct.price = parseFloat(priceString); 
-                         window.toggleEditPrice(productId, priceString); // Schließe den Edit-Modus
+                         window.toggleEditPrice(productId, priceString); 
                     }
 
                 } catch (e) {
@@ -862,7 +741,7 @@
             }
         };
 
-        // --- Transaktions Logik ---
+        // --- Transaktions Logik (Unverändert) ---
 
         async function saveToCloud(data) {
             if (!userId || !db) return;
