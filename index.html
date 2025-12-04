@@ -70,6 +70,7 @@
         .toast-info { @apply bg-blue-600; }
 
         /* NEU: Druck-Styles für Kassenbondrucker (Monospace) */
+        /* Diese sind für den Druck direkt von der Hauptseite NÖTIG */
         @media print {
             body * {
                 visibility: hidden;
@@ -949,7 +950,7 @@
             }
         }
         
-        // NEU: Kassenzettel Druckfunktion, optimiert als Bewirtungsbeleg mit Leerfeldern
+        // 🚨 KORRIGIERTE FUNKTION: Kassenzettel Druckfunktion
         function printKassenzettel(transactionData, bewirtungDetails) {
             
             const FIRMA_NAME = FIRMA_DETAILS.NAME;
@@ -1065,11 +1066,23 @@
                 </div>
             `;
             
-            // Generische Druckfunktion für Kassenbondrucker
+            // KORREKTUR: Schreiben der Styles direkt in das neue Fenster
             const printWindow = window.open('', '_blank');
             printWindow.document.write('<html><head><title>Bewirtungsbeleg</title>');
-            // Kopiert die Druck-Styles in das neue Fenster
-            printWindow.document.write('<style>@media print {' + document.querySelector('style').textContent.match(/@media print\s*{[^}]*}/s)[0].replace(/@media print\s*{/g, '').replace(/}$/g, '') + '}</style>');
+
+            // Direkte CSS-Definition für den Bondrucker-Look
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: "Consolas", "Courier New", monospace; font-size: 9pt; margin: 0; padding: 0; }');
+            printWindow.document.write('.receipt-print { width: 80mm; color: #000; padding: 5px; box-sizing: border-box; }');
+            printWindow.document.write('.receipt-print strong { font-weight: bold; }');
+            printWindow.document.write('.receipt-print .center { text-align: center; }');
+            printWindow.document.write('.receipt-print .line { display: flex; justify-content: space-between; margin-bottom: 1px; }');
+            printWindow.document.write('.receipt-print .item-name { width: 60%; }');
+            printWindow.document.write('.receipt-print .item-price { width: 30%; text-align: right; }');
+            printWindow.document.write('.receipt-print hr { border: 0; border-top: 1px dashed #000; margin: 3px 0; }');
+            printWindow.document.write('@page { size: auto; margin: 0; }'); // Wichtig für Bondrucker-ähnliche Ausgabe
+            printWindow.document.write('</style>');
+
             printWindow.document.write('</head><body>');
             printWindow.document.write(receiptHTML);
             printWindow.document.write('</body></html>');
@@ -1553,7 +1566,7 @@
                 
                 report += "Verkaufte Artikel:\n";
                 
-                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(b.name));
                 for(const [name, stats] of sortedProducts) {
                     report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} € Brutto)\n`;
                 }
