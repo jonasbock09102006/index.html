@@ -12,25 +12,61 @@
         #receipt-content { overflow-y: auto; max-height: 45vh; }
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
+
+        /* LOADING OVERLAY */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #f7f7f7;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #b91c1c; /* red-700 */
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #b91c1c;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="min-h-screen p-2 md:p-6 bg-red-500/10">
 
-    <!-- Status Leiste und Titel -->
-    <header class="flex justify-between items-center mb-4">
-        <!-- DB Status Indikator -->
-        <div id="db-status" class="text-xs font-bold p-2 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
-            Datenbankmodul lädt...
-        </div>
-        <h1 class="text-3xl font-bold text-center text-red-700">Glühweinstand 🍷</h1>
-        <!-- Logout / User Info -->
-        <div id="auth-info" class="text-xs text-gray-500 text-right"></div>
-    </header>
+    <!-- Loading Screen (Wird beim erfolgreichen Login ausgeblendet) -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        Kasse wird geladen und anonym angemeldet...
+    </div>
 
     <!-- 
-        HAUPT-APP: Wird automatisch geladen, sobald die anonyme Anmeldung abgeschlossen ist.
+        HAUPT-INHALT: Wird erst sichtbar, nachdem die anonyme Anmeldung abgeschlossen ist.
     -->
-    <div id="main-app" style="display: none;">
+    <div id="kasse-content" style="display: none;">
+
+        <!-- Status Leiste und Titel -->
+        <header class="flex justify-between items-center mb-4">
+            <!-- DB Status Indikator -->
+            <div id="db-status" class="text-xs font-bold p-2 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
+                Datenbankmodul lädt...
+            </div>
+            <h1 class="text-3xl font-bold text-center text-red-700">Glühweinstand 🍷</h1>
+            <!-- Logout / User Info -->
+            <div id="auth-info" class="text-xs text-gray-500 text-right"></div>
+        </header>
+
+        <!-- Haupt-App-Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             
             <!-- Linke Seite: Eingabe und Steuerung -->
@@ -85,7 +121,8 @@
             <div id="payment-total-display" class="text-xl font-bold text-red-700 mb-6 text-center">...</div>
 
             <label class="block text-sm font-medium text-gray-700 mb-1">Erhalten (€):</label>
-            <input type="number" id="input-received" placeholder="0,00" class="w-full px-4 py-3 border rounded-lg text-lg text-center mb-4" oninput="calculateChange()" onkeyup="if(event.key === 'Enter') finishTransaction()">
+            <!-- Hinzugefügt: inputmode="numeric" um den Ziffernblock auf Mobilgeräten zu erzwingen -->
+            <input type="number" inputmode="numeric" id="input-received" placeholder="0,00" class="w-full px-4 py-3 border rounded-lg text-lg text-center mb-4" oninput="calculateChange()" onkeyup="if(event.key === 'Enter') finishTransaction()">
 
             <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
 
@@ -153,6 +190,7 @@
         
         // --- Startet sofort ---
         window.onload = function() {
+            // Beim Start wird das Laden angezeigt (siehe HTML)
             renderButtons();
             updateUI();
         };
@@ -160,15 +198,18 @@
         
         // --- UI Ansichtskontrolle ---
         function updateAppView(state, userDisplay = '') {
-            const mainApp = document.getElementById('main-app');
+            const kasseContent = document.getElementById('kasse-content');
+            const loadingOverlay = document.getElementById('loading-overlay');
             const authInfo = document.getElementById('auth-info');
 
             if (state === 'logged_in') {
-                mainApp.style.display = 'grid'; 
+                kasseContent.style.display = 'block'; // Inhalt anzeigen
+                loadingOverlay.style.display = 'none'; // Lade-Overlay ausblenden
                 authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Session beenden</button>`;
                 document.getElementById('db-status').style.display = 'block';
             } else { // 'loading' oder 'logged_out'
-                mainApp.style.display = 'none';
+                kasseContent.style.display = 'none';
+                loadingOverlay.style.display = 'flex'; // Lade-Overlay anzeigen
                 authInfo.innerHTML = 'Kasse v1.2';
             }
         }
@@ -426,7 +467,8 @@
         }
 
         function calculateChange() {
-            let val = document.getElementById('input-received').value.replace(',', '.');
+            // Ersetze Komma durch Punkt für das Parsen, da type="number" Punkt erwartet
+            let val = document.getElementById('input-received').value.replace(',', '.'); 
             let received = parseFloat(val);
             let btn = document.getElementById('btn-confirm-pay');
             let display = document.getElementById('change-display');
@@ -599,7 +641,7 @@
                             unsubscribeProducts();
                             unsubscribeProducts = null;
                         }
-                        console.log("Auth-Status: Abgemeldet");
+                        console.log("Auth-Status: Abgemeldet. Starte anonyme Wiederanmeldung.");
                         userId = null;
                         isDefaultProductsAdded = false;
                         window.setProducts([]); 
@@ -610,31 +652,27 @@
                         window.cloudReportFunction = null;
                         window.productsDB = null;
 
-                        // VERSUCHE EINE NEUE ANONYME ANMELDUNG, falls nicht gerade abgemeldet wird
-                        // (Ein Custom Token wäre bereits oben im 'if (initialAuthToken)' Block verarbeitet worden)
-                        if (!auth.currentUser) {
-                           await signInAnonymously(auth).catch(e => {
-                                console.error("Anonyme Anmeldung fehlgeschlagen:", e);
-                                window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
-                            });
-                        }
+                        // VERSUCHE EINE NEUE ANONYME ANMELDUNG
+                        await signInAnonymously(auth).catch(e => {
+                            console.error("Anonyme Anmeldung fehlgeschlagen:", e);
+                            window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
+                        });
                     }
                 });
 
-                // Versuche zuerst, mit dem initial Auth Token einzuloggen (für Canvas Umgebung)
+                // Trigger Auth: Entweder mit Canvas Token oder direkt anonym
                 if (initialAuthToken) {
+                    // Falls ein Token von der Umgebung kommt, versuchen wir den Custom Login
                     await signInWithCustomToken(auth, initialAuthToken).catch(e => {
                          console.warn("Auth: Custom Token Login fehlgeschlagen. Versuche anonyme Anmeldung.");
+                         // Bei Fehler fallback auf anonym
+                         signInAnonymously(auth); 
                     });
                 } else {
                     // Wenn kein Token vorhanden, starte direkt die anonyme Anmeldung
-                    // (Falls nicht bereits durch onAuthStateChanged getriggert)
-                    if (!auth.currentUser) {
-                         await signInAnonymously(auth).catch(e => {
-                            console.error("Anonyme Anmeldung fehlgeschlagen:", e);
-                            window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
-                         });
-                    }
+                    await signInAnonymously(auth).catch(e => {
+                         console.error("Anonyme Anmeldung fehlgeschlagen:", e);
+                    });
                 }
 
             } catch (e) {
