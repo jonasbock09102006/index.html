@@ -13,6 +13,13 @@
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
 
+        /* Numpad Button Style */
+        .numpad-btn {
+            @apply p-4 rounded-lg font-bold text-2xl shadow-md transition-colors;
+            line-height: 1; /* Text zentrieren */
+        }
+        .numpad-btn:active { transform: scale(0.95); }
+
         /* LOADING OVERLAY */
         #loading-overlay {
             position: fixed;
@@ -117,16 +124,37 @@
     <!-- Zahlungs-Modal -->
     <div id="payment-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
-            <h3 class="text-2xl font-bold text-gray-800 mb-4">Zahlung</h3>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Zahlung</h3>
             <div id="payment-total-display" class="text-xl font-bold text-red-700 mb-6 text-center">...</div>
 
-            <label class="block text-sm font-medium text-gray-700 mb-1">Erhalten (€):</label>
-            <!-- Hinzugefügt: inputmode="numeric" um den Ziffernblock auf Mobilgeräten zu erzwingen -->
-            <input type="number" inputmode="numeric" id="input-received" placeholder="0,00" class="w-full px-4 py-3 border rounded-lg text-lg text-center mb-4" oninput="calculateChange()" onkeyup="if(event.key === 'Enter') finishTransaction()">
+            <label class="block text-sm font-medium text-gray-700 mb-1 text-center">Erhalten (€):</label>
+            <!-- WICHTIG: inputmode="none" und readonly, um die native Tastatur zu verhindern -->
+            <input type="text" id="input-received" readonly placeholder="0,00" value="0,00" 
+                   class="w-full px-4 py-3 border-2 border-green-600 rounded-lg text-3xl font-mono text-center mb-4 bg-gray-50 text-gray-800">
 
             <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
+            
+            <!-- Custom Numpad -->
+            <div id="numpad-container" class="grid grid-cols-3 gap-2">
+                <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
+                <button onclick="handleNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
+                <button onclick="handleNumpadInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
+                
+                <button onclick="handleNumpadInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
+                <button onclick="handleNumpadInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
+                <button onclick="handleNumpadInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
+                
+                <button onclick="handleNumpadInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
+                <button onclick="handleNumpadInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
+                <button onclick="handleNumpadInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
-            <button id="btn-confirm-pay" onclick="finishTransaction()" disabled class="w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400">
+                <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-xl">C</button>
+                <button onclick="handleNumpadInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
+                <button onclick="handleNumpadInput(',')" class="numpad-btn bg-gray-200 hover:bg-gray-300">,</button>
+            </div>
+            <!-- Ende Custom Numpad -->
+
+            <button id="btn-confirm-pay" onclick="finishTransaction()" disabled class="mt-6 w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400">
                 Zahlung Buchen
             </button>
             <button onclick="closeModal('payment-modal')" class="mt-3 w-full p-2 text-sm text-gray-500">Abbrechen</button>
@@ -450,37 +478,79 @@
         }
 
 
-        // --- Allgemeine Modal Logik (unverändert) ---
+        // --- Allgemeine Modal Logik ---
         function openPaymentModal() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (currentTotal <= 0) return showInfo("Info", "Bitte erst etwas buchen.");
-            document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2) + " €";
-            document.getElementById('input-received').value = "";
-            document.getElementById('change-display').innerText = "Rückgeld: 0.00 €";
-            document.getElementById('btn-confirm-pay').disabled = true;
+            
+            document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2).replace('.', ',') + " €";
+            
+            // Setze den Input-Wert auf "0,00" und rufe calculateChange auf
+            document.getElementById('input-received').value = "0,00";
+            calculateChange();
+            
             document.getElementById('payment-modal').style.display = 'flex';
-            document.getElementById('input-received').focus();
         }
 
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
         }
 
+        // --- NEUE NUMPAD LOGIK ---
+        function handleNumpadInput(key) {
+            const inputField = document.getElementById('input-received');
+            let currentValue = inputField.value.replace(',', ''); // Entferne Komma für interne Logik
+
+            if (key === 'clear') {
+                inputField.value = "0,00";
+            } else if (key === ',') {
+                // Wenn noch kein Komma vorhanden, füge es nach den ersten Ziffern ein
+                if (!inputField.value.includes(',')) {
+                    // Entferne führende "0" oder "0,"
+                    if (currentValue === "000") currentValue = "";
+
+                    // Konvertiere zu Cent-Betrag, füge , hinzu
+                    let cents = currentValue.padStart(3, '0').slice(0, -2);
+                    let decimals = currentValue.padStart(3, '0').slice(-2);
+                    
+                    inputField.value = `${cents},${decimals}`;
+                }
+            } else { // Ist eine Ziffer 0-9
+                // Entferne die führende "0" oder "0," wenn man tippt
+                if (currentValue === "000" || inputField.value === "0,00") {
+                    currentValue = key;
+                } else {
+                    currentValue += key;
+                }
+
+                // Begrenze auf maximal 8 Ziffern insgesamt
+                if (currentValue.length > 8) currentValue = currentValue.substring(currentValue.length - 8);
+
+                // Formatiere den Wert (letzte zwei Ziffern als Dezimalstellen)
+                let integerPart = currentValue.length > 2 ? currentValue.slice(0, -2) : "0";
+                let decimalPart = currentValue.length > 1 ? currentValue.slice(-2) : "0" + currentValue.slice(-1);
+                
+                inputField.value = `${integerPart},${decimalPart}`;
+            }
+
+            calculateChange();
+        }
+
         function calculateChange() {
-            // Ersetze Komma durch Punkt für das Parsen, da type="number" Punkt erwartet
+            // Lese Wert und ersetze Komma durch Punkt für das Parsen
             let val = document.getElementById('input-received').value.replace(',', '.'); 
             let received = parseFloat(val);
             let btn = document.getElementById('btn-confirm-pay');
             let display = document.getElementById('change-display');
 
-            if (isNaN(received)) {
+            if (isNaN(received) || received < 0.01) {
                 display.innerText = "Ungültig";
                 btn.disabled = true;
                 return;
             }
 
             let change = received - currentTotal;
-            change = Math.round(change * 100) / 100; 
+            change = Math.round(change * 100) / 100; // Rundungsfehler korrigieren
 
             if (change >= -0.01) { 
                 display.innerText = "Rückgeld: " + change.toFixed(2).replace('.', ',') + " €";
@@ -504,9 +574,13 @@
                 price: USER_PRODUCTS[name]?.price || 0
             }));
 
+            let receivedAmount = parseFloat(document.getElementById('input-received').value.replace(',', '.'));
+
             let transactionData = {
                 items: itemsWithPrice,
                 total: currentTotal,
+                received: receivedAmount, // Speichere auch den erhaltenen Betrag
+                change: receivedAmount - currentTotal, // Speichere das Rückgeld
                 timestamp: new Date().toISOString()
             };
 
