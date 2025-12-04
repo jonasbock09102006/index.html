@@ -165,7 +165,7 @@
             </div>
   
             <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
-            <div id="auth-info" class="text-xs text-gray-500 text-right"></div>
+            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v1.8 (Fixes Loaded)</div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -539,7 +539,7 @@
             } else { 
                 kasseContent.style.display = 'none';
                 loginModal.style.display = 'flex'; 
-                authInfo.innerHTML = 'Kasse v1.7 (Full Feature)';
+                authInfo.innerHTML = 'Kasse v1.8 (Fixes Loaded)'; // NEU: Version aktualisiert
                 document.getElementById('db-status').style.display = 'none';
                 window.setDBStatus(false, "Offline"); 
                 window.resetBestellung();
