@@ -364,7 +364,7 @@
             document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
         }
 
-        // NEU (2b): Toast Funktion
+        // Toast Funktion
         function showToast(message, type = 'success', duration = 3000) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -735,7 +735,7 @@
             }
         }
 
-        // NEU: runDailyReport erhält 'type' (report/csv)
+        // runDailyReport erhält 'type' (report/csv)
         function runDailyReport(type) { 
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (window.cloudReportFunction) {
@@ -773,7 +773,7 @@
             deleteDoc,
             doc,
             updateDoc,
-            where // Hinzugefügt für den Tagesfilter
+            where 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         // =================================================================
         // ⚠️ HIER FIREBASE KONFIGURATION EINFÜGEN ⚠️
@@ -886,7 +886,7 @@
             window.showLoading(true);
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                window.showToast("Anmeldung erfolgreich!", 'success'); // NEU: Toast
+                window.showToast("Anmeldung erfolgreich!", 'success'); 
                 window.closeModal('login-modal');
             } catch (error) {
                 console.error("Login Fehler:", error);
@@ -901,7 +901,7 @@
             window.showLoading(true);
             try {
                 await createUserWithEmailAndPassword(auth, email, password);
-                window.showToast("Registrierung erfolgreich!", 'success'); // NEU: Toast
+                window.showToast("Registrierung erfolgreich!", 'success'); 
                 window.closeModal('registration-modal');
             } catch (error) {
                 console.error("Registrierungsfehler:", error);
@@ -915,7 +915,7 @@
             try {
                 await signOut(auth);
                 window.resetBestellung(); 
-                window.showToast("Sie wurden abgemeldet.", 'info'); // NEU: Toast
+                window.showToast("Sie wurden abgemeldet.", 'info'); 
             } catch (error) {
      
                 console.error("Logout Fehler:", error);
@@ -992,7 +992,7 @@
                 productData.price = parseFloat(productData.price); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
-                    window.showToast("Produkt hinzugefügt!", 'success'); // NEU: Toast
+                    window.showToast("Produkt hinzugefügt!", 'success'); 
                 } catch (e) {
                     console.error("Produkt speichern Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gespeichert werden.");
@@ -1006,7 +1006,7 @@
                 try {
                     const productDoc = doc(db, getProductsPath(userId), productId);
                     await deleteDoc(productDoc);
-                    window.showToast("Produkt gelöscht.", 'info'); // NEU: Toast
+                    window.showToast("Produkt gelöscht.", 'info'); 
                 } catch (e) {
                     console.error("Produkt löschen Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gelöscht werden.");
@@ -1025,7 +1025,7 @@
                         price: priceNumber 
                     });
                     
-                    window.showToast("Preis aktualisiert!", 'success'); // NEU: Toast
+                    window.showToast("Preis aktualisiert!", 'success'); 
 
                     const currentProduct = Object.values(window.USER_PRODUCTS).find(p => p.id === productId);
                     if (currentProduct) {
@@ -1059,31 +1059,26 @@
             }
         }
 
-        // NEU (3b): CSV-Konvertierung
-        function transactionsToCSV(transactions) {
-            let csv = "Timestamp;Total;Received;Change;Item;Count;Price\n"; // Semikolon als Trennzeichen für bessere Excel-Kompatibilität
+        // NEU: Aggregiert die Produktstatistik in ein CSV-Format
+        function summarizedTransactionsToCSV(productStats) {
+            let csv = "Produktname;Gesamtstueckzahl;Gesamterloes (€)\n"; // Semikolon als Trennzeichen
+            
+            // Sortierung nach Produktname für bessere Übersicht
+            const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
 
-            transactions.forEach(d => {
-                // Konvertiere Beträge in deutsches Format (Komma)
-                const base = `${d.timestamp};${d.total.toFixed(2)};${d.received.toFixed(2)};${d.change.toFixed(2)}`;
-                
-                if (d.items && Array.isArray(d.items) && d.items.length > 0) {
-                    d.items.forEach(item => {
-                        // Zeilenumbruch und Semikolon im Namen entfernen
-                        const cleanName = item.name.replace(/(\r\n|\n|\r|;)/gm," ");
-                        csv += `${base};${cleanName};${item.count};${item.price.toFixed(2)}\n`;
-                    });
-                } else {
-                    csv += `${base};N/A;0;0.00\n`;
-                }
+            sortedProducts.forEach(([name, stats]) => {
+                // Zeilenumbruch und Semikolon im Namen entfernen
+                const cleanName = name.replace(/(\r\n|\n|\r|;)/gm," ");
+                // stats.count ist die Stückzahl, stats.revenue der Erlös
+                csv += `${cleanName};${stats.count};${stats.revenue.toFixed(2)}\n`;
             });
 
             return csv.replace(/\./g, ','); // Ersetze Dezimalpunkt durch Komma
         }
 
-        // NEU (3b): CSV-Download-Funktion
+        // CSV-Download-Funktion
         function downloadReportCSV(csvContent) {
-            const filename = `Tagesabschluss_${new Date().toISOString().slice(0, 10)}.csv`;
+            const filename = `Tagesabschluss_Produkte_${new Date().toISOString().slice(0, 10)}.csv`;
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             
@@ -1102,14 +1097,14 @@
         }
 
 
-        // NEU (3a & 3b): Überarbeitete Berichtsfunktion mit Zeitfilter und Typ-Auswahl
-        async function generateReport(type) { // type: 'report' oder 'csv'
+        // Überarbeitete Berichtsfunktion mit Aggregation
+        async function generateReport(type) { 
             if (!userId || !db) return;
             window.showLoading(true);
             try {
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
                 
-                // --- 3a) Zeitfilter: Nur heutige Transaktionen ---
+                // Zeitfilter: Nur heutige Transaktionen
                 const today = new Date();
                 today.setHours(0, 0, 0, 0); 
                 const startOfTodayISO = today.toISOString(); 
@@ -1121,22 +1116,28 @@
                 
                 const snapshot = await getDocs(q);
                 
-                const transactions = [];
                 let totalSum = 0;
                 let count = 0;
-                let productStats = {};
+                // NEU: productStats speichert Zähler und Erlös
+                let productStats = {}; 
 
                 snapshot.forEach(doc => {
                     let d = doc.data();
-                    // Firebase speichert Zahlen als double, aber es ist sicherer, parseFloat zu verwenden, wenn man sie aus der DB holt
                     d.total = parseFloat(d.total); 
                     totalSum += d.total;
                     count++;
-                    transactions.push(d); // Für CSV
 
                     if(d.items && Array.isArray(d.items)) {
                         d.items.forEach(item => {
-                             productStats[item.name] = (productStats[item.name] || 0) + item.count;
+                             const name = item.name;
+                             const lineRevenue = item.count * item.price;
+                             
+                             if (!productStats[name]) {
+                                 productStats[name] = { count: 0, revenue: 0.0 };
+                             }
+                             productStats[name].count += item.count;
+                             // Korrekte Rundung des Gesamterlöses
+                             productStats[name].revenue = Math.round((productStats[name].revenue + lineRevenue) * 100) / 100;
                         });
                     }
                 });
@@ -1147,7 +1148,8 @@
                 }
 
                 if(type === 'csv') {
-                    const csvContent = transactionsToCSV(transactions);
+                    // NEU: Übergabe des aggregierten productStats-Objekts
+                    const csvContent = summarizedTransactionsToCSV(productStats);
                     downloadReportCSV(csvContent);
                     return;
                 }
@@ -1157,8 +1159,11 @@
                 report += `Anzahl Buchungen: ${count}\n`;
                 report += `GESAMTSUMME: ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
                 report += "Verkaufte Artikel:\n";
-                for(let [p, c] of Object.entries(productStats)) {
-                    report += `- ${p}: ${c}x\n`;
+                
+                // NEU: Iteration über die neue Struktur
+                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+                for(const [name, stats] of sortedProducts) {
+                    report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} €)\n`;
                 }
 
                 window.showInfo("Tagesabschluss", report);
