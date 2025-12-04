@@ -233,8 +233,8 @@
             <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Zahlung abschließen</h3>
             <div id="finalize-total-display" class="text-lg font-bold text-red-700 mb-4 text-center">...</div>
 
-            <button onclick="openBewirtungModal()" class="w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 mb-2 shadow-lg">
-                Mit Kassenzettel (Bewirtungsbeleg)
+            <button onclick="openPaymentModal(true)" class="w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 mb-2 shadow-lg">
+                Mit Bewirtungsbeleg (Zum Ausfüllen)
             </button>
             <button onclick="openPaymentModal(false)" class="w-full p-3 rounded-lg font-bold text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
                 Ohne Kassenzettel
@@ -244,26 +244,6 @@
         </div>
     </div>
     
-    <div id="bewirtung-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-sm"> 
-            <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Bewirtungsdetails</h3>
-            <p class="text-sm text-gray-600 mb-4">Erforderlich für den steuerlichen Bewirtungsbeleg.</p>
-            
-            <label for="bewirtung-host" class="block text-sm font-medium text-gray-700">Gastgeber (Bewirtender):</label>
-            <input type="text" id="bewirtung-host" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm mb-3" placeholder="Vorname Nachname">
-            
-            <label for="bewirtung-reason" class="block text-sm font-medium text-gray-700">Anlass der Bewirtung (Geschäftszweck):</label>
-            <textarea id="bewirtung-reason" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm h-16 mb-4" placeholder="z.B. Kundengespräch mit Fa. Mustermann zur Jahresplanung"></textarea>
-
-            <button onclick="confirmBewirtungDetails()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 mb-2 shadow-lg">
-                Weiter zur Zahlung
-            </button>
-            <button onclick="closeModal('bewirtung-modal'); openFinalizeModal();" class="w-full p-1 text-xs text-gray-500">Abbrechen</button>
-        </div>
-    </div>
-
-
     <div id="payment-modal" style="display: none;"
     class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
@@ -383,7 +363,6 @@
         // NEU: Verwenden Sie Brutto- und Steuerdetails
         let currentTotalGross = 0.0; 
         let currentTaxDetails = {}; // { '19%': { net: 0, tax: 0 }, '7%': { net: 0, tax: 0 } }
-        let bewirtungData = null; // Speichert Bewirtungsdetails temporär
         
         let currentReceivedString = "0"; 
 
@@ -429,7 +408,7 @@
             } else { 
                 kasseContent.style.display = 'none';
                 loginModal.style.display = 'flex'; // Zeigt das Login-Modal
-                authInfo.innerHTML = 'Kasse v1.5 (mit Bewirtungsbeleg)';
+                authInfo.innerHTML = 'Kasse v1.6 (Bewirtungsbeleg manuell)';
                 document.getElementById('db-status').style.display = 'none';
                 window.setDBStatus(false, "Offline"); // Setzt DB-Status zurück
                 window.resetBestellung();
@@ -812,45 +791,16 @@
             document.getElementById('finalize-modal').style.display = 'flex';
         }
         
-        // NEU: Öffnet das Bewirtungs-Modal
-        function openBewirtungModal() {
-            closeModal('finalize-modal');
-            document.getElementById('bewirtung-modal').style.display = 'flex';
-            // Vorbelegung mit Standardwerten oder leeren
-            document.getElementById('bewirtung-host').value = '';
-            document.getElementById('bewirtung-reason').value = '';
-        }
+        // Bewirtungs-Modals wurden entfernt.
         
-        // NEU: Bestätigt Bewirtungs-Details und geht zur Zahlung
-        function confirmBewirtungDetails() {
-            const host = document.getElementById('bewirtung-host').value.trim();
-            const reason = document.getElementById('bewirtung-reason').value.trim();
-
-            if (!host || !reason) {
-                return showInfo("Eingabe fehlt", "Bitte geben Sie den Gastgeber und den Anlass der Bewirtung ein.");
-            }
-
-            bewirtungData = { host, reason }; // Speichert die Daten temporär
-            openPaymentModal(true); // Ruft Zahlung mit Druck-Flag auf
-        }
-
         // Geändert: Öffnet das Zahlungs-Modal
         function openPaymentModal(printReceipt) { 
             closeModal('finalize-modal'); 
-            closeModal('bewirtung-modal'); // Sicherstellen, dass Bewirtung-Modal geschlossen wird
             
             // Speichert die Entscheidung für die Transaktion
             document.getElementById('payment-modal').dataset.printReceipt = printReceipt; 
 
-            // Wenn Drucken, speichere Bewirtungsdaten im Dataset (nur falls vorhanden)
-            if (printReceipt && bewirtungData) {
-                document.getElementById('payment-modal').dataset.host = bewirtungData.host;
-                document.getElementById('payment-modal').dataset.reason = bewirtungData.reason;
-            } else {
-                // Setze auf leer, wenn kein Druck (oder bewirtungData nicht gesetzt)
-                document.getElementById('payment-modal').dataset.host = '';
-                document.getElementById('payment-modal').dataset.reason = '';
-            }
+            // HIER ist keine Bewirtungs-Daten-Erfassung mehr nötig.
 
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
             
@@ -954,10 +904,12 @@
                 vatRate: USER_PRODUCTS[name]?.vatRate || VAT_RATES.standard // NEU
             }));
             
-            // Liest die Druck-Entscheidung und die Bewirtungsdetails aus dem Modal-Dataset
+            // Liest die Druck-Entscheidung aus dem Modal-Dataset
             const printReceipt = document.getElementById('payment-modal').dataset.printReceipt === 'true'; 
-            const host = document.getElementById('payment-modal').dataset.host || 'Nicht angegeben';
-            const reason = document.getElementById('payment-modal').dataset.reason || 'Nicht angegeben';
+            
+            // NEU: Platzhalter für manuelle Eingabe
+            const hostPlaceholder = "_________________________";
+            const reasonPlaceholder = "__________________________________________________"; 
 
             let receivedAmount = 0;
             let changeAmount = 0;
@@ -982,13 +934,13 @@
                 timestamp: new Date().toISOString()
             };
 
-            // NEU: Kassenzettel drucken (mit Bewirtungsdetails)
+            // NEU: Kassenzettel drucken (mit Platzhaltern)
             if (printReceipt) {
-                printKassenzettel(transactionData, { host, reason });
+                // Übergabe der Platzhalter an die Druckfunktion
+                printKassenzettel(transactionData, { host: hostPlaceholder, reason: reasonPlaceholder });
             }
 
             resetBestellung();
-            bewirtungData = null; // Globale Variable zurücksetzen
 
             if (window.cloudSaveFunction) {
                 window.cloudSaveFunction(transactionData); 
@@ -997,7 +949,7 @@
             }
         }
         
-        // NEU: Kassenzettel Druckfunktion, optimiert als Bewirtungsbeleg
+        // NEU: Kassenzettel Druckfunktion, optimiert als Bewirtungsbeleg mit Leerfeldern
         function printKassenzettel(transactionData, bewirtungDetails) {
             
             const FIRMA_NAME = FIRMA_DETAILS.NAME;
@@ -1017,12 +969,14 @@
                         <strong style="font-size: 10pt;">BEWIRTUNGSBELEG</strong><br>
                         Datum: ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}<br>
                         <hr>
-                        <div class="line" style="font-size: 8pt; margin-bottom: 2px;">
-                            <span class="item-name">Gastgeber:</span> 
-                            <span class="item-price">${bewirtungDetails.host}</span>
+                        
+                        <div style="font-size: 8pt; text-align: left; margin-bottom: 5px;">
+                            <strong style="font-weight: bold;">Gastgeber (Bewirtender):</strong><br>
+                            ${bewirtungDetails.host}<br>
                         </div>
                         <div style="font-size: 8pt; text-align: left; margin-bottom: 5px;">
-                            Anlass: ${bewirtungDetails.reason}<br>
+                            <strong style="font-weight: bold;">Anlass der Bewirtung:</strong><br>
+                            ${bewirtungDetails.reason}<br>
                         </div>
                         <hr>
                     </div>
@@ -1098,10 +1052,13 @@
                     </div>
                     <div class="footer center" style="margin-top: 10px;">
                         <hr>
-                        <strong style="font-size: 8pt;">Unterschrift des Gastgebers/Bewirteten:</strong><br>
+                        <strong style="font-size: 8pt;">Namen der bewirteten Personen:</strong><br>
                         <br>
                         __________________________________<br>
-                        (Ort, Datum und Unterschrift)<br>
+                        <hr>
+                        <strong style="font-size: 8pt;">Ort, Datum und Unterschrift (Gastgeber):</strong><br>
+                        <br>
+                        __________________________________<br>
                         <hr>
                         Vielen Dank für Ihren Besuch!
                     </div>
@@ -1120,7 +1077,7 @@
             
             setTimeout(() => {
                 printWindow.print();
-                // printWindow.close(); // Auskommentiert, damit der Nutzer ihn bei Bedarf speichern kann
+                // printWindow.close(); 
             }, 300); // Kurze Verzögerung, um Rendering zu ermöglichen
         }
 
@@ -1465,7 +1422,7 @@
             csv += `\nSteuerzusammenfassung:\n`;
             csv += `Steuersatz;Netto (€);Steuer (€)\n`;
             
-            Object.entries(taxSummary).sort(([rateA], [rateB]) => parseFloat(rateB) - parseFloat(rateA)).forEach(([rate, details]) => {
+            Object.entries(taxSummary).sort(([rateA], [rateB]) => parseFloat(b.replace('%', '')) - parseFloat(a.replace('%', ''))).forEach(([rate, details]) => {
                  csv += `${rate};${details.net.toFixed(2)};${details.tax.toFixed(2)}\n`;
             });
 
@@ -1588,7 +1545,7 @@
                 
                 report += "Steuerzusammenfassung (Brutto = Netto + Steuer):\n";
                 // Sortiere nach Steuersatz (19% vor 7%)
-                Object.entries(taxSummary).sort(([rateA], [rateB]) => parseFloat(rateB) - parseFloat(rateA)).forEach(([rate, details]) => {
+                Object.entries(taxSummary).sort(([rateA], [rateB]) => parseFloat(b.replace('%', '')) - parseFloat(a.replace('%', ''))).forEach(([rate, details]) => {
                     report += `  - ${rate} Netto: ${details.net.toFixed(2).replace('.', ',')} €\n`;
                     report += `  - ${rate} Steuer: ${details.tax.toFixed(2).replace('.', ',')} €\n`;
                 });
@@ -1596,7 +1553,7 @@
                 
                 report += "Verkaufte Artikel:\n";
                 
-                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(b.name));
+                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
                 for(const [name, stats] of sortedProducts) {
                     report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} € Brutto)\n`;
                 }
