@@ -379,7 +379,12 @@
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Kategorie:</label>
-                        <input type="text" id="product-category" required value="Standard" class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="z.B. Getränke">
+                        <select id="product-category" required class="w-full px-2 py-1 border rounded-lg text-sm bg-white">
+                            <option value="Trinken">Trinken</option>
+                            <option value="Essen">Essen</option>
+                            <option value="Sonstiges">Sonstiges</option>
+                            <option value="Standard">Standard</option>
+                        </select>
                     </div>
 
                     <div class="md:col-span-5">
@@ -488,8 +493,134 @@
         };
 
         // --- AUTH/DB Status Logik (unverändert) ---
-        // ... (loadFirmDetails, openSettingsModal, saveFirmDetails, setReportDateToday, updateAppView, handleLoginSubmit, handleRegisterSubmit, handleSignOut, showLoading, showToast, setDBStatus, openLoginModal, openRegistrationModal, closeModal)
+        function loadFirmDetails() {
+            const savedDetails = localStorage.getItem('kasse_firm_details');
+            if (savedDetails) {
+                try {
+                    const loaded = JSON.parse(savedDetails);
+                    FIRMA_DETAILS = { ...FIRMA_DETAILS, ...loaded };
+                } catch (e) {
+                    console.error("Fehler beim Laden der Firmendetails aus localStorage", e);
+                }
+            }
+        }
+
+        function saveFirmDetails() {
+            const newDetails = {
+                NAME: document.getElementById('setting-firm-name').value.trim(),
+                ADRESSE: document.getElementById('setting-firm-adresse').value.trim(),
+                STEUER_NR: document.getElementById('setting-firm-steuer-nr').value.trim(),
+                TELEFON: document.getElementById('setting-firm-telefon').value.trim()
+            };
+
+            FIRMA_DETAILS = { ...FIRMA_DETAILS, ...newDetails };
+            localStorage.setItem('kasse_firm_details', JSON.stringify(FIRMA_DETAILS));
+
+            closeModal('settings-modal');
+            showToast("Belegkopf-Details gespeichert!", 'success');
+        }
+
+
+        function setReportDateToday() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('report-date').value = today;
+        }
+
+        function updateAppView(state, userDisplay = '') {
+            const kasseContent = document.getElementById('kasse-content');
+            const loginModal = document.getElementById('login-modal');
+            const authInfo = document.getElementById('auth-info');
+
+            if (state === 'logged_in') {
+                kasseContent.style.display = 'grid';
+                loginModal.style.display = 'none'; 
+                authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Abmelden</button>`;
+                document.getElementById('db-status').style.display = 'block';
+            } else { 
+                kasseContent.style.display = 'none';
+                loginModal.style.display = 'flex'; 
+                authInfo.innerHTML = 'Kasse v1.7 (Full Feature)';
+                document.getElementById('db-status').style.display = 'none';
+                window.setDBStatus(false, "Offline"); 
+                window.resetBestellung();
+            }
+        }
         
+        function openLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('registration-modal').style.display = 'none';
+        }
+        
+        function openRegistrationModal() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('registration-modal').style.display = 'flex';
+        }
+
+        function handleLoginSubmit() {
+            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            window.authService.signIn(email, password);
+        }
+
+        function handleRegisterSubmit() {
+            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            if (password.length < 6) {
+                return showInfo("Fehler", "Das Passwort muss mindestens 6 Zeichen lang sein.");
+            }
+            window.authService.register(email, password);
+        }
+
+        function handleSignOut() {
+            if (!window.authService) return;
+            window.authService.signOut();
+        }
+
+        function showLoading(show) {
+            document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        function showToast(message, type = 'success', duration = 3000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} opacity-0`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('opacity-0');
+                toast.style.opacity = '1';
+            }, 10);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, duration);
+        }
+
+
+        function setDBStatus(isActive, message) {
+            kasseActive = isActive;
+            const statusElement = document.getElementById('db-status');
+
+            statusElement.innerText = message;
+
+            if (isActive) {
+                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-green-600 text-white shadow-sm";
+            } else if (message.includes("Konfiguration fehlt") || message.includes("API Key fehlt")) {
+                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-800 text-white shadow-sm";
+            } else {
+                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 text-white shadow-sm";
+            }
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
         // NEU: Aktualisiert die Anzeige des Mengen-Numpads
         function updateQuantityDisplay() {
             document.getElementById('quantity-display').innerText = currentQuantityInput;
@@ -586,6 +717,7 @@
             const allButton = `<button onclick="setCategoryFilter('Alle')" class="p-2 text-sm font-bold rounded-lg transition-colors ${currentCategoryFilter === 'Alle' ? 'bg-red-700 text-white shadow-md' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}">Alle</button>`;
             container.innerHTML += allButton;
 
+            // Sortiert die Kategorien für konsistente Darstellung
             [...categories].sort().forEach(category => {
                 const isActive = currentCategoryFilter === category;
                 const button = `<button onclick="setCategoryFilter('${category}')" class="p-2 text-sm font-bold rounded-lg transition-colors ${isActive ? 'bg-red-700 text-white shadow-md' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}">${category}</button>`;
@@ -596,7 +728,9 @@
         // NEU: Setzt den Kategorie-Filter und rendert neu
         function setCategoryFilter(category) {
             currentCategoryFilter = category;
-            renderCategoryTabs(Object.keys(USER_PRODUCTS).map(name => USER_PRODUCTS[name].category)); // Re-render Tabs, um den aktiven Zustand zu aktualisieren
+            // Stelle sicher, dass die Liste der Kategorien für das Re-rendering aktuell ist
+            const allCategories = Object.keys(USER_PRODUCTS).map(name => USER_PRODUCTS[name].category);
+            renderCategoryTabs(new Set(allCategories)); 
             renderButtons(); // Re-render Buttons mit neuem Filter
         }
 
@@ -617,7 +751,7 @@
                 const product = USER_PRODUCTS[name];
                 let price = product.price;
 
-                let colorClass = (name.toLowerCase().includes("wein") || name.toLowerCase().includes("punsch")) ? "bg-red-700 hover:bg-red-800" : "bg-orange-800 hover:bg-orange-900";
+                let colorClass = (name.toLowerCase().includes("wein") || name.toLowerCase().includes("punsch") || product.category.toLowerCase().includes("trinken")) ? "bg-red-700 hover:bg-red-800" : "bg-orange-800 hover:bg-orange-900";
                 
                 let btn = document.createElement('button');
                 btn.className = `product-btn p-2 rounded-lg font-bold text-sm text-white shadow-md transition-colors ${colorClass}`;
@@ -668,11 +802,11 @@
             // NEU: Menge zurücksetzen
             currentQuantityInput = 1;
             updateQuantityDisplay();
-
+            showToast(`Artikel ${name} ${quantity}x gebucht.`, 'success'); // Feedback
             updateUI();
         }
         
-        // NEU: Entfernt ein einzelnes Stück eines bestimmten Artikels
+        // NEU: Entfernt ein einzelnes Stück eines bestimmten Artikels (Storno-Basis)
         function removeItemFromOrder(name) {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (!currentOrder[name] || currentOrder[name] <= 0) return;
@@ -716,11 +850,14 @@
             
             // Aufräumen von 0-Einträgen
             if (currentOrder[name] <= 0) delete currentOrder[name];
-
+            
+            showToast(`1x ${name} storniert.`, 'info'); // FIX: Feedback hinzugefügt
+            
             updateUI();
         }
 
 
+        // FIX: Die Hauptfunktion für den Storno-Button
         function undoLastAction() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (orderHistory.length === 0) return showInfo("Info", "Nichts zu stornieren.");
@@ -729,8 +866,7 @@
             // Ruft die neue gezielte Entfernung für den letzten Artikel auf
             removeItemFromOrder(lastItem); 
             
-            // Die Logik von undoLastAction ist nun in removeItemFromOrder enthalten, 
-            // es reicht der Aufruf oben, da removeItemFromOrder die orderHistory auch bereinigt.
+            // Der Toast ist jetzt in removeItemFromOrder enthalten.
         }
 
         function resetBestellung() {
@@ -876,20 +1012,25 @@
                 return showInfo("Fehler", "Ungültige MwSt.-Gruppe. Verwenden Sie 'standard' oder 'reduced'.");
             }
             
-            const newCategory = prompt(`Neue Kategorie für ${name} eingeben:`, currentCategory);
+            const newCategory = prompt(`Neue Kategorie für ${name} eingeben (Trinken/Essen/Sonstiges/Standard):`, currentCategory);
             if (newCategory === null || newCategory.trim() === "") {
                 return showInfo("Fehler", "Kategorie darf nicht leer sein.");
             }
+            
+            // Optional: Prüfen, ob die Kategorie gültig ist
+            const validCategories = ["Trinken", "Essen", "Sonstiges", "Standard"];
+            if (!validCategories.includes(newCategory.trim())) {
+                if (!confirm(`Die Kategorie "${newCategory.trim()}" ist keine Standard-Kategorie. Trotzdem verwenden?`)) {
+                    return;
+                }
+            }
+
 
             window.productsDB.updateProduct(id, newPrice, newVatGroup, newCategory);
         }
 
-        // NEU: Füllt das Kategorie-Feld beim Öffnen mit einem Standardwert
+        // NEU: Füllt die Firmendetails und setzt Kategorie-Dropdown
         function openSettingsModal() {
-            // ... (bestehende Logik) ...
-            document.getElementById('product-category').value = 'Standard'; 
-            // ... (bestehende Logik) ...
-            
             // Füllt die Felder mit gespeicherten Werten
             document.getElementById('setting-firm-name').value = FIRMA_DETAILS.NAME;
             document.getElementById('setting-firm-adresse').value = FIRMA_DETAILS.ADRESSE;
@@ -904,22 +1045,19 @@
             const name = document.getElementById('product-name').value.trim();
             const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
             const vatGroup = document.getElementById('product-vat-group').value; 
-            const category = document.getElementById('product-category').value.trim(); // NEU
+            const category = document.getElementById('product-category').value.trim(); 
             
             if (name === "" || isNaN(price) || price <= 0 || category === "") {
-                return showInfo("Eingabefehler", "Bitte gültigen Namen, Preis, MwSt. und Kategorie eingeben.");
+                return showInfo("Eingabefehler", "Bitte gültigen Namen, Preis, MwSt. und Kategorie auswählen.");
             }
 
-            const productData = { name: name, price: price, vatGroup: vatGroup, category: category }; // NEU
+            const productData = { name: name, price: price, vatGroup: vatGroup, category: category }; 
             
             await window.productsDB.saveProduct(productData);
             
             document.getElementById('product-form').reset();
-            document.getElementById('product-category').value = 'Standard'; // Setze Kategorie zurück
+            // Die Auswahl im Dropdown bleibt, was gut ist.
             document.getElementById('product-name').focus();
-            
-            // renderProductList wird über den Firestore Listener in setProducts aufgerufen
-            // renderProductList(); 
         }
 
         // --- Transaktions-Storno Logik (NEU) ---
@@ -999,137 +1137,6 @@
             document.getElementById('info-title').innerText = title;
             document.getElementById('info-text').innerText = text;
             document.getElementById('info-modal').style.display = 'flex';
-        }
-
-        // --- HINZUFÜGEN SIE HIER DIE UNVERÄNDERTE ZWISCHENLOGIK (loadFirmDetails etc.) ---
-        // ... (Der Einfachheit halber in der Realität hier belassen, aber im Output ausgelassen)
-        
-        function loadFirmDetails() {
-            const savedDetails = localStorage.getItem('kasse_firm_details');
-            if (savedDetails) {
-                try {
-                    const loaded = JSON.parse(savedDetails);
-                    FIRMA_DETAILS = { ...FIRMA_DETAILS, ...loaded };
-                } catch (e) {
-                    console.error("Fehler beim Laden der Firmendetails aus localStorage", e);
-                }
-            }
-        }
-
-        function saveFirmDetails() {
-            const newDetails = {
-                NAME: document.getElementById('setting-firm-name').value.trim(),
-                ADRESSE: document.getElementById('setting-firm-adresse').value.trim(),
-                STEUER_NR: document.getElementById('setting-firm-steuer-nr').value.trim(),
-                TELEFON: document.getElementById('setting-firm-telefon').value.trim()
-            };
-
-            FIRMA_DETAILS = { ...FIRMA_DETAILS, ...newDetails };
-            localStorage.setItem('kasse_firm_details', JSON.stringify(FIRMA_DETAILS));
-
-            closeModal('settings-modal');
-            showToast("Belegkopf-Details gespeichert!", 'success');
-        }
-
-
-        function setReportDateToday() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('report-date').value = today;
-        }
-
-        function updateAppView(state, userDisplay = '') {
-            const kasseContent = document.getElementById('kasse-content');
-            const loginModal = document.getElementById('login-modal');
-            const authInfo = document.getElementById('auth-info');
-
-            if (state === 'logged_in') {
-                kasseContent.style.display = 'grid';
-                loginModal.style.display = 'none'; 
-                authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Abmelden</button>`;
-                document.getElementById('db-status').style.display = 'block';
-            } else { 
-                kasseContent.style.display = 'none';
-                loginModal.style.display = 'flex'; 
-                authInfo.innerHTML = 'Kasse v1.7 (Full Feature)';
-                document.getElementById('db-status').style.display = 'none';
-                window.setDBStatus(false, "Offline"); 
-                window.resetBestellung();
-            }
-        }
-        
-        function openLoginModal() {
-            document.getElementById('login-modal').style.display = 'flex';
-            document.getElementById('registration-modal').style.display = 'none';
-        }
-        
-        function openRegistrationModal() {
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('registration-modal').style.display = 'flex';
-        }
-
-        function handleLoginSubmit() {
-            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            window.authService.signIn(email, password);
-        }
-
-        function handleRegisterSubmit() {
-            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            
-            if (password.length < 6) {
-                return showInfo("Fehler", "Das Passwort muss mindestens 6 Zeichen lang sein.");
-            }
-            window.authService.register(email, password);
-        }
-
-        function handleSignOut() {
-            if (!window.authService) return;
-            window.authService.signOut();
-        }
-
-        function showLoading(show) {
-            document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
-        }
-
-        function showToast(message, type = 'success', duration = 3000) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type} opacity-0`;
-            toast.textContent = message;
-
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.remove('opacity-0');
-                toast.style.opacity = '1';
-            }, 10);
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.addEventListener('transitionend', () => toast.remove());
-            }, duration);
-        }
-
-
-        function setDBStatus(isActive, message) {
-            kasseActive = isActive;
-            const statusElement = document.getElementById('db-status');
-
-            statusElement.innerText = message;
-
-            if (isActive) {
-                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-green-600 text-white shadow-sm";
-            } else if (message.includes("Konfiguration fehlt") || message.includes("API Key fehlt")) {
-                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-800 text-white shadow-sm";
-            } else {
-                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 text-white shadow-sm";
-            }
-        }
-        
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
         }
         
         function openFinalizeModal() {
@@ -1457,13 +1464,13 @@
         let unsubscribeProducts = null;
         let isDefaultProductsAdded = false;
 
-        // NEU: Default Products mit Kategorie
+        // GEÄNDERT: Default Products mit neuen Kategorien
         const DEFAULT_PRODUCTS = [
-            { name: "Glühwein", price: 3.50, vatGroup: 'standard', category: 'Heißgetränke' },
-            { name: "Kinderpunsch", price: 2.50, vatGroup: 'standard', category: 'Heißgetränke' },
-            { name: "Bratwurst", price: 4.00, vatGroup: 'reduced', category: 'Speisen' }, // 7%
-            { name: "Pommes", price: 3.00, vatGroup: 'reduced', category: 'Speisen' }, // 7%
-            { name: "Wasser", price: 1.50, vatGroup: 'reduced', category: 'Kaltgetränke' } // 7%
+            { name: "Glühwein", price: 3.50, vatGroup: 'standard', category: 'Trinken' },
+            { name: "Kinderpunsch", price: 2.50, vatGroup: 'standard', category: 'Trinken' },
+            { name: "Bratwurst", price: 4.00, vatGroup: 'reduced', category: 'Essen' }, // 7%
+            { name: "Pommes", price: 3.00, vatGroup: 'reduced', category: 'Essen' }, // 7%
+            { name: "Wasser", price: 1.50, vatGroup: 'reduced', category: 'Trinken' } // 7%
         ];
 
         async function initDB() {
@@ -1639,7 +1646,7 @@
                 if (!userId || !db) return;
                 window.showLoading(true);
                 productData.price = parseFloat(productData.price); 
-                productData.category = productData.category.trim(); // NEU
+                productData.category = productData.category.trim(); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
                     window.showToast("Produkt hinzugefügt!", 'success'); 
@@ -1664,7 +1671,7 @@
                     window.showLoading(false);
                 }
             },
-            updateProduct: async (productId, newPrice, newVatGroup, newCategory) => { // NEU: newCategory hinzugefügt
+            updateProduct: async (productId, newPrice, newVatGroup, newCategory) => { 
                 if (!userId || !db) return;
                 window.showLoading(true);
                 try {
@@ -1674,7 +1681,7 @@
                     await updateDoc(productDocRef, {
                         price: priceNumber, 
                         vatGroup: newVatGroup,
-                        category: newCategory.trim() // NEU
+                        category: newCategory.trim() 
                     });
                     
                     window.showToast("Produkt aktualisiert!", 'success'); 
