@@ -534,8 +534,8 @@
             }
         }
 
-
-        function handleProductFormSubmit() { 
+        // 🛑 WICHTIGE ÄNDERUNG: ASYNC HINZUGEFÜGT UND RENDER CALL
+        async function handleProductFormSubmit() { 
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
             const name = document.getElementById('product-name').value.trim();
             const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
@@ -545,10 +545,15 @@
             }
 
             const productData = { name: name, price: price }; 
-            window.productsDB.saveProduct(productData);
+            
+            // Warten, bis der Speichervorgang abgeschlossen ist
+            await window.productsDB.saveProduct(productData);
             
             document.getElementById('product-form').reset();
             document.getElementById('product-name').focus();
+            
+            // Manuelle Aktualisierung der Ansicht
+            renderProductList(); 
         }
 
         function confirmDeleteProduct(id, name) { 
@@ -708,7 +713,7 @@
         // ⚠️ HIER FIREBASE KONFIGURATION EINFÜGEN ⚠️
         // =================================================================
         const PLACEHOLDER_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc", // Platzhalter
+            apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc", 
             authDomain: "kassensystem-85412.firebaseapp.com",
             projectId: "kassensystem-85412",
             storageBucket: "kassensystem-85412.firebaseApp.com",
@@ -854,11 +859,9 @@
 
         function getFirebaseErrorText(errorCode) {
             switch (errorCode) {
-                // HIER IST DER FIX FÜR DEN NEUEN ALLGEMEINEN FEHLERCODE
                 case 'auth/invalid-credential':
                     return 'Die Kombination aus E-Mail und Passwort ist ungültig. Bitte überprüfen Sie Ihre Eingaben.';
                 
-                // Bestehende Fehlercodes für Logikfehler
                 case 'auth/wrong-password':
                     return 'Falsches Passwort.';
                 case 'auth/user-not-found':
@@ -866,7 +869,6 @@
                 case 'auth/invalid-email':
                     return 'Ungültiges E-Mail-Format.';
                 
-                // Fehlercodes bei Registrierung
                 case 'auth/email-already-in-use':
                     return 'Diese E-Mail-Adresse wird bereits verwendet.';
                 case 'auth/weak-password':
@@ -887,7 +889,6 @@
             unsubscribeProducts = onSnapshot(productsCol, async (snapshot) => {
                 const products = snapshot.docs.map(doc => ({
                     id: doc.id,
-                    // Stellt sicher, dass der Preis als Zahl (Float) geladen wird.
                     price: parseFloat(doc.data().price), 
                     name: doc.data().name,
                 }));
@@ -902,13 +903,18 @@
 
             }, (error) => {
                 console.error("Produkt-Listener Fehler:", error);
-                window.showInfo("Datenbankfehler", "Konnte Produktliste nicht laden: " + error.message);
+                
+                // 🛑 FEHLERDIAGNOSE für fehlgeschlagenen LESEZUGRIFF
+                if (error.code === 'permission-denied') {
+                    window.showInfo("Datenbankfehler: Lesezugriff verweigert!", "Die Sicherheitsregeln in der Firebase Konsole verhindern das Laden der Produkte. Bitte die Firestore 'Rules' überprüfen. (Lesezugriff muss für Ihre UID erlaubt sein)");
+                } else {
+                    window.showInfo("Datenbankfehler", "Konnte Produktliste nicht laden: " + error.message);
+                }
             });
         }
         
         async function addDefaultProductsIfEmpty(id) {
              const productsCol = collection(db, getProductsPath(id));
-            // Preise als Floats speichern
             for (const product of DEFAULT_PRODUCTS) {
                  await addDoc(productsCol, { name: product.name, price: product.price }); 
             }
@@ -918,7 +924,6 @@
             saveProduct: async (productData) => {
                 if (!userId || !db) return;
                 window.showLoading(true);
-                // Speichert als Float/Number
                 productData.price = parseFloat(productData.price); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
@@ -946,7 +951,6 @@
                 if (!userId || !db) return;
                 window.showLoading(true);
                 try {
-                    // Speichert als Float/Number
                     const priceNumber = parseFloat(newPrice); 
                     const productDocRef = doc(db, getProductsPath(userId), productId);
                     
