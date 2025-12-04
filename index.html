@@ -7,41 +7,45 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Grundlegendes Styling */
-        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        body { font-family: 'Inter', sans-serif;
+        background-color: #f7f7f7; }
         /* Höhe der Beleg-Anzeige weiter begrenzen */
-        #receipt-content { overflow-y: auto; max-height: 40vh; } 
+        #receipt-content { overflow-y: auto;
+        max-height: 40vh; } 
         /* Klick-Effekt für Buttons */
-        .product-btn:active { transform: scale(0.98); }
+        .product-btn:active { transform: scale(0.98);
+        }
 
         /* Numpad Button Style (QUADRATISCH) */
         .numpad-btn {
             /* Geändert: Padding p-2 -> p-1 und Schriftgröße text-lg -> text-base für kleinere Blöcke */
             @apply w-full p-1 rounded-xl font-extrabold text-base shadow-lg transition-colors;
-            line-height: 1; /* Für bessere Zentrierung */
-            display: flex; /* Für bessere Zentrierung */
+        line-height: 1; /* Für bessere Zentrierung */
+            display: flex;
             justify-content: center;
             align-items: center;
-            aspect-ratio: 1 / 1; /* Erzwingt eine quadratische Form */
+        aspect-ratio: 1 / 1; /* Erzwingt eine quadratische Form */
         }
-        .numpad-btn:active { transform: scale(0.95); }
+        .numpad-btn:active { transform: scale(0.95);
+        }
 
         /* LOADING OVERLAY */
         #loading-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+        top: 0; left: 0; right: 0; bottom: 0;
             background-color: #f7f7f7;
             z-index: 100;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: #b91c1c; /* red-700 */
+        color: #b91c1c; /* red-700 */
             font-size: 1.5rem;
             font-weight: bold;
         }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
-            border-top: 4px solid #b91c1c;
+        border-top: 4px solid #b91c1c;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -49,115 +53,115 @@
             margin-bottom: 20px;
         }
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% { transform: rotate(0deg);
+        }
+            100% { transform: rotate(360deg);
+        }
         }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-4 bg-red-500/10">
 
-    <!-- Loading Screen (Wird beim erfolgreichen Login ausgeblendet) -->
     <div id="loading-overlay">
         <div class="spinner"></div>
         Kasse wird geladen und anonym angemeldet...
     </div>
 
-    <!-- 
-        HAUPT-INHALT: Wird erst sichtbar, nachdem die anonyme Anmeldung abgeschlossen ist.
-    -->
     <div id="kasse-content" style="display: none;">
 
-        <!-- Status Leiste und Titel -->
         <header class="flex justify-between items-center mb-3">
-            <!-- DB Status Indikator -->
             <div id="db-status" class="text-xs font-bold p-1.5 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
                 Datenbankmodul lädt...
             </div>
-            <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand 🍷</h1>
-            <!-- Logout / User Info -->
+  
+            <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
             <div id="auth-info" class="text-xs text-gray-500 text-right"></div>
         </header>
 
-        <!-- Haupt-App-Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             
-            <!-- Linke Seite: Eingabe und Steuerung -->
+          
             <div class="lg:col-span-1 space-y-3">
                 <div class="bg-white p-3 rounded-xl shadow-lg">
                     <h2 class="text-lg font-semibold mb-2 text-red-800">Produkte buchen</h2>
-                    <!-- Dynamisches Produkt-Grid -->
                     <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
                         <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
                     </div>
                 </div>
 
-                <div class="bg-white p-3 rounded-xl shadow-lg flex flex-wrap gap-2 justify-between">
+                <div class="bg-white 
+                p-3 rounded-xl shadow-lg flex flex-wrap gap-2 justify-between">
                     <button onclick="undoLastAction()" class="product-btn w-full md:w-1/2 p-2 rounded-lg font-bold text-sm text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
-                        ↩️ Storno (Letzte)
+                         Storno (Letzte)
                     </button>
+                
                     <button onclick="resetBestellung()" class="product-btn w-full md:w-[48%] p-2 rounded-lg font-bold text-sm text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
                         Neue Bestellung
                     </button>
                 </div>
                 
-                <div class="flex flex-col gap-2">
+       
+                 <div class="flex flex-col gap-2">
                     <button onclick="openPaymentModal()" class="product-btn w-full p-3 rounded-xl font-extrabold text-lg text-white bg-green-600 hover:bg-green-700 shadow-lg">
-                        🧾 Bon & Buchen
+                         Bon & Buchen
                     </button>
+          
                     <button onclick="openProductModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
-                        ⚙️ Produkte verwalten
+                         Produkte verwalten
                     </button>
                     <button onclick="runDailyReport()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
-                        💰 Tagesabschluss
+  
+                        Tagesabschluss
                     </button>
                 </div>
             </div>
 
-            <!-- Rechte Seite: Anzeige -->
-            <div class="lg:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3">
+            <div 
+            class="lg:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3">
                 <h2 class="text-lg font-semibold mb-2 text-gray-700">Aktueller Bon</h2>
                 <div id="receipt-content" class="bg-gray-50 p-2 rounded-lg text-xs font-mono whitespace-pre text-gray-700 border border-gray-200 min-h-[150px]"></div>
                 <div class="mt-3 pt-3 border-t-2 border-red-700">
-                    <div id="total-display" class="text-2xl font-extrabold text-right text-red-700">GESAMT: 0.00 €</div>
+                    <div id="total-display" class="text-2xl font-extrabold text-right 
+                    text-red-700">GESAMT: 0.00 €</div>
                 </div>
             </div>
         </div>
     </div>
 
 
-    <!-- Zahlungs-Modal -->
-    <div id="payment-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <!-- MAX-WIDTH BLEIBT AUF MAX-W-XS (320px) -->
+    <div id="payment-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
             <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Zahlung</h3>
             <div id="payment-total-display" class="text-lg font-bold text-red-700 mb-4 text-center">...</div>
 
             <label class="block text-sm font-medium text-gray-700 mb-1 text-center">Erhalten (€):</label>
+         
             <input type="text" id="input-received" readonly placeholder="0,00" value="0,00" 
                    class="w-full px-3 py-2 border-2 border-green-600 rounded-lg text-2xl font-mono text-center mb-3 bg-gray-50 text-gray-800">
 
             <div id="change-display" class="text-xl font-extrabold text-blue-600 mb-4 text-center">Rückgeld: 0.00 €</div>
             
-            <!-- Custom Numpad: Gap bleibt bei gap-1 -->
             <div id="numpad-container" class="grid grid-cols-3 gap-1"> 
                 <button onclick="handleNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
                 <button onclick="handleNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
                 <button onclick="handleNumpadInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
                 
-                <button onclick="handleNumpadInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
+                <button 
+                onclick="handleNumpadInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
                 <button onclick="handleNumpadInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
                 <button onclick="handleNumpadInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
                 
                 <button onclick="handleNumpadInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
                 <button onclick="handleNumpadInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
+ 
                 <button onclick="handleNumpadInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
                 <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
                 <button onclick="handleNumpadInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
                 <button onclick="handleNumpadInput(',')" class="numpad-btn bg-gray-200 hover:bg-gray-300">,</button>
             </div>
-            <!-- Ende Custom Numpad -->
-
+       
             <button id="btn-confirm-pay" onclick="finishTransaction()" disabled class="mt-3 w-full p-2 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400">
                 Zahlung Buchen
             </button>
@@ -165,32 +169,35 @@
         </div>
     </div>
 
-    <!-- Produktverwaltung Modal (Paddings und Font Sizes reduziert) -->
-    <div id="product-management-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+    <div id="product-management-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold text-indigo-700 mb-3">Produkte verwalten</h3>
             
-            <!-- Produkt Hinzufügen Formular -->
             <form id="product-form" class="bg-gray-100 p-3 rounded-lg mb-5 shadow-inner" onsubmit="event.preventDefault(); handleProductFormSubmit()">
+           
                 <h4 class="text-base font-semibold mb-2">Neues Produkt hinzufügen</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Name:</label>
+                     
                         <input type="text" id="product-name" required class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="z.B. Heiße Schokolade">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Preis (€):</label>
+               
                         <input type="number" step="0.01" id="product-price" required class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="1.50">
                     </div>
                     <button type="submit" class="w-full p-2 rounded-lg font-bold text-sm text-white bg-green-600 hover:bg-green-700 self-end">
                         Produkt speichern
+     
                     </button>
                 </div>
             </form>
 
-            <!-- Liste der aktuellen Produkte -->
             <h4 class="text-base font-semibold mb-2">Deine Produkte (Klicken Sie auf den Stift zum Bearbeiten)</h4>
             <div id="product-list-container" class="space-y-1.5 text-sm">
+  
                 <p class="text-gray-500">Lade Produkte...</p>
             </div>
 
@@ -198,8 +205,8 @@
         </div>
     </div>
 
-    <!-- Info Modal (Paddings und Font Sizes reduziert) -->
-    <div id="info-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div id="info-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-sm">
             <h3 id="info-title" class="text-lg font-bold text-gray-800 mb-2">Info</h3>
             <pre id="info-text" class="whitespace-pre-wrap text-xs font-mono bg-gray-100 p-2 rounded-lg"></pre>
@@ -207,10 +214,6 @@
         </div>
     </div>
 
-    <!-- 
-      TEIL 1: DAS KASSEN-GEHIRN (CLIENT-SEITIGE LOGIK) 
-      (Funktionen sind hier global verfügbar)
-    -->
     <script>
         // --- Globale Status Variablen ---
         let kasseActive = false;
@@ -220,7 +223,8 @@
         let currentOrder = {};
         let orderHistory = [];
         let currentTotal = 0.0;
-        
+        let currentReceivedString = "0"; // NEU: Globaler String für Numpad-Eingabe
+
         // --- Startet sofort ---
         window.onload = function() {
             renderButtons();
@@ -235,7 +239,7 @@
             const authInfo = document.getElementById('auth-info');
 
             if (state === 'logged_in') {
-                kasseContent.style.display = 'block'; 
+                kasseContent.style.display = 'block';
                 loadingOverlay.style.display = 'none'; 
                 authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Session beenden</button>`;
                 document.getElementById('db-status').style.display = 'block';
@@ -274,7 +278,8 @@
             USER_PRODUCTS = products.reduce((acc, product) => {
                 const price = parseFloat(product.price);
                 if (!isNaN(price) && price > 0) {
-                     acc[product.name] = { price: price, id: product.id }; 
+           
+                    acc[product.name] = { price: price, id: product.id }; 
                 }
                 return acc;
             }, {});
@@ -310,7 +315,6 @@
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             const price = USER_PRODUCTS[name]?.price;
             if (typeof price === 'undefined') return showInfo("Fehler", `Preis für "${name}" nicht gefunden.`);
-
             if (!currentOrder[name]) currentOrder[name] = 0;
             currentOrder[name]++;
             orderHistory.push(name);
@@ -325,7 +329,6 @@
             
             let lastItem = orderHistory.pop();
             const price = USER_PRODUCTS[lastItem]?.price;
-
             if (currentOrder[lastItem] && typeof price !== 'undefined') {
                 currentOrder[lastItem]--;
                 if (currentOrder[lastItem] <= 0) delete currentOrder[lastItem];
@@ -344,10 +347,10 @@
 
         function updateUI() {
             document.getElementById('total-display').innerText = "GESAMT: " + currentTotal.toFixed(2).replace('.', ',') + " €";
-            
             let text = "---------------------------------------\n";
             for (let [name, count] of Object.entries(currentOrder)) {
-                const price = USER_PRODUCTS[name]?.price || 0;
+                const price = USER_PRODUCTS[name]?.price ||
+                0;
                 let lineTotal = count * price;
                 text += `${count}x ${name.padEnd(18)} ${lineTotal.toFixed(2).replace('.', ',')} €\n`;
             }
@@ -372,7 +375,6 @@
                 price: USER_PRODUCTS[name].price,
                 id: USER_PRODUCTS[name].id
             })).sort((a, b) => a.name.localeCompare(b.name));
-
             if (productsArray.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center">Noch keine Produkte angelegt.</p>';
                 return;
@@ -383,23 +385,27 @@
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center p-2 bg-white rounded-lg shadow-sm border border-gray-200';
                 
+     
                 const priceElementId = `price-display-${id}`;
 
                 div.innerHTML = `
                     <span class="font-semibold text-gray-800 text-sm w-1/3">${product.name}</span>
                     
-                    <div id="${priceElementId}" class="flex items-center space-x-2 w-1/3 justify-end min-w-[100px]">
+                    <div id="${priceElementId}" class="flex items-center 
+                    space-x-2 w-1/3 justify-end min-w-[100px]">
                         <span class="text-base font-bold text-red-600">${product.price.toFixed(2).replace('.', ',')} €</span>
                         <button onclick="toggleEditPrice('${id}', '${product.price}')" 
                                 class="p-1 text-sm text-gray-700 hover:text-indigo-600 transition-colors">
-                            ✏️
+     
                         </button>
                     </div>
 
                     <div class="flex space-x-1 w-1/4 justify-end min-w-[70px]">
+        
                         <button onclick="confirmDeleteProduct('${id}', '${product.name}')" 
                                 class="p-1 text-xs text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
                             Löschen
+               
                         </button>
                     </div>
                 `;
@@ -409,13 +415,13 @@
         
         function toggleEditPrice(id, currentPrice) {
             const container = document.getElementById(`price-display-${id}`);
-            
             if (container.querySelector('input')) {
                 container.innerHTML = `
                     <span class="text-base font-bold text-red-600">${parseFloat(currentPrice).toFixed(2).replace('.', ',')} €</span>
                     <button onclick="toggleEditPrice('${id}', '${currentPrice}')" 
-                            class="p-1 text-sm text-gray-700 hover:text-indigo-600 transition-colors">
-                        ✏️
+                            class="p-1 text-sm text-gray-700 hover:text-indigo-600 
+                            transition-colors">
+                        
                     </button>
                 `;
                 return;
@@ -425,8 +431,9 @@
                 <input type="number" id="edit-price-${id}" value="${parseFloat(currentPrice).toFixed(2)}" 
                        step="0.01" class="w-16 px-1 py-0.5 border rounded text-right text-sm font-mono">
                 <button onclick="saveProductPrice('${id}')" 
+    
                         class="p-1 text-xs text-white bg-green-500 hover:bg-green-600 rounded whitespace-nowrap">
-                    💾 Speichern
+                     Speichern
                 </button>
             `;
             document.getElementById(`edit-price-${id}`).focus();
@@ -452,7 +459,6 @@
 
         function handleProductFormSubmit() {
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
-            
             const name = document.getElementById('product-name').value.trim();
             const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
             
@@ -460,7 +466,8 @@
                 return showInfo("Eingabefehler", "Bitte gültigen Namen und Preis eingeben.");
             }
 
-            const productData = { name: name, price: price };
+            // NEU: Preis wird als Float/Number an die DB gesendet
+            const productData = { name: name, price: price }; 
             window.productsDB.saveProduct(productData);
             
             document.getElementById('product-form').reset();
@@ -485,7 +492,10 @@
             
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2).replace('.', ',') + " €";
             
-            document.getElementById('input-received').value = "0,00";
+            // NEU: Setzt den internen String und das Feld zurück auf den Standard (0,00)
+            currentReceivedString = "0"; 
+            document.getElementById('input-received').value = "0,00"; 
+            
             calculateChange();
             
             document.getElementById('payment-modal').style.display = 'flex';
@@ -495,43 +505,46 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // --- NUMPAD LOGIK ---
+        // --- NUMPAD LOGIK (OPTIMIERT) ---
         function handleNumpadInput(key) {
             const inputField = document.getElementById('input-received');
-            let currentValue = inputField.value.replace(',', ''); 
 
             if (key === 'clear') {
-                inputField.value = "0,00";
+                currentReceivedString = "0";
             } else if (key === ',') {
-                if (!inputField.value.includes(',')) {
-                    if (currentValue === "000") currentValue = "";
-
-                    let cents = currentValue.padStart(3, '0').slice(0, -2);
-                    let decimals = currentValue.padStart(3, '0').slice(-2);
-                    
-                    inputField.value = `${cents},${decimals}`;
+                // Füge nur ein Komma hinzu, wenn noch keines existiert
+                if (!currentReceivedString.includes(',')) {
+                    currentReceivedString += ',';
                 }
             } else { 
-                if (currentValue === "000" || inputField.value === "0,00") {
-                    currentValue = key;
-                } else {
-                    currentValue += key;
-                }
-
-                if (currentValue.length > 8) currentValue = currentValue.substring(currentValue.length - 8);
-
-                let integerPart = currentValue.length > 2 ? currentValue.slice(0, -2) : "0";
-                let decimalPart = currentValue.length > 1 ? currentValue.slice(-2) : "0" + currentValue.slice(-1);
+                // Zifferntasten (0-9)
                 
-                inputField.value = `${integerPart},${decimalPart}`;
+                // Entferne führende '0', wenn eine Ziffer gedrückt wird und kein Komma vorhanden ist
+                if (currentReceivedString === "0" && !currentReceivedString.includes(',')) {
+                    currentReceivedString = key;
+                } else {
+                    // Begrenzt die Anzahl der Nachkommastellen auf 2, wenn ein Komma existiert
+                    if(currentReceivedString.includes(',') && currentReceivedString.split(',')[1].length >= 2) {
+                        // Ignoriert weitere Ziffern, wenn Max. erreicht
+                        // Könnte auch schieben, aber Ignorieren ist sicherer für die Kasse
+                    } else {
+                        currentReceivedString += key;
+                    }
+                }
             }
 
+            // Aktualisiere das Feld mit dem neuen, formatierten Wert
+            inputField.value = currentReceivedString.replace('.', ','); 
+            
             calculateChange();
         }
 
+        // --- Geänderte calculateChange, um direkt den Input-Wert zu verwenden ---
         function calculateChange() {
-            let val = document.getElementById('input-received').value.replace(',', '.'); 
-            let received = parseFloat(val);
+            // Verwendet den *tatsächlichen* Wert aus dem Eingabefeld (welcher das Komma enthält)
+            let val = document.getElementById('input-received').value.replace(',', '.');
+            let received = parseFloat(val); // Jetzt wird der String mit Komma zu einem Float
+
             let btn = document.getElementById('btn-confirm-pay');
             let display = document.getElementById('change-display');
 
@@ -542,7 +555,7 @@
             }
 
             let change = received - currentTotal;
-            change = Math.round(change * 100) / 100; 
+            change = Math.round(change * 100) / 100; // Rundung auf 2 Dezimalstellen
 
             if (change >= -0.01) { 
                 display.innerText = "Rückgeld: " + change.toFixed(2).replace('.', ',') + " €";
@@ -553,7 +566,8 @@
             }
         }
 
-        // --- Transaktions Logik ---
+
+        // --- Transaktions Logik (OPTIMIERT) ---
         function finishTransaction() {
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if(document.getElementById('btn-confirm-pay').disabled) return;
@@ -565,7 +579,8 @@
                 count: count,
                 price: USER_PRODUCTS[name]?.price || 0
             }));
-
+            
+            // NEU: Wert aus dem Input-Feld mit Komma in Float parsen
             let receivedAmount = parseFloat(document.getElementById('input-received').value.replace(',', '.'));
 
             let transactionData = {
@@ -577,7 +592,6 @@
             };
 
             resetBestellung();
-
             if (window.cloudSaveFunction) {
                 window.cloudSaveFunction(transactionData);
                 showInfo("Erfolgreich", "Transaktion wurde gebucht.");
@@ -602,9 +616,6 @@
         }
     </script>
 
-    <!-- 
-      TEIL 2: DATENBANK MODUL (Firebase, Auth, Firestore)
-    -->
     <script type="module">
         import { 
             initializeApp 
@@ -627,27 +638,27 @@
             doc,
             updateDoc 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
         // =================================================================
-        // ✅ DEINE FIREBASE KONFIGURATION (PLATZHALTER ERSETZT) ✅
+        //  DEINE FIREBASE KONFIGURATION (PLATZHALTER ERSETZT) 
         // =================================================================
         const PLACEHOLDER_FIREBASE_CONFIG = {
             apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc", 
             authDomain: "kassensystem-85412.firebaseapp.com",
             projectId: "kassensystem-85412",
-            storageBucket: "kassensystem-85412.firebasestorage.app",
+            storageBucket: "kassensystem-85412.firebaseApp.com",
             messagingSenderId: "916536785810",
             appId: "1:916536785810:web:0d0319ef565af65d279f4b"
         };
         // =================================================================
         
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'external-kasse-glühwein';
+        const appId = typeof __app_id !== 'undefined' ?
+        __app_id : 'external-kasse-glühwein';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : PLACEHOLDER_FIREBASE_CONFIG;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 
         let db, auth, userId;
-        let unsubscribeProducts = null; 
+        let unsubscribeProducts = null;
         let isDefaultProductsAdded = false;
 
         const DEFAULT_PRODUCTS = [
@@ -656,7 +667,6 @@
             { name: "Bratwurst", price: 4.00 },
             { name: "Pommes", price: 3.00 }
         ];
-
         async function initDB() {
             if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("HIER")) { 
                 window.setDBStatus(false, "DB-Fehler (API Key fehlt). Bitte Firebase Config einfügen!");
@@ -673,7 +683,6 @@
                 window.authService = {
                     signOut: signOutUser 
                 };
-                
                 window.isDBReady = true;
                 window.setDBStatus(false, "Verbinde...");
 
@@ -681,20 +690,24 @@
                     if (user) {
                         userId = user.uid;
                         const userDisplay = user.isAnonymous ? `Anonyme Kasse (${userId.substr(0, 8)}...)` : `Kasse (${userId.substr(0, 8)}...)`;
-                        
+       
+                  
                         console.log(`Auth-Status: Angemeldet als ${userDisplay}`);
 
                         setupProductsListener(userId);
 
                         window.setDBStatus(true, `Online (ID: ${userId.substr(0, 8)}...)`);
+    
                         window.updateAppView('logged_in', userDisplay);
                         
                         window.cloudSaveFunction = saveToCloud;
                         window.cloudReportFunction = generateReport;
+   
                         window.productsDB = productsDB; 
 
                     } else {
                         if (unsubscribeProducts) {
+                            
                             unsubscribeProducts();
                             unsubscribeProducts = null;
                         }
@@ -702,33 +715,39 @@
                         userId = null;
                         isDefaultProductsAdded = false;
                         window.setProducts([]); 
+                     
                         window.setDBStatus(false, "Offline");
                         window.updateAppView('logged_out');
                         
                         window.cloudSaveFunction = null;
+                      
                         window.cloudReportFunction = null;
                         window.productsDB = null;
 
                         await signInAnonymously(auth).catch(e => {
                             console.error("Anonyme Anmeldung fehlgeschlagen:", e);
+            
                             window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
                         });
                     }
                 });
 
                 if (initialAuthToken) {
+   
                     await signInWithCustomToken(auth, initialAuthToken).catch(e => {
                          console.warn("Auth: Custom Token Login fehlgeschlagen. Versuche anonyme Anmeldung.");
                          signInAnonymously(auth); 
                     });
                 } else {
                     await signInAnonymously(auth).catch(e => {
-                         console.error("Anonyme Anmeldung fehlgeschlagen:", e);
+           
+                        console.error("Anonyme Anmeldung fehlgeschlagen:", e);
                     });
                 }
 
             } catch (e) {
                 console.error("DB INIT FEHLER:", e);
+             
                 window.setDBStatus(false, "Fehler beim Start der Kasse");
                 window.showInfo("Fehler", "Datenbank konnte nicht initialisiert werden: " + e.message);
                 window.updateAppView('logged_out');
@@ -744,6 +763,7 @@
                 window.resetBestellung(); 
                 window.showInfo("Abmeldung", "Die Session wurde beendet.");
             } catch (error) {
+     
                 console.error("Logout Fehler:", error);
                 window.showInfo("Abmeldefehler", "Fehler beim Abmelden: " + error.message);
             }
@@ -752,23 +772,24 @@
         // --- Produkt-Management Logik ---
 
         const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
-
         function setupProductsListener(id) {
             if (unsubscribeProducts) unsubscribeProducts();
-
             const productsCol = collection(db, getProductsPath(id));
             
             unsubscribeProducts = onSnapshot(productsCol, async (snapshot) => {
                 const products = snapshot.docs.map(doc => ({
                     id: doc.id,
-                    ...doc.data()
+                    // NEU: Stellt sicher, dass der Preis als Zahl (Float) geladen wird.
+                    price: parseFloat(doc.data().price), 
+                    name: doc.data().name,
                 }));
-                
+           
                 if (products.length === 0 && !isDefaultProductsAdded) {
                      await addDefaultProductsIfEmpty(id);
                      isDefaultProductsAdded = true; 
                 }
 
+           
                 window.setProducts(products);
 
             }, (error) => {
@@ -779,15 +800,17 @@
         
         async function addDefaultProductsIfEmpty(id) {
              const productsCol = collection(db, getProductsPath(id));
-             for (const product of DEFAULT_PRODUCTS) {
-                 await addDoc(productsCol, { name: product.name, price: product.price.toFixed(2) });
-             }
+            // NEU: Preise als Floats speichern
+            for (const product of DEFAULT_PRODUCTS) {
+                 await addDoc(productsCol, { name: product.name, price: product.price }); 
+            }
         }
 
         const productsDB = {
             saveProduct: async (productData) => {
                 if (!userId || !db) return;
-                productData.price = parseFloat(productData.price).toFixed(2); 
+                // NEU: Preis als Float/Number speichern
+                productData.price = parseFloat(productData.price); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
                 } catch (e) {
@@ -808,19 +831,20 @@
             updateProductPrice: async (productId, newPrice) => {
                 if (!userId || !db) return;
                 try {
-                    const priceString = parseFloat(newPrice).toFixed(2);
+                    // NEU: Preis als Float/Number speichern
+                    const priceNumber = parseFloat(newPrice); 
                     const productDocRef = doc(db, getProductsPath(userId), productId);
                     
                     await updateDoc(productDocRef, {
-                        price: priceString 
+                        price: priceNumber 
                     });
                     
-                    window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceString} €)`);
+                    window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceNumber.toFixed(2)} €)`); // Anzeige nutzt toFixed(2)
 
                     const currentProduct = Object.values(window.USER_PRODUCTS).find(p => p.id === productId);
                     if (currentProduct) {
-                         currentProduct.price = parseFloat(priceString); 
-                         window.toggleEditPrice(productId, priceString); 
+                         currentProduct.price = priceNumber; // Aktualisiert den Float im Cache
+                         window.toggleEditPrice(productId, priceNumber); // UI aktualisieren
                     }
 
                 } catch (e) {
@@ -829,7 +853,6 @@
                 }
             }
         };
-
         // --- Transaktions Logik ---
 
         async function saveToCloud(data) {
@@ -859,13 +882,14 @@
                     totalSum += d.total;
                     count++;
                     
+         
                     if(d.items && Array.isArray(d.items)) {
                         d.items.forEach(item => {
                              productStats[item.name] = (productStats[item.name] || 0) + item.count;
                         });
+ 
                     }
                 });
-
                 let report = `Tagesabschluss (Nutzer ID: ${userId.substr(0, 8)}...)\n\n`;
                 report += `Anzahl Buchungen: ${count}\n`;
                 report += `GESAMTSUMME: ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
@@ -875,7 +899,6 @@
                 }
 
                 window.showInfo("Tagesabschluss", report);
-
             } catch (e) {
                 console.error(e);
                 window.showInfo("Fehler", "Konnte Bericht nicht laden.");
