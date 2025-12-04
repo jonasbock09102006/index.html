@@ -230,25 +230,45 @@
                 <div id="finalize-total" class="text-4xl font-extrabold text-right text-green-700">0.00 €</div>
             </div>
 
-            <h3 class="text-lg font-semibold mb-2">Zahlung</h3>
-            <div id="payment-buttons" class="grid grid-cols-2 gap-3 mb-4">
-               <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
-                    KARTE
-                </button>
-                <button onclick="setPaymentMethod('BAR')" id="btn-bar" class="p-4 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg border-4 border-transparent">
-                    BAR
+            <div id="payment-buttons" class="grid grid-cols-1 gap-3 mb-4">
+                <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg border-4 border-transparent transition-all duration-300">
+                    KARTE ZAHLUNG
                 </button>
             </div>
 
-            <div id="cash-payment-area" class="mt-4 p-3 border rounded-lg bg-gray-50" style="display: none;">
-                <label for="cash-received" class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag (BAR)</label>
-                <input type="number" id="cash-received" step="0.01" min="0" oninput="calculateChangeDisplay()" placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-2xl font-extrabold text-right focus:ring-green-500 focus:border-green-500">
+
+            <div id="cash-payment-area" class="mt-4 p-3 border rounded-lg bg-gray-50">
+                <h3 class="text-lg font-semibold mb-2 flex justify-between items-center text-blue-700">
+                    BAR Zahlung (Rückgeld)
+                    <span id="btn-bar-indicator" class="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">AKTIV</span>
+                </h3>
+                
+                <label class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag</label>
+                <div id="cash-received-display" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-4xl font-extrabold text-right text-gray-800 focus:ring-green-500 focus:border-green-500 bg-white">0,00</div>
                 
                 <div class="mt-3 pt-2 border-t flex justify-between items-center">
                     <span class="text-lg font-bold text-gray-700">Rückgeld:</span>
-                    <span id="change-display" class="text-3xl font-extrabold text-green-700">0.00 €</span>
+                    <span id="change-display" class="text-3xl font-extrabold text-green-700">0,00 €</span>
                 </div>
-            </div>
+
+                <div id="cash-numpad-container" class="mt-4 grid grid-cols-3 gap-2">
+                    <button onclick="handleCashInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
+                    <button onclick="handleCashInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
+                    <button onclick="handleCashInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
+
+                    <button onclick="handleCashInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
+                    <button onclick="handleCashInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
+                    <button onclick="handleCashInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
+
+                    <button onclick="handleCashInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
+                    <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
+                    <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
+                    
+                    <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
+                    <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
+                    <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-2xl">.</button> 
+                </div>
+                </div>
             <button onclick="finalizeTransactionWithCheck()" id="finalize-button" disabled class="mt-4 w-full p-4 rounded-xl font-extrabold text-white bg-green-400 shadow-lg transition-colors">
                 Transaktion abschließen
             </button>
@@ -338,7 +358,7 @@
      
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
-            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v1.9 (Storno-Fix 2)</div>
+            <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.0 (Cash Numpad)</div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -437,7 +457,7 @@
                     <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-2 mb-3 border-b">
                         </div>
 
-                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
                 
                        <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
                     </div>
@@ -467,13 +487,14 @@
         let DB_STATUS = 'disconnected';
          let currentBestellung = [];
         let currentQuantity = '1';
+        let cashReceivedInput = '0'; // NEU: Für den Cash Numpad im Finalize Modal
         let products = {};
         let categories = {};
         let userSettings = {};
          let transactionHistory = [];
         let lastAction = null; 
         
-        // NEU: Globale Variablen für Rückgeldfunktion
+        // Globale Variablen für Rückgeldfunktion
         let selectedPaymentMethod = null;
         let totalBrutto = 0;
 
@@ -713,10 +734,11 @@
             }
             filteredProducts.forEach(product => {
                 const button = document.createElement('button');
-                button.className = 'product-btn p-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-md flex flex-col justify-center items-center text-center';
+                // NEU: Größere Buttons durch p-4, text-2xl und h-24
+                button.className = 'product-btn p-4 rounded-xl font-extrabold text-white bg-red-500 hover:bg-red-600 shadow-lg flex flex-col justify-center items-center text-center h-24';
                 button.innerHTML = `
-                    <span class="text-sm">${product.name}</span>
-                    <span class="text-lg font-extrabold">${product.price.toFixed(2).replace('.', ',')} €</span>
+                    <span class="text-base">${product.name}</span>
+                    <span class="text-2xl font-extrabold mt-1">${product.price.toFixed(2).replace('.', ',')} €</span>
                 `;
                 button.onclick = () => addToBestellung(product.id);
                 container.appendChild(button);
@@ -880,6 +902,45 @@
             document.getElementById('quantity-display').innerText = currentQuantity;
          }
 
+        // NEU: Logik für den Cash Numpad
+        function handleCashInput(value) {
+            let current = cashReceivedInput;
+            const decimalIndex = current.indexOf('.');
+
+            if (value === 'clear') {
+                current = '0';
+            } else if (value === 'dot') {
+                if (decimalIndex === -1) {
+                    current += '.';
+                }
+            } else if (value.match(/[0-9]/)) {
+                if (current === '0' && value !== '0') {
+                    current = value;
+                } else if (current === '0' && value === '0') {
+                    // Bleibt bei '0'
+                } else {
+                    current += value;
+                }
+
+                // Begrenzung auf 2 Nachkommastellen
+                if (decimalIndex !== -1 && current.substring(decimalIndex + 1).length > 2) {
+                    current = cashReceivedInput; // Nicht aktualisieren
+                } else if (current.replace('.', '').length > 7) { 
+                    current = cashReceivedInput; // Max 7 Ziffern insgesamt
+                }
+            }
+            cashReceivedInput = current;
+
+            // Anzeige aktualisieren: Formatierung mit Komma und evtl. führender 0 vor dem Komma
+            let displayValue = cashReceivedInput;
+            if (displayValue.startsWith('.')) displayValue = '0' + displayValue;
+            if (displayValue === '') displayValue = '0';
+            
+            document.getElementById('cash-received-display').innerText = displayValue.replace('.', ',');
+
+            calculateChangeDisplay();
+        }
+
         function addToBestellung(productId) {
             const product = products[productId];
             const quantity = parseInt(currentQuantity);
@@ -1039,33 +1100,22 @@
         // NEU: Setzt die Zahlungsmethode und initialisiert das Modal
         function setPaymentMethod(method) {
             selectedPaymentMethod = method;
-            const btnBar = document.getElementById('btn-bar');
             const btnKarte = document.getElementById('btn-karte');
             const cashArea = document.getElementById('cash-payment-area');
-            const finalizeBtn = document.getElementById('finalize-button');
-            const total = calculateTotalBrutto();
-            totalBrutto = total; 
+            const btnBarIndicator = document.getElementById('btn-bar-indicator');
 
             // UI Updates
-            btnBar.classList.remove('border-green-500');
-            btnKarte.classList.remove('border-green-500');
-
             if (method === 'BAR') {
-                btnBar.classList.add('border-green-500');
-                btnBar.classList.remove('bg-blue-600');
-                btnBar.classList.add('bg-blue-700');
-                btnKarte.classList.remove('bg-indigo-700');
-                btnKarte.classList.add('bg-indigo-600');
                 cashArea.style.display = 'block';
-                document.getElementById('cash-received').value = total.toFixed(2); // Voreinstellung auf Gesamtbetrag
+                btnBarIndicator.style.display = 'inline-block';
+                btnKarte.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                btnKarte.classList.remove('bg-indigo-700', 'hover:bg-indigo-800', 'border-green-500');
             } else if (method === 'KARTE') {
-                btnKarte.classList.add('border-green-500');
-                btnKarte.classList.remove('bg-indigo-600');
-                btnKarte.classList.add('bg-indigo-700');
-                btnBar.classList.remove('bg-blue-700');
-                btnBar.classList.add('bg-blue-600');
                 cashArea.style.display = 'none';
-                document.getElementById('change-display').innerText = '0.00 €';
+                btnBarIndicator.style.display = 'none';
+                btnKarte.classList.add('border-green-500', 'bg-indigo-700', 'hover:bg-indigo-800');
+                btnKarte.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                document.getElementById('change-display').innerText = '0,00 €'; 
             }
             
             calculateChangeDisplay(); // Aktualisiert den Button und das Rückgeld
@@ -1073,10 +1123,11 @@
 
         // NEU: Berechnet und zeigt das Rückgeld an, und steuert den Finalize Button
         function calculateChangeDisplay() {
-            const receivedInput = document.getElementById('cash-received');
+            // Holen des Werts aus der Numpad-Variable (mit Punkt)
+            const received = parseFloat(cashReceivedInput) || 0;
+            
             const changeDisplay = document.getElementById('change-display');
             const finalizeBtn = document.getElementById('finalize-button');
-            const received = parseFloat(receivedInput.value) || 0;
             
             const change = received - totalBrutto;
             
@@ -1106,7 +1157,7 @@
         // NEU: Wrapper für finalizeTransaction, um Rückgeld zu prüfen und anzuzeigen
         function finalizeTransactionWithCheck() {
             if (selectedPaymentMethod === 'BAR') {
-                const received = parseFloat(document.getElementById('cash-received').value) || 0;
+                const received = parseFloat(cashReceivedInput) || 0;
                 const change = received - totalBrutto;
                 if (change < 0) {
                     showToast('Der erhaltene Betrag ist zu gering.', 'error');
@@ -1134,6 +1185,11 @@
             // Standardmäßig BAR wählen und die Ansicht initialisieren
             setPaymentMethod('BAR'); 
             
+            // Setze den initialen Wert im Numpad auf den Gesamtbetrag (optional, aber hilfreich)
+            cashReceivedInput = totalBrutto.toFixed(2).replace(',', '.');
+            document.getElementById('cash-received-display').innerText = cashReceivedInput.replace('.', ',');
+            calculateChangeDisplay(); // Aktualisiert Rückgeld und Button
+
             document.getElementById('finalize-modal').style.display = 'flex';
         }
 
