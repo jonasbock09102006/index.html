@@ -395,7 +395,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.5 (Logout hinzugefügt)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.6 (Robuster Start)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
@@ -1534,10 +1534,13 @@
             showLoading(false);
         }
 
-        // --- STARTE DIE DB INITIALISIERUNG ---\
-        window.updateAppView('loading');
-        setReportDateToday();
-        initDB();
+        // --- STARTE DIE DB INITIALISIERUNG ---
+        // Sicherstellen, dass das Skript erst läuft, wenn alle Elemente im DOM verfügbar sind
+        document.addEventListener('DOMContentLoaded', () => {
+            window.updateAppView('loading');
+            setReportDateToday();
+            initDB();
+        });
 
     </script>
 </body>
