@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glühweinstand Kasse Mobile (E-Mail/Passwort Auth)</title>
+    <title>Glühweinstand Kasse Mobile (Robustes Auth)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Grundlegendes Styling */
@@ -180,6 +180,7 @@
         // --- Globale Status Variablen ---
         let kasseActive = false;
         let USER_PRODUCTS = {}; 
+        let isDBReady = false; // NEU: Globaler Flag für Datenbank-Bereitschaft
 
         let currentOrder = {};
         let orderHistory = [];
@@ -229,7 +230,8 @@
         // --- Auth Steuerung Funktionen ---
         
         function handleSignIn() {
-            if (!authService) return showAuthError("Datenbankmodul lädt noch...");
+            // NEUE PRÜFUNG: Ist die Datenbank wirklich bereit?
+            if (!isDBReady || !authService) return showAuthError("Datenbankmodul lädt noch. Bitte kurz warten und erneut klicken.");
             document.getElementById('auth-error-message').style.display = 'none';
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -237,7 +239,8 @@
         }
 
         function handleSignUp() {
-            if (!authService) return showAuthError("Datenbankmodul lädt noch...");
+            // NEUE PRÜFUNG: Ist die Datenbank wirklich bereit?
+            if (!isDBReady || !authService) return showAuthError("Datenbankmodul lädt noch. Bitte kurz warten und erneut klicken.");
             document.getElementById('auth-error-message').style.display = 'none';
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -648,6 +651,7 @@
             if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("HIER")) { 
                 window.setDBStatus(false, "DB-Fehler (API Key fehlt). Bitte Firebase Config einfügen!");
                 window.updateAppView('logged_out');
+                window.isDBReady = false; // Initialisierungsfehler
                 return;
             }
             
@@ -662,6 +666,9 @@
                     signUp: signUp,
                     signOut: signOutUser
                 };
+                
+                // HIER: Setzen des Ready-Flags, da Auth-Funktionen jetzt definiert sind.
+                window.isDBReady = true;
 
                 // Auth Listener: Reagiert auf erfolgreichen Login/Logout
                 onAuthStateChanged(auth, async (user) => {
@@ -715,6 +722,7 @@
                 window.setDBStatus(false, "Fehler beim Start der Kasse");
                 window.showInfo("Fehler", "Datenbank konnte nicht initialisiert werden: " + e.message);
                 window.updateAppView('logged_out');
+                window.isDBReady = false; // Setze den Status bei Fehler
             }
         }
 
@@ -722,7 +730,6 @@
 
         async function signIn(email, password) {
             try {
-                // setDBStatus(true, "Melde an..."); // Optional: Status anzeigen
                 await signInWithEmailAndPassword(auth, email, password);
                 // onAuthStateChanged übernimmt die UI Aktualisierung
             } catch (error) {
@@ -731,15 +738,13 @@
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                     window.showAuthError("Anmeldedaten falsch. Bitte E-Mail und Passwort prüfen oder neu registrieren.");
                 } else {
-                    window.showAuthError(`Anmeldefehler: ${error.message} (Code: ${error.code})`);
+                    window.showAuthError(`Anmeldefehler: ${error.message} (Code: ${error.code}). Prüfen Sie die 'Email/Password' Auth-Methode in Firebase!`);
                 }
-                window.setDBStatus(false, "Fehler beim Login");
             }
         }
 
         async function signUp(email, password) {
             try {
-                // setDBStatus(true, "Registriere..."); // Optional: Status anzeigen
                 await createUserWithEmailAndPassword(auth, email, password);
                 // onAuthStateChanged übernimmt die UI Aktualisierung
                 window.showInfo("Erfolgreich", "Registrierung erfolgreich! Du bist jetzt eingeloggt.");
@@ -749,9 +754,8 @@
                  if (error.code === 'auth/email-already-in-use') {
                     window.showAuthError("Diese E-Mail wird bereits verwendet. Bitte melde dich an.");
                 } else {
-                    window.showAuthError(`Registrierungsfehler: ${error.message} (Code: ${error.code})`);
+                    window.showAuthError(`Registrierungsfehler: ${error.message} (Code: ${error.code}). Prüfen Sie die 'Email/Password' Auth-Methode in Firebase!`);
                 }
-                window.setDBStatus(false, "Fehler bei Registrierung");
             }
         }
 
@@ -764,7 +768,6 @@
             } catch (error) {
                 console.error("Logout Fehler:", error);
                 window.showInfo("Abmeldefehler", "Fehler beim Abmelden: " + error.message);
-                window.setDBStatus(true, "Online (Fehler beim Logout)");
             }
         }
 
