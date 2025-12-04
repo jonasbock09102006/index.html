@@ -52,9 +52,29 @@
             100% { transform: rotate(360deg);
         }
         }
+
+        /* NEU: TOAST NOTIFICATIONS */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            pointer-events: none; /* Macht den Container klickbar durch */
+        }
+        .toast {
+            @apply p-3 rounded-lg shadow-xl text-sm text-white transition-opacity duration-300;
+            opacity: 0;
+        }
+        .toast-success { @apply bg-green-500; }
+        .toast-error { @apply bg-red-600; }
+        .toast-info { @apply bg-blue-600; }
+
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-4 bg-red-500/10">
+
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+        </div>
 
     <div id="async-loading-overlay">
         <div class="spinner"></div>
@@ -151,10 +171,14 @@
                     <button onclick="openProductModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
                          Produkte verwalten
                     </button>
-                    <button onclick="runDailyReport()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
-  
-                        Tagesabschluss
+                    
+                    <button onclick="runDailyReport('report')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
+                        Tagesabschluss (Bericht)
                     </button>
+                    <button onclick="runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
+                        Tagesabschluss (CSV Export)
+                    </button>
+
                 </div>
             </div>
 
@@ -277,7 +301,6 @@
         window.onload = function() {
             renderButtons();
             updateUI();
-            // Startet mit dem Login-Modal, sobald die DB initialisiert ist
         };
         
         // --- UI Ansichtskontrolle ---
@@ -339,6 +362,28 @@
         // Zeigt/Versteckt den Ladespinner für asynchrone DB-Aufrufe
         function showLoading(show) {
             document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        // NEU (2b): Toast Funktion
+        function showToast(message, type = 'success', duration = 3000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} opacity-0`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            // Fade-in
+            setTimeout(() => {
+                toast.classList.remove('opacity-0');
+                toast.style.opacity = '1';
+            }, 10);
+
+            // Fade-out und Entfernen
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, duration);
         }
 
 
@@ -540,7 +585,6 @@
             }
         }
 
-        // 🛑 WICHTIGE ÄNDERUNG: ASYNC HINZUGEFÜGT UND RENDER CALL
         async function handleProductFormSubmit() { 
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
             const name = document.getElementById('product-name').value.trim();
@@ -552,13 +596,11 @@
 
             const productData = { name: name, price: price }; 
             
-            // Warten, bis der Speichervorgang abgeschlossen ist
             await window.productsDB.saveProduct(productData);
             
             document.getElementById('product-form').reset();
             document.getElementById('product-name').focus();
             
-            // Manuelle Aktualisierung der Ansicht
             renderProductList(); 
         }
 
@@ -593,7 +635,7 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // 💡 NEUE FUNKTION: Quick Pay Logik
+        // Quick Pay Logik
         function handleQuickPay(value) {
             const inputField = document.getElementById('input-received');
             
@@ -687,17 +729,17 @@
 
             resetBestellung();
             if (window.cloudSaveFunction) {
-                window.cloudSaveFunction(transactionData);
-                showInfo("Erfolgreich", "Transaktion wurde gebucht.");
+                window.cloudSaveFunction(transactionData); 
             } else {
                 showInfo("Offline", "Gebucht! (Datenbank nicht verbunden)");
             }
         }
 
-        function runDailyReport() { 
+        // NEU: runDailyReport erhält 'type' (report/csv)
+        function runDailyReport(type) { 
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (window.cloudReportFunction) {
-                window.cloudReportFunction();
+                window.cloudReportFunction(type); // Übergabe des Typs
             } else {
                 showInfo("Fehler", "Datenbank noch nicht verbunden.");
             }
@@ -730,7 +772,8 @@
             onSnapshot,
             deleteDoc,
             doc,
-            updateDoc 
+            updateDoc,
+            where // Hinzugefügt für den Tagesfilter
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         // =================================================================
         // ⚠️ HIER FIREBASE KONFIGURATION EINFÜGEN ⚠️
@@ -843,7 +886,7 @@
             window.showLoading(true);
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                window.showInfo("Erfolg", "Anmeldung erfolgreich!");
+                window.showToast("Anmeldung erfolgreich!", 'success'); // NEU: Toast
                 window.closeModal('login-modal');
             } catch (error) {
                 console.error("Login Fehler:", error);
@@ -858,7 +901,7 @@
             window.showLoading(true);
             try {
                 await createUserWithEmailAndPassword(auth, email, password);
-                window.showInfo("Erfolg", "Registrierung erfolgreich! Sie sind jetzt angemeldet.");
+                window.showToast("Registrierung erfolgreich!", 'success'); // NEU: Toast
                 window.closeModal('registration-modal');
             } catch (error) {
                 console.error("Registrierungsfehler:", error);
@@ -872,7 +915,7 @@
             try {
                 await signOut(auth);
                 window.resetBestellung(); 
-                window.showInfo("Abmeldung", "Die Session wurde beendet.");
+                window.showToast("Sie wurden abgemeldet.", 'info'); // NEU: Toast
             } catch (error) {
      
                 console.error("Logout Fehler:", error);
@@ -927,7 +970,6 @@
             }, (error) => {
                 console.error("Produkt-Listener Fehler:", error);
                 
-                // 🛑 FEHLERDIAGNOSE für fehlgeschlagenen LESEZUGRIFF
                 if (error.code === 'permission-denied') {
                     window.showInfo("Datenbankfehler: Lesezugriff verweigert!", "Die Sicherheitsregeln in der Firebase Konsole verhindern das Laden der Produkte. Bitte die Firestore 'Rules' überprüfen. (Lesezugriff muss für Ihre UID erlaubt sein)");
                 } else {
@@ -950,6 +992,7 @@
                 productData.price = parseFloat(productData.price); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
+                    window.showToast("Produkt hinzugefügt!", 'success'); // NEU: Toast
                 } catch (e) {
                     console.error("Produkt speichern Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gespeichert werden.");
@@ -963,6 +1006,7 @@
                 try {
                     const productDoc = doc(db, getProductsPath(userId), productId);
                     await deleteDoc(productDoc);
+                    window.showToast("Produkt gelöscht.", 'info'); // NEU: Toast
                 } catch (e) {
                     console.error("Produkt löschen Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gelöscht werden.");
@@ -981,7 +1025,7 @@
                         price: priceNumber 
                     });
                     
-                    window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceNumber.toFixed(2)} €)`); 
+                    window.showToast("Preis aktualisiert!", 'success'); // NEU: Toast
 
                     const currentProduct = Object.values(window.USER_PRODUCTS).find(p => p.id === productId);
                     if (currentProduct) {
@@ -1005,6 +1049,8 @@
             try {
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
                 await addDoc(collection(db, path), data);
+                // Buchung erfolgreich, kein Modal, nur Toast
+                window.showToast("Buchung abgeschlossen.", 'success'); 
             } catch (e) {
                 console.error("Save error", e);
                 window.showInfo("Fehler", "Transaktion konnte nicht gespeichert werden.");
@@ -1013,31 +1059,101 @@
             }
         }
 
-        async function generateReport() {
+        // NEU (3b): CSV-Konvertierung
+        function transactionsToCSV(transactions) {
+            let csv = "Timestamp;Total;Received;Change;Item;Count;Price\n"; // Semikolon als Trennzeichen für bessere Excel-Kompatibilität
+
+            transactions.forEach(d => {
+                // Konvertiere Beträge in deutsches Format (Komma)
+                const base = `${d.timestamp};${d.total.toFixed(2)};${d.received.toFixed(2)};${d.change.toFixed(2)}`;
+                
+                if (d.items && Array.isArray(d.items) && d.items.length > 0) {
+                    d.items.forEach(item => {
+                        // Zeilenumbruch und Semikolon im Namen entfernen
+                        const cleanName = item.name.replace(/(\r\n|\n|\r|;)/gm," ");
+                        csv += `${base};${cleanName};${item.count};${item.price.toFixed(2)}\n`;
+                    });
+                } else {
+                    csv += `${base};N/A;0;0.00\n`;
+                }
+            });
+
+            return csv.replace(/\./g, ','); // Ersetze Dezimalpunkt durch Komma
+        }
+
+        // NEU (3b): CSV-Download-Funktion
+        function downloadReportCSV(csvContent) {
+            const filename = `Tagesabschluss_${new Date().toISOString().slice(0, 10)}.csv`;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.showToast("CSV erfolgreich heruntergeladen!", 'success');
+            } else {
+                window.showInfo("Fehler", "Ihr Browser unterstützt den automatischen Download nicht.");
+            }
+        }
+
+
+        // NEU (3a & 3b): Überarbeitete Berichtsfunktion mit Zeitfilter und Typ-Auswahl
+        async function generateReport(type) { // type: 'report' oder 'csv'
             if (!userId || !db) return;
             window.showLoading(true);
             try {
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
-                const q = query(collection(db, path));
+                
+                // --- 3a) Zeitfilter: Nur heutige Transaktionen ---
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); 
+                const startOfTodayISO = today.toISOString(); 
+
+                const q = query(
+                    collection(db, path),
+                    where("timestamp", ">=", startOfTodayISO)
+                );
+                
                 const snapshot = await getDocs(q);
                 
+                const transactions = [];
                 let totalSum = 0;
                 let count = 0;
                 let productStats = {};
 
                 snapshot.forEach(doc => {
                     let d = doc.data();
+                    // Firebase speichert Zahlen als double, aber es ist sicherer, parseFloat zu verwenden, wenn man sie aus der DB holt
+                    d.total = parseFloat(d.total); 
                     totalSum += d.total;
                     count++;
-                    
+                    transactions.push(d); // Für CSV
+
                     if(d.items && Array.isArray(d.items)) {
                         d.items.forEach(item => {
                              productStats[item.name] = (productStats[item.name] || 0) + item.count;
                         });
- 
                     }
                 });
-                let report = `Tagesabschluss (Nutzer: ${auth.currentUser?.email || userId.substr(0, 8)}...)\n\n`;
+                
+                if (count === 0) {
+                    window.showInfo("Tagesabschluss", "Keine Buchungen für heute gefunden.");
+                    return;
+                }
+
+                if(type === 'csv') {
+                    const csvContent = transactionsToCSV(transactions);
+                    downloadReportCSV(csvContent);
+                    return;
+                }
+
+                // Standard Report (type === 'report')
+                let report = `Tagesabschluss (${new Date().toLocaleDateString('de-DE')})\n\n`;
                 report += `Anzahl Buchungen: ${count}\n`;
                 report += `GESAMTSUMME: ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
                 report += "Verkaufte Artikel:\n";
@@ -1046,14 +1162,16 @@
                 }
 
                 window.showInfo("Tagesabschluss", report);
+                
             } catch (e) {
                 console.error(e);
-                window.showInfo("Fehler", "Konnte Bericht nicht laden.");
+                window.showInfo("Fehler", "Konnte Bericht nicht laden: " + e.message);
             } finally {
                 window.showLoading(false);
             }
         }
 
+        // Hilfsfunktion (muss im Modul bleiben, um Toast zu verwenden)
         function showInfo(title, text) {
             document.getElementById('info-title').innerText = title;
             document.getElementById('info-text').innerText = text;
