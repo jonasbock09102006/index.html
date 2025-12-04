@@ -199,7 +199,7 @@
                 <div class="mb-4 border-b pb-3">
                     <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt anlegen</h3>
                     <div class="flex space-x-2 mb-2">
-                        <input type="text" id="new-category-name" placeholder="Name der Kategorie (z.B. Glühwein)" class="flex-grow p-2 border rounded-lg">
+                        <input type="text" id="new-category-name" placeholder="Name der Kategorie (z.B. Getränke)" class="flex-grow p-2 border rounded-lg">
     
                         <button onclick="addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Kategorie hinzufügen</button>
                     </div>
@@ -394,7 +394,12 @@
      
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
-          <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.4 (Optimierte Zahlung)</div>
+          <div class="flex flex-col items-end">
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.5 (Logout hinzugefügt)</div>
+                <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
+                    Logout
+                </button>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -659,6 +664,13 @@
             closeModal('registration-modal');
          openLoginModal();
             showLoading(false);
+        }
+
+        // NEU: Logout Funktion
+        function handleLogout() {
+            resetBestellung(); // Bestellung zurücksetzen
+            window.updateAppView('login');
+            showToast('Erfolgreich abgemeldet.', 'info');
         }
 
         async function loadSettings() {
@@ -1499,7 +1511,8 @@
                 report += `  - KARTE: ${revenueByMethod['KARTE'].toFixed(2).replace('.', ',')} €\n\n`;
 
                 report += "Umsatz nach Steuersatz (MwSt. bereits enthalten):\n";
-                Object.entries(revenueByTax).sort(([rateA], [rateB]) => parseFloat(rateB.replace('%', '')) - parseFloat(rateA.replace('%', ''))).forEach(([rate, details]) => {
+                Object.entries(revenueByTax).sort(([rateA], [rateB]) => parseFloat(rateB.replace('%', '')) - parseFloat(rateA.replace('%', ''
+                )).forEach(([rate, details]) => {
                     report += `  - ${rate} Netto: ${details.netto.toFixed(2).replace('.', ',')} €\n`;
                     report += `  - ${rate} Steuer: ${details.tax.toFixed(2).replace('.', ',')} €\n`;
                 });
