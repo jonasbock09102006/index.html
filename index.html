@@ -212,6 +212,10 @@
                     <button onclick="runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
                         Tagesabschluss (CSV Export)
                     </button>
+                    
+                    <button onclick="openSettingsModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-yellow-600 hover:bg-yellow-700 shadow-lg">
+                         Einstellungen (Belegkopf)
+                    </button>
 
                 </div>
             </div>
@@ -343,6 +347,41 @@
         </div>
     </div>
 
+    <div id="settings-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold text-yellow-700 mb-3">Belegkopf-Einstellungen</h3>
+            <p class="text-sm text-gray-500 mb-4">Diese Daten werden im Browser (localStorage) gespeichert und für den Bewirtungsbeleg verwendet.</p>
+            
+            <form id="firm-details-form" onsubmit="event.preventDefault(); saveFirmDetails();">
+                <div class="space-y-3">
+                    <div>
+                        <label for="setting-firm-name" class="block text-sm font-medium text-gray-700">Firmenname:</label>
+                        <input type="text" id="setting-firm-name" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="setting-firm-adresse" class="block text-sm font-medium text-gray-700">Adresse:</label>
+                        <input type="text" id="setting-firm-adresse" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="setting-firm-steuer-nr" class="block text-sm font-medium text-gray-700">USt-IdNr.:</label>
+                        <input type="text" id="setting-firm-steuer-nr" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <label for="setting-firm-telefon" class="block text-sm font-medium text-gray-700">Telefon (optional):</label>
+                        <input type="text" id="setting-firm-telefon" class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full p-3 mt-5 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg">
+                    Einstellungen speichern
+                </button>
+            </form>
+
+            <button onclick="closeModal('settings-modal')" class="mt-4 w-full p-2 text-sm font-bold text-gray-500">Abbrechen</button>
+        </div>
+    </div>
+    
     <div id="info-modal" style="display: none;"
     class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-sm">
@@ -373,8 +412,8 @@
             reduced: 0.07   // 7%
         };
         
-        // NEU: HARTE CODIERTE FIRMENINFORMATIONEN FÜR DEN BEWIRTUNGSBELEG
-        const FIRMA_DETAILS = {
+        // NEU: GLOBALE VARIABLE FÜR FIRMENDETAILS (wird von localStorage geladen)
+        let FIRMA_DETAILS = {
             NAME: "Glühweinstand GmbH & Co. KG",
             ADRESSE: "Hauptstraße 12, 99084 Erfurt",
             STEUER_NR: "DE987654321", // USt-IdNr.
@@ -384,11 +423,58 @@
 
         // --- Startet sofort ---
         window.onload = function() {
+            loadFirmDetails(); // NEU: Firmendaten aus localStorage laden
             setReportDateToday(); // Setze das Startdatum auf heute
             renderButtons();
             updateUI();
         };
-        
+
+        // --- NEU: Einstellungs-Logik (Firmendaten) ---
+
+        function loadFirmDetails() {
+            const savedDetails = localStorage.getItem('kasse_firm_details');
+            if (savedDetails) {
+                try {
+                    // Überschreibe Standardwerte mit gespeicherten Werten
+                    const loaded = JSON.parse(savedDetails);
+                    FIRMA_DETAILS = { ...FIRMA_DETAILS, ...loaded };
+                } catch (e) {
+                    console.error("Fehler beim Laden der Firmendetails aus localStorage", e);
+                }
+            }
+        }
+
+        function openSettingsModal() {
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
+            
+            // Felder mit aktuellen Werten füllen
+            document.getElementById('setting-firm-name').value = FIRMA_DETAILS.NAME;
+            document.getElementById('setting-firm-adresse').value = FIRMA_DETAILS.ADRESSE;
+            document.getElementById('setting-firm-steuer-nr').value = FIRMA_DETAILS.STEUER_NR;
+            document.getElementById('setting-firm-telefon').value = FIRMA_DETAILS.TELEFON || '';
+
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function saveFirmDetails() {
+            const newDetails = {
+                NAME: document.getElementById('setting-firm-name').value.trim(),
+                ADRESSE: document.getElementById('setting-firm-adresse').value.trim(),
+                STEUER_NR: document.getElementById('setting-firm-steuer-nr').value.trim(),
+                TELEFON: document.getElementById('setting-firm-telefon').value.trim()
+            };
+
+            // Globale Variable aktualisieren
+            FIRMA_DETAILS = { ...FIRMA_DETAILS, ...newDetails };
+
+            // In localStorage speichern
+            localStorage.setItem('kasse_firm_details', JSON.stringify(FIRMA_DETAILS));
+
+            closeModal('settings-modal');
+            showToast("Belegkopf-Details gespeichert!", 'success');
+        }
+
+
         // NEU: Setzt das Berichtsdatum auf heute
         function setReportDateToday() {
             const today = new Date().toISOString().split('T')[0];
@@ -792,16 +878,12 @@
             document.getElementById('finalize-modal').style.display = 'flex';
         }
         
-        // Bewirtungs-Modals wurden entfernt.
-        
         // Geändert: Öffnet das Zahlungs-Modal
         function openPaymentModal(printReceipt) { 
             closeModal('finalize-modal'); 
             
             // Speichert die Entscheidung für die Transaktion
             document.getElementById('payment-modal').dataset.printReceipt = printReceipt; 
-
-            // HIER ist keine Bewirtungs-Daten-Erfassung mehr nötig.
 
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
             
@@ -953,6 +1035,7 @@
         // 🚨 KORRIGIERTE FUNKTION: Kassenzettel Druckfunktion
         function printKassenzettel(transactionData, bewirtungDetails) {
             
+            // NUTZT JETZT DIE GLOBALE, DURCH localStorage GELADENE FIRMA_DETAILS
             const FIRMA_NAME = FIRMA_DETAILS.NAME;
             const FIRMA_ADRESSE = FIRMA_DETAILS.ADRESSE;
             const FIRMA_STEUER_NR = FIRMA_DETAILS.STEUER_NR; 
