@@ -575,7 +575,7 @@
             
             renderCategoryTabs(productCategories); // NEU
             renderButtons();
-            renderProductList(); 
+            renderProductList(); // FIX: Jetzt aufgerufen und definiert
         }
         
         // NEU: Rendert die Kategorie-Tabs
@@ -816,11 +816,87 @@
             renderProductList();
         }
 
+        // FIX: Hinzugefügt - Rendert die Liste der Produkte im Modal
+        function renderProductList() { 
+            const container = document.getElementById('product-list-container');
+            container.innerHTML = '';
+            
+            const productKeys = Object.keys(USER_PRODUCTS);
+
+            if (productKeys.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">Noch keine Produkte vorhanden. Fügen Sie oben neue hinzu.</p>';
+                return;
+            }
+
+            for (let name of productKeys) {
+                const product = USER_PRODUCTS[name];
+                const vatDisplay = product.vatGroup === 'reduced' ? '7%' : '19%';
+                
+                const productHtml = `
+                    <div class="flex justify-between items-center p-2 rounded-lg bg-white shadow-sm border border-gray-200">
+                        <div class="flex-grow">
+                            <span class="font-bold text-gray-800">${name}</span>
+                            <span class="text-xs text-gray-500 block">Kategorie: ${product.category}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-semibold text-blue-600 cursor-pointer" 
+                                onclick="editProductPrice('${product.id}', '${name}', ${product.price}, '${product.vatGroup}', '${product.category}')">
+                                ${product.price.toFixed(2).replace('.', ',')} € (${vatDisplay})
+                            </span>
+                            <button onclick="deleteProduct('${product.id}')" class="text-red-500 hover:text-red-700 text-sm font-bold p-1 rounded-full">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += productHtml;
+            }
+        }
+        
+        // FIX: Hinzugefügt - Helferfunktion zum Löschen
+        function deleteProduct(productId) {
+            if (confirm("Produkt wirklich löschen?")) {
+                 window.productsDB.deleteProduct(productId);
+            }
+        }
+
+        // FIX: Hinzugefügt - Helferfunktion zum Bearbeiten
+        function editProductPrice(id, name, currentPrice, currentVatGroup, currentCategory) {
+            const newPriceStr = prompt(`Neuen Brutto-Preis für ${name} eingeben:`, currentPrice.toFixed(2).replace('.', ','));
+            if (newPriceStr === null) return;
+            const newPrice = parseFloat(newPriceStr.replace(',', '.'));
+            
+            if (isNaN(newPrice) || newPrice <= 0) {
+                return showInfo("Fehler", "Ungültiger Preis eingegeben.");
+            }
+            
+            const newVatGroup = prompt(`Neue MwSt.-Gruppe für ${name} (standard / reduced):`, currentVatGroup);
+            if (newVatGroup === null) return;
+            if (newVatGroup !== 'standard' && newVatGroup !== 'reduced') {
+                return showInfo("Fehler", "Ungültige MwSt.-Gruppe. Verwenden Sie 'standard' oder 'reduced'.");
+            }
+            
+            const newCategory = prompt(`Neue Kategorie für ${name} eingeben:`, currentCategory);
+            if (newCategory === null || newCategory.trim() === "") {
+                return showInfo("Fehler", "Kategorie darf nicht leer sein.");
+            }
+
+            window.productsDB.updateProduct(id, newPrice, newVatGroup, newCategory);
+        }
+
         // NEU: Füllt das Kategorie-Feld beim Öffnen mit einem Standardwert
         function openSettingsModal() {
             // ... (bestehende Logik) ...
             document.getElementById('product-category').value = 'Standard'; 
             // ... (bestehende Logik) ...
+            
+            // Füllt die Felder mit gespeicherten Werten
+            document.getElementById('setting-firm-name').value = FIRMA_DETAILS.NAME;
+            document.getElementById('setting-firm-adresse').value = FIRMA_DETAILS.ADRESSE;
+            document.getElementById('setting-firm-steuer-nr').value = FIRMA_DETAILS.STEUER_NR;
+            document.getElementById('setting-firm-telefon').value = FIRMA_DETAILS.TELEFON || '';
+
+            document.getElementById('settings-modal').style.display = 'flex';
         }
 
         async function handleProductFormSubmit() { 
@@ -842,7 +918,8 @@
             document.getElementById('product-category').value = 'Standard'; // Setze Kategorie zurück
             document.getElementById('product-name').focus();
             
-            renderProductList(); 
+            // renderProductList wird über den Firestore Listener in setProducts aufgerufen
+            // renderProductList(); 
         }
 
         // --- Transaktions-Storno Logik (NEU) ---
@@ -937,17 +1014,6 @@
                     console.error("Fehler beim Laden der Firmendetails aus localStorage", e);
                 }
             }
-        }
-
-        function openSettingsModal() {
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            
-            document.getElementById('setting-firm-name').value = FIRMA_DETAILS.NAME;
-            document.getElementById('setting-firm-adresse').value = FIRMA_DETAILS.ADRESSE;
-            document.getElementById('setting-firm-steuer-nr').value = FIRMA_DETAILS.STEUER_NR;
-            document.getElementById('setting-firm-telefon').value = FIRMA_DETAILS.TELEFON || '';
-
-            document.getElementById('settings-modal').style.display = 'flex';
         }
 
         function saveFirmDetails() {
