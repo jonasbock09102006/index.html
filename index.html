@@ -28,13 +28,13 @@
         .numpad-btn:active { transform: scale(0.95);
         }
 
-        /* ASYNC LOADING OVERLAY (Minimal) */
+        /* ASYNC LOADING OVERLAY */
         #async-loading-overlay {
             position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
             background-color: rgba(255, 255, 255, 0.8);
             z-index: 100;
-            display: none; /* Wird nur bei aktiven DB-Aufrufen gezeigt */
+            display: none;
             justify-content: center;
             align-items: center;
         }
@@ -271,10 +271,10 @@
         window.onload = function() {
             renderButtons();
             updateUI();
-            openLoginModal(); // Startet mit dem Login-Modal
+            // Startet mit dem Login-Modal, sobald die DB initialisiert ist
         };
         
-        // --- UI Ansichtskontrolle (GEÄNDERT) ---
+        // --- UI Ansichtskontrolle ---
         function updateAppView(state, userDisplay = '') {
             const kasseContent = document.getElementById('kasse-content');
             const loginModal = document.getElementById('login-modal');
@@ -295,7 +295,7 @@
             }
         }
         
-        // --- AUTH-Modal Logik (NEU) ---
+        // --- AUTH-Modal Logik ---
         function openLoginModal() {
             document.getElementById('login-modal').style.display = 'flex';
             document.getElementById('registration-modal').style.display = 'none';
@@ -306,7 +306,6 @@
             document.getElementById('registration-modal').style.display = 'flex';
         }
 
-        // Wird von der HTML-Form aufgerufen
         function handleLoginSubmit() {
             if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
             const email = document.getElementById('login-email').value;
@@ -352,8 +351,8 @@
             }
         }
         
-        // --- Kasse UI Funktionen (Bleiben im Wesentlichen gleich) ---
-        function setProducts(products) { /* ... */
+        // --- Kasse UI Funktionen ---
+        function setProducts(products) { 
             USER_PRODUCTS = products.reduce((acc, product) => {
                 const price = parseFloat(product.price);
                 if (!isNaN(price) && price > 0) {
@@ -366,7 +365,7 @@
             renderProductList(); 
         }
 
-        function renderButtons() { /* ... */
+        function renderButtons() { 
             const container = document.getElementById('product-grid');
             container.innerHTML = '';
             
@@ -437,15 +436,15 @@
             document.getElementById('receipt-content').innerText = text;
         }
 
-        // --- Produktverwaltung Logik (Bleibt gleich) ---
+        // --- Produktverwaltung Logik ---
 
-        function openProductModal() { /* ... */
+        function openProductModal() { 
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             document.getElementById('product-management-modal').style.display = 'flex';
             renderProductList();
         }
 
-        function renderProductList() { /* ... */
+        function renderProductList() { 
             const container = document.getElementById('product-list-container');
             container.innerHTML = ''; 
 
@@ -492,7 +491,7 @@
             });
         }
         
-        function toggleEditPrice(id, currentPrice) { /* ... */
+        function toggleEditPrice(id, currentPrice) { 
             const container = document.getElementById(`price-display-${id}`);
             if (container.querySelector('input')) {
                 container.innerHTML = `
@@ -518,7 +517,7 @@
             document.getElementById(`edit-price-${id}`).focus();
         }
 
-        function saveProductPrice(id) { /* ... */
+        function saveProductPrice(id) { 
             const input = document.getElementById(`edit-price-${id}`);
             const newPrice = parseFloat(input.value.replace(',', '.'));
 
@@ -536,7 +535,7 @@
         }
 
 
-        function handleProductFormSubmit() { /* ... */
+        function handleProductFormSubmit() { 
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
             const name = document.getElementById('product-name').value.trim();
             const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
@@ -552,7 +551,7 @@
             document.getElementById('product-name').focus();
         }
 
-        function confirmDeleteProduct(id, name) { /* ... */
+        function confirmDeleteProduct(id, name) { 
             if (window.confirm(`Soll das Produkt "${name}" wirklich gelöscht werden?`)) { 
                 if (window.productsDB) {
                     window.productsDB.deleteProduct(id);
@@ -563,8 +562,8 @@
         }
 
 
-        // --- Allgemeine Modal Logik (Bleibt gleich) ---
-        function openPaymentModal() { /* ... */
+        // --- Allgemeine Modal Logik ---
+        function openPaymentModal() { 
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (currentTotal <= 0) return showInfo("Info", "Bitte erst etwas buchen.");
             
@@ -582,8 +581,8 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // --- NUMPAD LOGIK (Bleibt gleich) ---
-        function handleNumpadInput(key) { /* ... */
+        // --- NUMPAD LOGIK (Optimiert) ---
+        function handleNumpadInput(key) { 
             const inputField = document.getElementById('input-received');
 
             if (key === 'clear') {
@@ -609,7 +608,7 @@
             calculateChange();
         }
 
-        function calculateChange() { /* ... */
+        function calculateChange() { 
             let val = document.getElementById('input-received').value.replace(',', '.');
             let received = parseFloat(val); 
 
@@ -635,8 +634,8 @@
         }
 
 
-        // --- Transaktions Logik (Bleibt gleich) ---
-        function finishTransaction() { /* ... */
+        // --- Transaktions Logik ---
+        function finishTransaction() { 
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if(document.getElementById('btn-confirm-pay').disabled) return;
 
@@ -667,7 +666,7 @@
             }
         }
 
-        function runDailyReport() { /* ... */
+        function runDailyReport() { 
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (window.cloudReportFunction) {
                 window.cloudReportFunction();
@@ -687,7 +686,6 @@
         import { 
             initializeApp 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // 🚨 GEÄNDERTE IMPORTS 🚨: signInWithEmailAndPassword & createUserWithEmailAndPassword hinzugefügt.
         import { 
             getAuth, 
             onAuthStateChanged,
@@ -707,10 +705,10 @@
             updateDoc 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         // =================================================================
-        //  DEINE FIREBASE KONFIGURATION (PLATZHALTER ERSETZT) 
+        // ⚠️ HIER FIREBASE KONFIGURATION EINFÜGEN ⚠️
         // =================================================================
         const PLACEHOLDER_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc", 
+            apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc", // Platzhalter
             authDomain: "kassensystem-85412.firebaseapp.com",
             projectId: "kassensystem-85412",
             storageBucket: "kassensystem-85412.firebaseApp.com",
@@ -749,7 +747,6 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // 🚨 GEÄNDERT 🚨: Bietet nun die Funktionen signIn und register an.
                 window.authService = {
                     signIn: signInUser,
                     register: registerUser,
@@ -761,10 +758,8 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        // 🚨 GEÄNDERT 🚨: Zeigt E-Mail statt anonymer ID an
                         const userDisplay = user.email || `UID: ${userId.substr(0, 8)}...`;
        
-                  
                         console.log(`Auth-Status: Angemeldet als ${userDisplay}`);
 
                         setupProductsListener(userId);
@@ -802,9 +797,6 @@
                     }
                 });
 
-                // 🚨 ENTFERNT 🚨: Keine automatische anonyme Anmeldung mehr beim Start.
-                // Der Nutzer muss sich jetzt über das Login-Modal anmelden.
-
             } catch (e) {
                 console.error("DB INIT FEHLER:", e);
              
@@ -816,7 +808,7 @@
             }
         }
 
-        // --- Firebase AUTH Implementierung (NEU) ---
+        // --- Firebase AUTH Implementierung ---
 
         async function signInUser(email, password) {
             if (!auth) return;
@@ -862,31 +854,40 @@
 
         function getFirebaseErrorText(errorCode) {
             switch (errorCode) {
+                // HIER IST DER FIX FÜR DEN NEUEN ALLGEMEINEN FEHLERCODE
+                case 'auth/invalid-credential':
+                    return 'Die Kombination aus E-Mail und Passwort ist ungültig. Bitte überprüfen Sie Ihre Eingaben.';
+                
+                // Bestehende Fehlercodes für Logikfehler
                 case 'auth/wrong-password':
                     return 'Falsches Passwort.';
                 case 'auth/user-not-found':
-                    return 'Kein Benutzer mit dieser E-Mail gefunden.';
+                    return 'Kein Benutzer mit dieser E-Mail gefunden. Haben Sie sich registriert?';
                 case 'auth/invalid-email':
                     return 'Ungültiges E-Mail-Format.';
+                
+                // Fehlercodes bei Registrierung
                 case 'auth/email-already-in-use':
                     return 'Diese E-Mail-Adresse wird bereits verwendet.';
                 case 'auth/weak-password':
-                    return 'Das Passwort ist zu schwach.';
+                    return 'Das Passwort ist zu schwach (mind. 6 Zeichen).';
+                    
                 default:
                     return `Ein unbekannter Fehler ist aufgetreten: ${errorCode}.`;
             }
         }
 
-        // --- Produkt-Management Logik (Bleibt gleich) ---
+        // --- Produkt-Management Logik ---
 
         const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
-        function setupProductsListener(id) { /* ... */
+        function setupProductsListener(id) { 
             if (unsubscribeProducts) unsubscribeProducts();
             const productsCol = collection(db, getProductsPath(id));
             
             unsubscribeProducts = onSnapshot(productsCol, async (snapshot) => {
                 const products = snapshot.docs.map(doc => ({
                     id: doc.id,
+                    // Stellt sicher, dass der Preis als Zahl (Float) geladen wird.
                     price: parseFloat(doc.data().price), 
                     name: doc.data().name,
                 }));
@@ -907,16 +908,17 @@
         
         async function addDefaultProductsIfEmpty(id) {
              const productsCol = collection(db, getProductsPath(id));
-            // NEU: Preise als Floats speichern
+            // Preise als Floats speichern
             for (const product of DEFAULT_PRODUCTS) {
                  await addDoc(productsCol, { name: product.name, price: product.price }); 
             }
         }
 
-        const productsDB = { /* ... */
+        const productsDB = { 
             saveProduct: async (productData) => {
                 if (!userId || !db) return;
                 window.showLoading(true);
+                // Speichert als Float/Number
                 productData.price = parseFloat(productData.price); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
@@ -944,6 +946,7 @@
                 if (!userId || !db) return;
                 window.showLoading(true);
                 try {
+                    // Speichert als Float/Number
                     const priceNumber = parseFloat(newPrice); 
                     const productDocRef = doc(db, getProductsPath(userId), productId);
                     
@@ -967,7 +970,7 @@
                 }
             }
         };
-        // --- Transaktions Logik (Bleibt gleich) ---
+        // --- Transaktions Logik ---
 
         async function saveToCloud(data) {
             if (!userId || !db) return;
