@@ -13,7 +13,7 @@
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
 
-        /* Numpad Button Style (VERGRÖSSERT) */
+        /* Numpad Button Style (EINHEITLICH GROSS) */
         .numpad-btn {
             /* Anpassungen für größere Tasten und bessere Bedienbarkeit */
             @apply p-6 rounded-xl font-extrabold text-3xl shadow-lg transition-colors;
@@ -150,8 +150,8 @@
                 <button onclick="handleNumpadInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
                 <button onclick="handleNumpadInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
-                <!-- Die Löschen-Taste ist nun auch größer -->
-                <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button>
+                <!-- Die Löschen-Taste ist nun auch größer und ohne redundante text-3xl Klasse -->
+                <button onclick="handleNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
                 <button onclick="handleNumpadInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
                 <button onclick="handleNumpadInput(',')" class="numpad-btn bg-gray-200 hover:bg-gray-300">,</button>
             </div>
