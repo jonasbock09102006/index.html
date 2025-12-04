@@ -387,7 +387,7 @@
                 </div>
             </div>
             
-            <div 
+            <div id="receipt-column" 
             class="lg:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3 order-3">
                 <h2 class="text-lg font-semibold mb-2 text-gray-700">Aktueller Bon (Brutto)</h2>
                 <div id="receipt-content-interactive" class="bg-gray-50 p-2 rounded-lg text-xs text-gray-700 border border-gray-200 min-h-[150px]">
@@ -436,6 +436,15 @@
 
         // --- UI FUNKTIONEN ---
 
+        // NEUE HILFSFUNKTION: Bon-Spalte ein/ausblenden
+        function toggleReceiptColumn(show) {
+            const column = document.getElementById('receipt-column');
+            if (column) {
+                // '' setzt den Display-Style zurück, sodass die CSS-Grid-Eigenschaft greift
+                column.style.display = show ? '' : 'none'; 
+            }
+        }
+
         window.updateAppView = function(view) {
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('registration-modal').style.display = 'none';
@@ -443,8 +452,10 @@
 
             if (view === 'login') {
                 document.getElementById('login-modal').style.display = 'flex';
+                toggleReceiptColumn(false); // Bon ausblenden, wenn im Login
             } else if (view === 'kasse') {
                 document.getElementById('kasse-content').style.display = 'block';
+                toggleReceiptColumn(true); // Bon einblenden, wenn in der Kasse
             } else if (view === 'loading') {
                 // Optional: Lade-Overlay anzeigen
             }
@@ -489,14 +500,17 @@
 
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
+            toggleReceiptColumn(true); // <-- Bon wieder einblenden
         }
         
         function openLoginModal() {
             document.getElementById('login-modal').style.display = 'flex';
+            toggleReceiptColumn(false); // Bon ausblenden
         }
 
         function openRegistrationModal() {
             closeModal('login-modal');
+            toggleReceiptColumn(false); // Bon ausblenden
             document.getElementById('registration-modal').style.display = 'flex';
         }
         
@@ -516,7 +530,8 @@
             // Simuliere Registrierungs-Logik
             await new Promise(resolve => setTimeout(resolve, 500));
             showToast('Registrierung erfolgreich! Bitte melden Sie sich an.', 'success');
-            closeModal('registration-modal');
+            // Die `closeModal` in der nächsten Zeile kümmert sich um das Einblenden
+            closeModal('registration-modal'); 
             openLoginModal();
             showLoading(false);
         }
@@ -536,6 +551,7 @@
             document.getElementById('address').value = userSettings.address;
             document.getElementById('tax-id').value = userSettings.taxId;
             document.getElementById('tax-rate').value = userSettings.taxRate;
+            toggleReceiptColumn(false); // <-- Bon ausblenden
             document.getElementById('settings-modal').style.display = 'flex';
         }
 
@@ -674,6 +690,7 @@
 
         function openProductModal() {
             renderProductModalContent();
+            toggleReceiptColumn(false); // <-- Bon ausblenden
             document.getElementById('product-modal').style.display = 'flex';
         }
 
@@ -933,6 +950,7 @@
             }
             const total = currentBestellung.reduce((sum, item) => sum + item.brutto, 0);
             document.getElementById('finalize-total').innerText = total.toFixed(2).replace('.', ',') + ' €';
+            toggleReceiptColumn(false); // <-- Bon ausblenden
             document.getElementById('finalize-modal').style.display = 'flex';
         }
 
@@ -994,6 +1012,7 @@
             if (transactionHistory.length === 0) {
                 listContainer.innerHTML = '<p class="text-gray-500">Keine abgeschlossenen Transaktionen gefunden.</p>';
                 document.getElementById('transaction-reversal-modal').style.display = 'flex';
+                toggleReceiptColumn(false); // <-- Bon ausblenden
                 return;
             }
 
@@ -1016,6 +1035,7 @@
                 listContainer.appendChild(item);
             });
 
+            toggleReceiptColumn(false); // <-- Bon ausblenden
             document.getElementById('transaction-reversal-modal').style.display = 'flex';
         }
 
@@ -1041,7 +1061,7 @@
             showToast(`Transaktion ${id} über ${reversedTx.totalBrutto.toFixed(2).replace('.', ',')} € storniert.`, 'success');
             
             // UI aktualisieren
-            closeModal('transaction-reversal-modal');
+            closeModal('transaction-reversal-modal'); // Ruft toggleReceiptColumn(true) auf
             await loadTransactionHistory();
             openTransactionReversalModal();
             showLoading(false);
@@ -1146,6 +1166,7 @@
 
                 document.getElementById('info-title').innerText = "Tagesabschluss";
                 document.getElementById('info-text').innerText = report;
+                toggleReceiptColumn(false); // <-- Bon ausblenden
                 document.getElementById('info-modal').style.display = 'flex';
             }
 
