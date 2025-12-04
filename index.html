@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glühweinstand Kasse Mobile (Konfigurierbar)</title>
+    <title>Glühweinstand Kasse Mobile (Sofort-Start)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Grundlegendes Styling */
@@ -12,26 +12,28 @@
         #receipt-content { overflow-y: auto; max-height: 45vh; }
         /* Klick-Effekt für Buttons */
         .product-btn:active { transform: scale(0.98); }
-        /* Overlay, wenn nicht eingeloggt */
-        .disabled-overlay {
+        /* Deaktivierungs-Styling bei DB-Fehler */
+        #main-content[data-active="false"] {
             pointer-events: none;
-            opacity: 0.5;
+            opacity: 0.7;
+            filter: grayscale(100%);
         }
     </style>
 </head>
 <body class="min-h-screen p-2 md:p-6 bg-red-500/10">
 
-    <!-- Status Leiste und Login/Logout Button -->
+    <!-- Status Leiste und Titel -->
     <div class="flex justify-between items-center mb-4">
-        <button id="auth-button" onclick="openLoginModal()" class="text-xs text-gray-800 p-2 rounded-lg bg-yellow-300 hover:bg-yellow-400 font-bold shadow-sm transition-colors">
-            Login / Offline
-        </button>
+        <!-- Neuer DB Status Indikator -->
+        <div id="db-status" class="text-xs font-bold p-2 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
+            Datenbankmodul lädt...
+        </div>
         <h1 class="text-3xl font-bold text-center text-red-700">Glühweinstand 🍷</h1>
-        <div style="width: 50px;"></div>
+        <div class="text-xs text-gray-500">Kasse v1.1</div>
     </div>
 
-    <!-- Haupt Layout (Deaktiviert, wenn nicht eingeloggt) -->
-    <div id="main-content" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 disabled-overlay">
+    <!-- Haupt Layout -->
+    <div id="main-content" data-active="false" class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         
         <!-- Linke Seite: Eingabe und Steuerung -->
         <div class="lg:col-span-1 space-y-4">
@@ -39,7 +41,7 @@
                 <h2 class="text-xl font-semibold mb-3 text-red-800">Produkte buchen</h2>
                 <!-- Dynamisches Produkt-Grid -->
                 <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
-                    <p class="text-gray-500 col-span-full text-center">Produkte werden nach Login geladen...</p>
+                    <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
                 </div>
             </div>
 
@@ -118,36 +120,12 @@
             </form>
 
             <!-- Liste der aktuellen Produkte -->
-            <h4 class="text-lg font-semibold mb-3">Deine Produkte</h4>
+            <h4 class="text-lg font-semibold mb-3">Deine Produkte (Klicken Sie auf den Stift zum Bearbeiten)</h4>
             <div id="product-list-container" class="space-y-2">
                 <p class="text-gray-500">Lade Produkte...</p>
             </div>
 
             <button onclick="closeModal('product-management-modal')" class="mt-6 w-full p-3 text-sm font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg">Schließen</button>
-        </div>
-    </div>
-
-    <!-- Login/Auth Modal -->
-    <div id="login-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
-            <h3 class="text-2xl font-bold text-red-700 mb-4">Anmeldung</h3>
-            
-            <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail:</label>
-            <input type="email" id="login-email" placeholder="name@beispiel.de" class="w-full px-4 py-2 border rounded-lg mb-3">
-
-            <label class="block text-sm font-medium text-gray-700 mb-1">Passwort:</label>
-            <input type="password" id="login-password" placeholder="********" class="w-full px-4 py-2 border rounded-lg mb-6" onkeyup="if(event.key === 'Enter') attemptLogin()">
-
-            <div id="login-error" class="text-sm text-red-500 mb-3 hidden"></div>
-
-            <button onclick="attemptLogin()" class="w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 mb-2">
-                Einloggen
-            </button>
-            <button id="signup-button" onclick="attemptSignup()" class="w-full p-3 rounded-lg font-bold text-gray-800 bg-gray-300 hover:bg-gray-400">
-                Registrieren (Neuer Nutzer)
-            </button>
-            
-            <button onclick="closeModal('login-modal')" id="login-close-btn" class="mt-4 w-full p-2 text-sm text-gray-500" style="display: none;">Schließen</button>
         </div>
     </div>
 
@@ -166,8 +144,7 @@
     -->
     <script>
         // --- Globale Status Variablen ---
-        let IS_AUTHENTICATED = false;
-        // Produktliste wird jetzt dynamisch aus Firebase geladen
+        let kasseActive = false; // Neuer Status-Indikator, ersetzt IS_AUTHENTICATED
         let USER_PRODUCTS = {}; 
 
         let currentOrder = {};
@@ -178,119 +155,27 @@
         window.onload = function() {
             renderButtons();
             updateUI();
+            // DB-Initialisierung startet in Teil 2
         };
 
-        // --- AUTH/Login UI Funktionen ---
-        function setAuthState(isAuthenticated, userEmail) {
-            IS_AUTHENTICATED = isAuthenticated;
-            const authButton = document.getElementById('auth-button');
+        // --- Status UI Funktionen ---
+        function setDBStatus(isActive, message) {
+            kasseActive = isActive;
+            const statusElement = document.getElementById('db-status');
             const mainContent = document.getElementById('main-content');
-            const closeBtn = document.getElementById('login-close-btn');
 
-            if (isAuthenticated) {
-                // Bei Erfolg die Kasse aktivieren
-                mainContent.classList.remove('disabled-overlay');
-                authButton.innerText = `Logout (${userEmail})`;
-                authButton.onclick = attemptLogout;
-                authButton.className = "text-xs text-white p-2 rounded-lg bg-red-600 hover:bg-red-700 font-bold shadow-sm transition-colors";
-                closeModal('login-modal');
-                closeBtn.style.display = 'block';
+            statusElement.innerText = message;
+            mainContent.setAttribute('data-active', isActive);
+
+            if (isActive) {
+                statusElement.className = "text-xs font-bold p-2 rounded-lg bg-green-600 text-white shadow-sm";
+            } else if (message.includes("API Key fehlt")) {
+                statusElement.className = "text-xs font-bold p-2 rounded-lg bg-red-800 text-white shadow-sm";
             } else {
-                // Bei Logout/nicht eingeloggt die Kasse deaktivieren
-                mainContent.classList.add('disabled-overlay');
-                authButton.innerText = "Login / Offline";
-                authButton.onclick = openLoginModal;
-                authButton.className = "text-xs text-gray-800 p-2 rounded-lg bg-yellow-300 hover:bg-yellow-400 font-bold shadow-sm transition-colors";
-                closeBtn.style.display = 'none';
+                statusElement.className = "text-xs font-bold p-2 rounded-lg bg-red-500 text-white shadow-sm";
             }
         }
 
-        function openLoginModal() {
-            if (IS_AUTHENTICATED) return;
-            document.getElementById('login-modal').style.display = 'flex';
-            document.getElementById('login-error').style.display = 'none';
-            document.getElementById('login-email').focus();
-            
-            // Setzt den Registrierungs-Button beim Öffnen auf Standard zurück
-            const signupBtn = document.getElementById('signup-button');
-            if (signupBtn) {
-                 signupBtn.disabled = false;
-                 signupBtn.innerText = "Registrieren (Neuer Nutzer)";
-                 signupBtn.className = "w-full p-3 rounded-lg font-bold text-gray-800 bg-gray-300 hover:bg-gray-400";
-            }
-        }
-
-        function getAuthCredentials() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            document.getElementById('login-error').style.display = 'none';
-            return { email, password };
-        }
-
-        function displayAuthError(message) {
-            const errorElement = document.getElementById('login-error');
-            errorElement.innerText = message;
-            errorElement.style.display = 'block';
-        }
-        
-        async function attemptLogin() {
-            if (!window.firebaseAuth) return displayAuthError("Datenbankmodul lädt noch. Bitte warten.");
-            const { email, password } = getAuthCredentials();
-            try {
-                await window.firebaseAuth.login(email, password);
-            } catch (error) {
-                console.error("Login Error:", error);
-                displayAuthError("Fehler beim Login. Prüfe E-Mail/Passwort.");
-            }
-        }
-
-        async function attemptSignup() {
-            if (!window.firebaseAuth) return displayAuthError("Datenbankmodul lädt noch. Bitte warten.");
-            const { email, password } = getAuthCredentials();
-            try {
-                await window.firebaseAuth.signup(email, password);
-            } catch (error) {
-                console.error("Signup Error:", error);
-                let message = "Fehler bei der Registrierung.";
-                
-                switch (error.code) {
-                    case 'auth/weak-password':
-                        message = "Das Passwort ist zu kurz. Es muss mindestens 6 Zeichen haben.";
-                        break;
-                    case 'auth/email-already-in-use':
-                        message = "Diese E-Mail-Adresse wird bereits verwendet. Bitte einloggen oder eine andere E-Mail nutzen.";
-                        break;
-                    case 'auth/invalid-email':
-                        message = "Ungültiges E-Mail-Format.";
-                        break;
-                    case 'auth/operation-not-allowed':
-                        message = "Registrierung ist deaktiviert. Die 'E-Mail/Passwort'-Methode muss in der Firebase-Konfiguration aktiviert werden.";
-                        const signupBtn = document.getElementById('signup-button');
-                        if (signupBtn) {
-                            signupBtn.disabled = true;
-                            signupBtn.innerText = "Deaktiviert (Konfigurationsfehler)";
-                            signupBtn.className = "w-full p-3 rounded-lg font-bold text-white bg-red-500 cursor-not-allowed";
-                        }
-                        break;
-                    default:
-                        message = "Ein unbekannter Fehler ist aufgetreten: " + error.message;
-                }
-                displayAuthError(message);
-            }
-        }
-
-        async function attemptLogout() {
-            if (!window.firebaseAuth) return showInfo("Fehler", "Datenbankmodul nicht geladen.");
-            try {
-                await window.firebaseAuth.logout();
-                resetBestellung(); // Bon löschen beim Logout
-            } catch (error) {
-                console.error("Logout Error:", error);
-                showInfo("Fehler", "Abmeldung fehlgeschlagen.");
-            }
-        }
-        // --- Ende AUTH/Login UI Funktionen ---
-        
         // --- Kasse UI Funktionen ---
         function setProducts(products) {
             // Firestore liefert ein Array von Produkten, wandeln es in ein Objekt um
@@ -329,7 +214,7 @@
         }
 
         function addToCart(name) {
-            if (!IS_AUTHENTICATED) return showInfo("Aktion blockiert", "Bitte zuerst einloggen.");
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             const price = USER_PRODUCTS[name]?.price;
             if (typeof price === 'undefined') return showInfo("Fehler", `Preis für "${name}" nicht gefunden.`);
 
@@ -342,7 +227,7 @@
         }
 
         function undoLastAction() {
-            if (!IS_AUTHENTICATED) return showInfo("Aktion blockiert", "Bitte zuerst einloggen.");
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (orderHistory.length === 0) return showInfo("Info", "Nichts zu stornieren.");
             
             let lastItem = orderHistory.pop();
@@ -380,7 +265,7 @@
         // --- Produktverwaltung Logik ---
 
         function openProductModal() {
-            if (!IS_AUTHENTICATED) return showInfo("Aktion blockiert", "Bitte zuerst einloggen.");
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             document.getElementById('product-management-modal').style.display = 'flex';
             renderProductList();
         }
@@ -402,18 +287,79 @@
             }
 
             productsArray.forEach(product => {
+                const id = product.id;
                 const div = document.createElement('div');
                 div.className = 'flex justify-between items-center p-3 bg-white rounded-lg shadow-sm border border-gray-200';
+                
+                // Dynamischer Inhalt für Preis-Anzeige/Eingabe
+                const priceElementId = `price-display-${id}`;
+
                 div.innerHTML = `
-                    <span class="font-semibold text-gray-800">${product.name}</span>
-                    <span class="text-lg font-bold text-red-600">${product.price.toFixed(2).replace('.', ',')} €</span>
-                    <button onclick="confirmDeleteProduct('${product.id}', '${product.name}')" class="p-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
-                        Löschen
-                    </button>
+                    <span class="font-semibold text-gray-800 w-1/3">${product.name}</span>
+                    
+                    <div id="${priceElementId}" class="flex items-center space-x-2 w-1/3 justify-end min-w-[120px]">
+                        <span class="text-lg font-bold text-red-600">${product.price.toFixed(2).replace('.', ',')} €</span>
+                        <button onclick="toggleEditPrice('${id}', '${product.price}')" 
+                                class="p-1 text-sm text-gray-700 hover:text-indigo-600 transition-colors">
+                            ✏️
+                        </button>
+                    </div>
+
+                    <div class="flex space-x-2 w-1/4 justify-end min-w-[80px]">
+                        <button onclick="confirmDeleteProduct('${id}', '${product.name}')" 
+                                class="p-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+                            Löschen
+                        </button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
         }
+        
+        /**
+         * Schaltet zwischen Preis-Anzeige und Preis-Eingabe um.
+         */
+        function toggleEditPrice(id, currentPrice) {
+            const container = document.getElementById(`price-display-${id}`);
+            
+            // Wenn wir bereits im Bearbeitungsmodus sind, passiert nichts
+            if (container.querySelector('input')) return;
+            
+            // Inhalt für den Bearbeitungsmodus setzen
+            container.innerHTML = `
+                <input type="number" id="edit-price-${id}" value="${parseFloat(currentPrice).toFixed(2)}" 
+                       step="0.01" class="w-20 px-1 py-0.5 border rounded text-right text-base font-mono">
+                <button onclick="saveProductPrice('${id}')" 
+                        class="p-1 text-sm text-white bg-green-500 hover:bg-green-600 rounded whitespace-nowrap">
+                    💾 Speichern
+                </button>
+            `;
+            document.getElementById(`edit-price-${id}`).focus();
+        }
+
+        /**
+         * Speichert den neuen Preis über die Datenbankfunktion.
+         */
+        function saveProductPrice(id) {
+            const input = document.getElementById(`edit-price-${id}`);
+            // Ersetze Komma durch Punkt für korrekte parseFloat Konvertierung
+            const newPrice = parseFloat(input.value.replace(',', '.'));
+
+            if (isNaN(newPrice) || newPrice <= 0) {
+                // Bei Fehler: zurück zum ursprünglichen Zustand (aktuellen Preis aus globalem State holen)
+                const currentProduct = Object.values(USER_PRODUCTS).find(p => p.id === id);
+                if (currentProduct) toggleEditPrice(id, currentProduct.price);
+                return showInfo("Eingabefehler", "Bitte einen gültigen Preis > 0 eingeben.");
+            }
+            
+            if (window.productsDB) {
+                // Rufe die neue DB-Update-Funktion auf
+                window.productsDB.updateProductPrice(id, newPrice);
+            } else {
+                showInfo("Fehler", "Datenbankverbindung nicht verfügbar.");
+            }
+        }
+
 
         function handleProductFormSubmit() {
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
@@ -448,7 +394,7 @@
 
         // --- Allgemeine Modal Logik ---
         function openPaymentModal() {
-            if (!IS_AUTHENTICATED) return showInfo("Aktion blockiert", "Bitte zuerst einloggen.");
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (currentTotal <= 0) return showInfo("Info", "Bitte erst etwas buchen.");
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2) + " €";
             document.getElementById('input-received').value = "";
@@ -490,7 +436,7 @@
 
         // --- Transaktions Logik ---
         function finishTransaction() {
-            if (!IS_AUTHENTICATED) return showInfo("Aktion blockiert", "Bitte zuerst einloggen.");
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if(document.getElementById('btn-confirm-pay').disabled) return;
 
             closeModal('payment-modal');
@@ -518,7 +464,7 @@
         }
 
         function runDailyReport() {
-            if (!IS_AUTHENTICATED) return showInfo("Aktion blockiert", "Bitte zuerst einloggen.");
+            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (window.cloudReportFunction) {
                 window.cloudReportFunction();
             } else {
@@ -544,10 +490,8 @@
         import { 
             getAuth, 
             signInWithCustomToken, 
-            onAuthStateChanged, 
-            signInWithEmailAndPassword, 
-            createUserWithEmailAndPassword, 
-            signOut 
+            signInAnonymously, // Neu: Anonymer Login
+            onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
@@ -557,7 +501,8 @@
             query, 
             onSnapshot,
             deleteDoc,
-            doc
+            doc,
+            updateDoc // Neu: Import für das Aktualisieren von Dokumenten
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase Konfigurationsvariablen (automatisch bereitgestellt)
@@ -581,7 +526,7 @@
 
         async function initDB() {
             if (firebaseConfig.apiKey === "DEMO") {
-                window.setAuthState(false, "Offline");
+                window.setDBStatus(false, "DB-Fehler (API Key fehlt)");
                 return;
             }
             
@@ -590,37 +535,40 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Initialer Login über Canvas-Token (falls vorhanden)
+                // Versuch, sich mit dem Token von Canvas anzumelden
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    // Fallback: Anonymer Login, um eine UserId für Firestore zu erhalten
+                    await signInAnonymously(auth);
                 }
 
-                // Auth Listener: Reagiert auf Login/Logout
+                // Auth Listener: Reagiert auf erfolgreichen (anonymen) Login
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
-                        const userEmail = user.email || "Canvas Nutzer";
+                        const statusMessage = `Online (ID: ${userId.substr(0, 8)}...)`;
 
                         // Starte den Produkt-Listener für diesen Benutzer
                         setupProductsListener(userId);
 
-                        window.setAuthState(true, userEmail);
+                        window.setDBStatus(true, statusMessage);
 
                         // Mache Datenbankfunktionen global zugänglich
                         window.cloudSaveFunction = saveToCloud;
                         window.cloudReportFunction = generateReport;
                         window.productsDB = productsDB; 
                     } else {
-                        // Bei Logout: Listener stoppen und UI aufräumen
+                        // Bei unerwartetem Logout (sollte nicht passieren)
                         if (unsubscribeProducts) {
                             unsubscribeProducts();
                             unsubscribeProducts = null;
                         }
                         userId = null;
                         isDefaultProductsAdded = false;
-                        window.setProducts([]); // Leere Produktliste
-                        window.setAuthState(false, null);
-                        window.openLoginModal();
+                        window.setProducts([]); 
+                        window.setDBStatus(false, "Offline");
+                        window.showInfo("Verbindung verloren", "Die Datenbankverbindung wurde getrennt.");
                         
                         // Datenbankfunktionen zurücksetzen
                         window.cloudSaveFunction = null;
@@ -629,16 +577,10 @@
                     }
                 });
 
-                // Mache Auth-Funktionen global zugänglich
-                window.firebaseAuth = {
-                    login: (email, password) => signInWithEmailAndPassword(auth, email, password),
-                    signup: (email, password) => createUserWithEmailAndPassword(auth, email, password),
-                    logout: () => signOut(auth)
-                };
-
             } catch (e) {
                 console.error("Datenbank-Initialisierungsfehler:", e);
-                window.setAuthState(false, "Offline");
+                window.setDBStatus(false, "Fehler beim Start der Kasse");
+                window.showInfo("Fehler", "Datenbank konnte nicht initialisiert werden: " + e.message);
             }
         }
 
@@ -647,26 +589,21 @@
         const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
 
         function setupProductsListener(id) {
-            // Stoppe alten Listener, falls vorhanden
             if (unsubscribeProducts) unsubscribeProducts();
 
             const productsCol = collection(db, getProductsPath(id));
             
-            // Richte Echtzeit-Listener ein
             unsubscribeProducts = onSnapshot(productsCol, async (snapshot) => {
                 const products = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
                 
-                // Wenn keine Produkte vorhanden UND dies der erste Ladevorgang nach dem Login ist, 
-                // füge Standardprodukte hinzu.
                 if (products.length === 0 && !isDefaultProductsAdded) {
                      await addDefaultProductsIfEmpty(id);
-                     isDefaultProductsAdded = true; // Markiere, dass dies versucht wurde
+                     isDefaultProductsAdded = true; 
                 }
 
-                // Aktualisiere die Kassen-UI
                 window.setProducts(products);
 
             }, (error) => {
@@ -677,10 +614,7 @@
         
         async function addDefaultProductsIfEmpty(id) {
              const productsCol = collection(db, getProductsPath(id));
-             // Füge alle Standardprodukte hinzu
              for (const product of DEFAULT_PRODUCTS) {
-                 // Speichere den Preis als String, um Probleme mit Float-Genauigkeit in Firestore zu vermeiden,
-                 // die clientseitige Logik konvertiert ihn zurück in Float.
                  await addDoc(productsCol, { name: product.name, price: product.price.toFixed(2) });
              }
         }
@@ -688,7 +622,6 @@
         const productsDB = {
             saveProduct: async (productData) => {
                 if (!userId || !db) return;
-                // Speichere den Preis auf zwei Nachkommastellen gerundet als String
                 productData.price = parseFloat(productData.price).toFixed(2); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
@@ -706,15 +639,35 @@
                     console.error("Produkt löschen Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gelöscht werden.");
                 }
+            },
+            /**
+             * Aktualisiert nur den Preis eines bestehenden Produkts.
+             */
+            updateProductPrice: async (productId, newPrice) => {
+                if (!userId || !db) return;
+                try {
+                    // Preis auf 2 Nachkommastellen formatieren
+                    const priceString = parseFloat(newPrice).toFixed(2);
+                    const productDocRef = doc(db, getProductsPath(userId), productId);
+                    
+                    // Verwende updateDoc, um nur das 'price'-Feld zu ändern
+                    await updateDoc(productDocRef, {
+                        price: priceString 
+                    });
+                    // Der onSnapshot Listener aktualisiert die UI automatisch, wenn der Speicherprozess abgeschlossen ist.
+                    window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceString} €)`);
+                } catch (e) {
+                    console.error("Produktpreis aktualisieren Fehler", e);
+                    window.showInfo("Fehler", "Produktpreis konnte nicht aktualisiert werden: " + e.message);
+                }
             }
         };
 
-        // --- Transaktions Logik ---
+        // --- Transaktions Logik (Unverändert) ---
 
         async function saveToCloud(data) {
             if (!userId || !db) return;
             try {
-                // Speichere die Transaktion im privaten Pfad des Nutzers
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
                 await addDoc(collection(db, path), data);
             } catch (e) {
@@ -739,7 +692,6 @@
                     totalSum += d.total;
                     count++;
                     
-                    // Verarbeite die im Array gespeicherten Artikel
                     if(d.items && Array.isArray(d.items)) {
                         d.items.forEach(item => {
                              productStats[item.name] = (productStats[item.name] || 0) + item.count;
@@ -747,7 +699,7 @@
                     }
                 });
 
-                let report = `Tagesabschluss (Nutzer ID: ${userId.substr(0, 5)}...)\n\n`;
+                let report = `Tagesabschluss (Nutzer ID: ${userId.substr(0, 8)}...)\n\n`;
                 report += `Anzahl Buchungen: ${count}\n`;
                 report += `GESAMTSUMME: ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
                 report += "Verkaufte Artikel:\n";
