@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glühweinstand Kasse (Anonyme Anmeldung)</title>
+    <title>Glühweinstand Kasse (E-Mail/Passwort)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Grundlegendes Styling */
@@ -18,30 +18,25 @@
 
         /* Numpad Button Style (QUADRATISCH) */
         .numpad-btn {
-            /* Geändert: Padding p-2 -> p-1 und Schriftgröße text-lg -> text-base für kleinere Blöcke */
             @apply w-full p-1 rounded-xl font-extrabold text-base shadow-lg transition-colors;
-        line-height: 1; /* Für bessere Zentrierung */
+        line-height: 1; 
             display: flex;
             justify-content: center;
             align-items: center;
-        aspect-ratio: 1 / 1; /* Erzwingt eine quadratische Form */
+        aspect-ratio: 1 / 1;
         }
         .numpad-btn:active { transform: scale(0.95);
         }
 
-        /* LOADING OVERLAY */
-        #loading-overlay {
+        /* ASYNC LOADING OVERLAY (Minimal) */
+        #async-loading-overlay {
             position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #f7f7f7;
+            background-color: rgba(255, 255, 255, 0.8);
             z-index: 100;
-            display: flex;
-            flex-direction: column;
+            display: none; /* Wird nur bei aktiven DB-Aufrufen gezeigt */
             justify-content: center;
             align-items: center;
-        color: #b91c1c; /* red-700 */
-            font-size: 1.5rem;
-            font-weight: bold;
         }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
@@ -50,7 +45,6 @@
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
         }
         @keyframes spin {
             0% { transform: rotate(0deg);
@@ -62,10 +56,58 @@
 </head>
 <body class="min-h-screen p-4 md:p-4 bg-red-500/10">
 
-    <div id="loading-overlay">
+    <div id="async-loading-overlay">
         <div class="spinner"></div>
-        Kasse wird geladen und anonym angemeldet...
     </div>
+
+    <div id="login-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-90 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h1 class="text-3xl font-bold text-center text-red-700 mb-2">Glühwein Kasse</h1>
+            <p class="text-sm text-center text-gray-500 mb-6">Bitte mit Ihren Zugangsdaten anmelden.</p>
+
+            <form id="login-form" onsubmit="event.preventDefault(); handleLoginSubmit()">
+                <div class="mb-4">
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+                    <input type="email" id="login-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                </div>
+                <div class="mb-6">
+                    <label for="login-password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                    <input type="password" id="login-password" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                </div>
+                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">
+                    Anmelden
+                </button>
+            </form>
+            <div class="mt-4 text-center">
+                <button onclick="openRegistrationModal()" class="text-sm text-indigo-600 hover:text-indigo-800">
+                    Noch kein Konto? Hier registrieren.
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="registration-modal" style="display: none;"
+    class="fixed inset-0 bg-black bg-opacity-90 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-indigo-700 mb-4">Konto erstellen</h2>
+            <form id="register-form" onsubmit="event.preventDefault(); handleRegisterSubmit()">
+                <div class="mb-4">
+                    <label for="register-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+                    <input type="email" id="register-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
+                </div>
+                <div class="mb-6">
+                    <label for="register-password" class="block text-sm font-medium text-gray-700">Passwort (min. 6 Zeichen)</label>
+                    <input type="password" id="register-password" required minlength="6" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
+                </div>
+                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 transition-colors">
+                    Registrieren
+                </button>
+            </form>
+            <button onclick="closeModal('registration-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
+        </div>
+    </div>
+
 
     <div id="kasse-content" style="display: none;">
 
@@ -223,41 +265,78 @@
         let currentOrder = {};
         let orderHistory = [];
         let currentTotal = 0.0;
-        let currentReceivedString = "0"; // NEU: Globaler String für Numpad-Eingabe
+        let currentReceivedString = "0"; 
 
         // --- Startet sofort ---
         window.onload = function() {
             renderButtons();
             updateUI();
+            openLoginModal(); // Startet mit dem Login-Modal
         };
-
         
-        // --- UI Ansichtskontrolle ---
+        // --- UI Ansichtskontrolle (GEÄNDERT) ---
         function updateAppView(state, userDisplay = '') {
             const kasseContent = document.getElementById('kasse-content');
-            const loadingOverlay = document.getElementById('loading-overlay');
+            const loginModal = document.getElementById('login-modal');
             const authInfo = document.getElementById('auth-info');
 
             if (state === 'logged_in') {
                 kasseContent.style.display = 'block';
-                loadingOverlay.style.display = 'none'; 
-                authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Session beenden</button>`;
+                loginModal.style.display = 'none'; 
+                authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Abmelden</button>`;
                 document.getElementById('db-status').style.display = 'block';
             } else { 
                 kasseContent.style.display = 'none';
-                loadingOverlay.style.display = 'flex'; 
-                authInfo.innerHTML = 'Kasse v1.2';
+                loginModal.style.display = 'flex'; // Zeigt das Login-Modal
+                authInfo.innerHTML = 'Kasse v1.3';
+                document.getElementById('db-status').style.display = 'none';
+                window.setDBStatus(false, "Offline"); // Setzt DB-Status zurück
+                window.resetBestellung();
             }
         }
         
-        // --- Auth Steuerung Funktionen ---
+        // --- AUTH-Modal Logik (NEU) ---
+        function openLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+            document.getElementById('registration-modal').style.display = 'none';
+        }
         
+        function openRegistrationModal() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('registration-modal').style.display = 'flex';
+        }
+
+        // Wird von der HTML-Form aufgerufen
+        function handleLoginSubmit() {
+            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            window.authService.signIn(email, password);
+        }
+
+        function handleRegisterSubmit() {
+            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            if (password.length < 6) {
+                return showInfo("Fehler", "Das Passwort muss mindestens 6 Zeichen lang sein.");
+            }
+            window.authService.register(email, password);
+        }
+
         function handleSignOut() {
             if (!window.authService) return;
             window.authService.signOut();
         }
 
         // --- Status UI Funktionen ---
+        // Zeigt/Versteckt den Ladespinner für asynchrone DB-Aufrufe
+        function showLoading(show) {
+            document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+
         function setDBStatus(isActive, message) {
             kasseActive = isActive;
             const statusElement = document.getElementById('db-status');
@@ -272,9 +351,9 @@
                 statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 text-white shadow-sm";
             }
         }
-
-        // --- Kasse UI Funktionen ---
-        function setProducts(products) {
+        
+        // --- Kasse UI Funktionen (Bleiben im Wesentlichen gleich) ---
+        function setProducts(products) { /* ... */
             USER_PRODUCTS = products.reduce((acc, product) => {
                 const price = parseFloat(product.price);
                 if (!isNaN(price) && price > 0) {
@@ -287,7 +366,7 @@
             renderProductList(); 
         }
 
-        function renderButtons() {
+        function renderButtons() { /* ... */
             const container = document.getElementById('product-grid');
             container.innerHTML = '';
             
@@ -358,15 +437,15 @@
             document.getElementById('receipt-content').innerText = text;
         }
 
-        // --- Produktverwaltung Logik ---
+        // --- Produktverwaltung Logik (Bleibt gleich) ---
 
-        function openProductModal() {
+        function openProductModal() { /* ... */
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             document.getElementById('product-management-modal').style.display = 'flex';
             renderProductList();
         }
 
-        function renderProductList() {
+        function renderProductList() { /* ... */
             const container = document.getElementById('product-list-container');
             container.innerHTML = ''; 
 
@@ -413,7 +492,7 @@
             });
         }
         
-        function toggleEditPrice(id, currentPrice) {
+        function toggleEditPrice(id, currentPrice) { /* ... */
             const container = document.getElementById(`price-display-${id}`);
             if (container.querySelector('input')) {
                 container.innerHTML = `
@@ -439,7 +518,7 @@
             document.getElementById(`edit-price-${id}`).focus();
         }
 
-        function saveProductPrice(id) {
+        function saveProductPrice(id) { /* ... */
             const input = document.getElementById(`edit-price-${id}`);
             const newPrice = parseFloat(input.value.replace(',', '.'));
 
@@ -457,7 +536,7 @@
         }
 
 
-        function handleProductFormSubmit() {
+        function handleProductFormSubmit() { /* ... */
             if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
             const name = document.getElementById('product-name').value.trim();
             const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
@@ -466,7 +545,6 @@
                 return showInfo("Eingabefehler", "Bitte gültigen Namen und Preis eingeben.");
             }
 
-            // NEU: Preis wird als Float/Number an die DB gesendet
             const productData = { name: name, price: price }; 
             window.productsDB.saveProduct(productData);
             
@@ -474,7 +552,7 @@
             document.getElementById('product-name').focus();
         }
 
-        function confirmDeleteProduct(id, name) {
+        function confirmDeleteProduct(id, name) { /* ... */
             if (window.confirm(`Soll das Produkt "${name}" wirklich gelöscht werden?`)) { 
                 if (window.productsDB) {
                     window.productsDB.deleteProduct(id);
@@ -485,14 +563,13 @@
         }
 
 
-        // --- Allgemeine Modal Logik ---
-        function openPaymentModal() {
+        // --- Allgemeine Modal Logik (Bleibt gleich) ---
+        function openPaymentModal() { /* ... */
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (currentTotal <= 0) return showInfo("Info", "Bitte erst etwas buchen.");
             
             document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotal.toFixed(2).replace('.', ',') + " €";
             
-            // NEU: Setzt den internen String und das Feld zurück auf den Standard (0,00)
             currentReceivedString = "0"; 
             document.getElementById('input-received').value = "0,00"; 
             
@@ -505,45 +582,36 @@
             document.getElementById(id).style.display = 'none';
         }
 
-        // --- NUMPAD LOGIK (OPTIMIERT) ---
-        function handleNumpadInput(key) {
+        // --- NUMPAD LOGIK (Bleibt gleich) ---
+        function handleNumpadInput(key) { /* ... */
             const inputField = document.getElementById('input-received');
 
             if (key === 'clear') {
                 currentReceivedString = "0";
             } else if (key === ',') {
-                // Füge nur ein Komma hinzu, wenn noch keines existiert
                 if (!currentReceivedString.includes(',')) {
                     currentReceivedString += ',';
                 }
             } else { 
-                // Zifferntasten (0-9)
-                
-                // Entferne führende '0', wenn eine Ziffer gedrückt wird und kein Komma vorhanden ist
                 if (currentReceivedString === "0" && !currentReceivedString.includes(',')) {
                     currentReceivedString = key;
                 } else {
-                    // Begrenzt die Anzahl der Nachkommastellen auf 2, wenn ein Komma existiert
                     if(currentReceivedString.includes(',') && currentReceivedString.split(',')[1].length >= 2) {
-                        // Ignoriert weitere Ziffern, wenn Max. erreicht
-                        // Könnte auch schieben, aber Ignorieren ist sicherer für die Kasse
+                        
                     } else {
                         currentReceivedString += key;
                     }
                 }
             }
 
-            // Aktualisiere das Feld mit dem neuen, formatierten Wert
             inputField.value = currentReceivedString.replace('.', ','); 
             
             calculateChange();
         }
 
-        // --- Geänderte calculateChange, um direkt den Input-Wert zu verwenden ---
-        function calculateChange() {
-            // Verwendet den *tatsächlichen* Wert aus dem Eingabefeld (welcher das Komma enthält)
+        function calculateChange() { /* ... */
             let val = document.getElementById('input-received').value.replace(',', '.');
-            let received = parseFloat(val); // Jetzt wird der String mit Komma zu einem Float
+            let received = parseFloat(val); 
 
             let btn = document.getElementById('btn-confirm-pay');
             let display = document.getElementById('change-display');
@@ -555,7 +623,7 @@
             }
 
             let change = received - currentTotal;
-            change = Math.round(change * 100) / 100; // Rundung auf 2 Dezimalstellen
+            change = Math.round(change * 100) / 100; 
 
             if (change >= -0.01) { 
                 display.innerText = "Rückgeld: " + change.toFixed(2).replace('.', ',') + " €";
@@ -567,8 +635,8 @@
         }
 
 
-        // --- Transaktions Logik (OPTIMIERT) ---
-        function finishTransaction() {
+        // --- Transaktions Logik (Bleibt gleich) ---
+        function finishTransaction() { /* ... */
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if(document.getElementById('btn-confirm-pay').disabled) return;
 
@@ -580,7 +648,6 @@
                 price: USER_PRODUCTS[name]?.price || 0
             }));
             
-            // NEU: Wert aus dem Input-Feld mit Komma in Float parsen
             let receivedAmount = parseFloat(document.getElementById('input-received').value.replace(',', '.'));
 
             let transactionData = {
@@ -600,7 +667,7 @@
             }
         }
 
-        function runDailyReport() {
+        function runDailyReport() { /* ... */
             if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
             if (window.cloudReportFunction) {
                 window.cloudReportFunction();
@@ -620,11 +687,12 @@
         import { 
             initializeApp 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // 🚨 GEÄNDERTE IMPORTS 🚨: signInWithEmailAndPassword & createUserWithEmailAndPassword hinzugefügt.
         import { 
             getAuth, 
             onAuthStateChanged,
-            signInWithCustomToken, 
-            signInAnonymously,     
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword,     
             signOut                         
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
@@ -667,6 +735,7 @@
             { name: "Bratwurst", price: 4.00 },
             { name: "Pommes", price: 3.00 }
         ];
+
         async function initDB() {
             if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("HIER")) { 
                 window.setDBStatus(false, "DB-Fehler (API Key fehlt). Bitte Firebase Config einfügen!");
@@ -680,7 +749,10 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
+                // 🚨 GEÄNDERT 🚨: Bietet nun die Funktionen signIn und register an.
                 window.authService = {
+                    signIn: signInUser,
+                    register: registerUser,
                     signOut: signOutUser 
                 };
                 window.isDBReady = true;
@@ -689,14 +761,15 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        const userDisplay = user.isAnonymous ? `Anonyme Kasse (${userId.substr(0, 8)}...)` : `Kasse (${userId.substr(0, 8)}...)`;
+                        // 🚨 GEÄNDERT 🚨: Zeigt E-Mail statt anonymer ID an
+                        const userDisplay = user.email || `UID: ${userId.substr(0, 8)}...`;
        
                   
                         console.log(`Auth-Status: Angemeldet als ${userDisplay}`);
 
                         setupProductsListener(userId);
 
-                        window.setDBStatus(true, `Online (ID: ${userId.substr(0, 8)}...)`);
+                        window.setDBStatus(true, `Online (User: ${user.email ? user.email.split('@')[0] : userId.substr(0, 8)}...)`);
     
                         window.updateAppView('logged_in', userDisplay);
                         
@@ -706,12 +779,13 @@
                         window.productsDB = productsDB; 
 
                     } else {
+                        // Bei Abmeldung oder wenn kein User gefunden wird
                         if (unsubscribeProducts) {
                             
                             unsubscribeProducts();
                             unsubscribeProducts = null;
                         }
-                        console.log("Auth-Status: Abgemeldet. Starte anonyme Wiederanmeldung.");
+                        console.log("Auth-Status: Abgemeldet.");
                         userId = null;
                         isDefaultProductsAdded = false;
                         window.setProducts([]); 
@@ -724,26 +798,12 @@
                         window.cloudReportFunction = null;
                         window.productsDB = null;
 
-                        await signInAnonymously(auth).catch(e => {
-                            console.error("Anonyme Anmeldung fehlgeschlagen:", e);
-            
-                            window.setDBStatus(false, "Anonyme Anmeldung fehlgeschlagen!");
-                        });
+                        window.openLoginModal(); // Zeigt das Login-Modal
                     }
                 });
 
-                if (initialAuthToken) {
-   
-                    await signInWithCustomToken(auth, initialAuthToken).catch(e => {
-                         console.warn("Auth: Custom Token Login fehlgeschlagen. Versuche anonyme Anmeldung.");
-                         signInAnonymously(auth); 
-                    });
-                } else {
-                    await signInAnonymously(auth).catch(e => {
-           
-                        console.error("Anonyme Anmeldung fehlgeschlagen:", e);
-                    });
-                }
+                // 🚨 ENTFERNT 🚨: Keine automatische anonyme Anmeldung mehr beim Start.
+                // Der Nutzer muss sich jetzt über das Login-Modal anmelden.
 
             } catch (e) {
                 console.error("DB INIT FEHLER:", e);
@@ -752,10 +812,41 @@
                 window.showInfo("Fehler", "Datenbank konnte nicht initialisiert werden: " + e.message);
                 window.updateAppView('logged_out');
                 window.isDBReady = false; 
+                window.openLoginModal();
             }
         }
 
-        // --- Firebase Auth Implementierung (Nur SignOut) ---
+        // --- Firebase AUTH Implementierung (NEU) ---
+
+        async function signInUser(email, password) {
+            if (!auth) return;
+            window.showLoading(true);
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.showInfo("Erfolg", "Anmeldung erfolgreich!");
+                window.closeModal('login-modal');
+            } catch (error) {
+                console.error("Login Fehler:", error);
+                window.showInfo("Anmeldefehler", "Anmeldung fehlgeschlagen: " + getFirebaseErrorText(error.code));
+            } finally {
+                window.showLoading(false);
+            }
+        }
+
+        async function registerUser(email, password) {
+            if (!auth) return;
+            window.showLoading(true);
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                window.showInfo("Erfolg", "Registrierung erfolgreich! Sie sind jetzt angemeldet.");
+                window.closeModal('registration-modal');
+            } catch (error) {
+                console.error("Registrierungsfehler:", error);
+                window.showInfo("Registrierungsfehler", "Registrierung fehlgeschlagen: " + getFirebaseErrorText(error.code));
+            } finally {
+                window.showLoading(false);
+            }
+        }
 
         async function signOutUser() {
             try {
@@ -769,17 +860,33 @@
             }
         }
 
-        // --- Produkt-Management Logik ---
+        function getFirebaseErrorText(errorCode) {
+            switch (errorCode) {
+                case 'auth/wrong-password':
+                    return 'Falsches Passwort.';
+                case 'auth/user-not-found':
+                    return 'Kein Benutzer mit dieser E-Mail gefunden.';
+                case 'auth/invalid-email':
+                    return 'Ungültiges E-Mail-Format.';
+                case 'auth/email-already-in-use':
+                    return 'Diese E-Mail-Adresse wird bereits verwendet.';
+                case 'auth/weak-password':
+                    return 'Das Passwort ist zu schwach.';
+                default:
+                    return `Ein unbekannter Fehler ist aufgetreten: ${errorCode}.`;
+            }
+        }
+
+        // --- Produkt-Management Logik (Bleibt gleich) ---
 
         const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
-        function setupProductsListener(id) {
+        function setupProductsListener(id) { /* ... */
             if (unsubscribeProducts) unsubscribeProducts();
             const productsCol = collection(db, getProductsPath(id));
             
             unsubscribeProducts = onSnapshot(productsCol, async (snapshot) => {
                 const products = snapshot.docs.map(doc => ({
                     id: doc.id,
-                    // NEU: Stellt sicher, dass der Preis als Zahl (Float) geladen wird.
                     price: parseFloat(doc.data().price), 
                     name: doc.data().name,
                 }));
@@ -806,32 +913,37 @@
             }
         }
 
-        const productsDB = {
+        const productsDB = { /* ... */
             saveProduct: async (productData) => {
                 if (!userId || !db) return;
-                // NEU: Preis als Float/Number speichern
+                window.showLoading(true);
                 productData.price = parseFloat(productData.price); 
                 try {
                     await addDoc(collection(db, getProductsPath(userId)), productData);
                 } catch (e) {
                     console.error("Produkt speichern Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gespeichert werden.");
+                } finally {
+                    window.showLoading(false);
                 }
             },
             deleteProduct: async (productId) => {
                 if (!userId || !db) return;
+                window.showLoading(true);
                 try {
                     const productDoc = doc(db, getProductsPath(userId), productId);
                     await deleteDoc(productDoc);
                 } catch (e) {
                     console.error("Produkt löschen Fehler", e);
                     window.showInfo("Fehler", "Produkt konnte nicht gelöscht werden.");
+                } finally {
+                    window.showLoading(false);
                 }
             },
             updateProductPrice: async (productId, newPrice) => {
                 if (!userId || !db) return;
+                window.showLoading(true);
                 try {
-                    // NEU: Preis als Float/Number speichern
                     const priceNumber = parseFloat(newPrice); 
                     const productDocRef = doc(db, getProductsPath(userId), productId);
                     
@@ -839,35 +951,41 @@
                         price: priceNumber 
                     });
                     
-                    window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceNumber.toFixed(2)} €)`); // Anzeige nutzt toFixed(2)
+                    window.showInfo("Erfolgreich", `Preis aktualisiert! (Neuer Preis: ${priceNumber.toFixed(2)} €)`); 
 
                     const currentProduct = Object.values(window.USER_PRODUCTS).find(p => p.id === productId);
                     if (currentProduct) {
-                         currentProduct.price = priceNumber; // Aktualisiert den Float im Cache
-                         window.toggleEditPrice(productId, priceNumber); // UI aktualisieren
+                         currentProduct.price = priceNumber; 
+                         window.toggleEditPrice(productId, priceNumber); 
                     }
 
                 } catch (e) {
                     console.error("Produktpreis aktualisieren Fehler", e);
                     window.showInfo("Fehler", "Produktpreis konnte nicht aktualisiert werden: " + e.message);
+                } finally {
+                    window.showLoading(false);
                 }
             }
         };
-        // --- Transaktions Logik ---
+        // --- Transaktions Logik (Bleibt gleich) ---
 
         async function saveToCloud(data) {
             if (!userId || !db) return;
+            window.showLoading(true);
             try {
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
                 await addDoc(collection(db, path), data);
             } catch (e) {
                 console.error("Save error", e);
                 window.showInfo("Fehler", "Transaktion konnte nicht gespeichert werden.");
+            } finally {
+                window.showLoading(false);
             }
         }
 
         async function generateReport() {
             if (!userId || !db) return;
+            window.showLoading(true);
             try {
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
                 const q = query(collection(db, path));
@@ -882,7 +1000,6 @@
                     totalSum += d.total;
                     count++;
                     
-         
                     if(d.items && Array.isArray(d.items)) {
                         d.items.forEach(item => {
                              productStats[item.name] = (productStats[item.name] || 0) + item.count;
@@ -890,7 +1007,7 @@
  
                     }
                 });
-                let report = `Tagesabschluss (Nutzer ID: ${userId.substr(0, 8)}...)\n\n`;
+                let report = `Tagesabschluss (Nutzer: ${auth.currentUser?.email || userId.substr(0, 8)}...)\n\n`;
                 report += `Anzahl Buchungen: ${count}\n`;
                 report += `GESAMTSUMME: ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
                 report += "Verkaufte Artikel:\n";
@@ -902,6 +1019,8 @@
             } catch (e) {
                 console.error(e);
                 window.showInfo("Fehler", "Konnte Bericht nicht laden.");
+            } finally {
+                window.showLoading(false);
             }
         }
 
@@ -911,7 +1030,7 @@
             document.getElementById('info-modal').style.display = 'flex';
         }
         
-        // --- STARTE DIE DB INITIALISIERUNG HIER DIREKT ---
+        // --- STARTE DIE DB INITIALISIERUNG ---
         window.updateAppView('loading');
         initDB();
 
