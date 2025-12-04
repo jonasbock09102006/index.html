@@ -37,7 +37,7 @@
             z-index: 100;
             display: none;
             justify-content: center;
-            align-items: center;
+        align-items: center;
         }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
@@ -57,44 +57,55 @@
         /* TOAST NOTIFICATIONS */
         #toast-container {
             position: fixed;
-            top: 1rem;
+        top: 1rem;
             right: 1rem;
             z-index: 1000;
             pointer-events: none; /* Macht den Container klickbar durch */
         }
         .toast {
             @apply p-3 rounded-lg shadow-xl text-sm text-white transition-opacity duration-300;
-            opacity: 0;
+        opacity: 0;
         }
-        .toast-success { @apply bg-green-500; }
-        .toast-error { @apply bg-red-600; }
-        .toast-info { @apply bg-blue-600; }
+        .toast-success { @apply bg-green-500;
+        }
+        .toast-error { @apply bg-red-600;
+        }
+        .toast-info { @apply bg-blue-600;
+        }
 
         /* Druck-Styles für Kassenbondrucker (Monospace) */
         @media print {
             body * {
                 visibility: hidden;
-            }
+        }
             .receipt-print, .receipt-print * {
                 visibility: visible;
-            }
+        }
             .receipt-print {
                 position: absolute;
-                left: 0;
+        left: 0;
                 top: 0;
                 width: 80mm; /* Standard-Bondruckerbreite */
-                font-family: 'Consolas', 'Courier New', monospace; /* Monospace für Spaltenausrichtung */
-                font-size: 9pt; /* Kleinere Schrift für Bons */
+                font-family: 'Consolas', 'Courier New', monospace;
+        /* Monospace für Spaltenausrichtung */
+                font-size: 9pt;
+        /* Kleinere Schrift für Bons */
                 color: #000;
-                padding: 0;
+        padding: 0;
                 margin: 0;
             }
-            .receipt-print strong { font-weight: bold; }
-            .receipt-print .center { text-align: center; }
-            .receipt-print .line { display: flex; justify-content: space-between; margin-bottom: 1px; }
-            .receipt-print .item-name { width: 60%; }
-            .receipt-print .item-price { width: 30%; text-align: right; }
-            .receipt-print hr { border: 0; border-top: 1px dashed #000; margin: 3px 0; }
+            .receipt-print strong { font-weight: bold;
+        }
+            .receipt-print .center { text-align: center;
+        }
+            .receipt-print .line { display: flex; justify-content: space-between;
+        margin-bottom: 1px; }
+            .receipt-print .item-name { width: 60%;
+        }
+            .receipt-print .item-price { width: 30%; text-align: right;
+        }
+            .receipt-print hr { border: 0;
+        border-top: 1px dashed #000; margin: 3px 0; }
         }
 
     </style>
@@ -116,15 +127,15 @@
 
             <form id="login-form" onsubmit="event.preventDefault(); handleLoginSubmit()">
                 <div class="mb-4">
-                    <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+                <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
                     <input type="email" id="login-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
                 </div>
                 <div class="mb-6">
-                    <label for="login-password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                <label for="login-password" class="block text-sm font-medium text-gray-700">Passwort</label>
                     <input type="password" id="login-password" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
                 </div>
                 <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">
-                    Anmelden
+                   Anmelden
                 </button>
             </form>
             <div class="mt-4 text-center">
@@ -151,11 +162,133 @@
                 <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 transition-colors">
                     Registrieren
                 </button>
-            </form>
+           </form>
             <button onclick="closeModal('registration-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
         </div>
     </div>
 
+    <div id="product-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-bold mb-4 text-indigo-700">Produkt- und Kategorie-Verwaltung</h2>
+            
+            <div id="product-modal-content">
+                <div class="mb-4 border-b pb-3">
+                    <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt anlegen</h3>
+                    <div class="flex space-x-2 mb-2">
+                        <input type="text" id="new-category-name" placeholder="Name der Kategorie (z.B. Glühwein)" class="flex-grow p-2 border rounded-lg">
+                        <button onclick="addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Kategorie hinzufügen</button>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2 items-end">
+                        <input type="text" id="new-product-name" placeholder="Name des Produkts" class="col-span-2 p-2 border rounded-lg">
+                        <input type="number" id="new-product-price" placeholder="Preis (€)" step="0.01" class="p-2 border rounded-lg">
+                        <select id="new-product-category" class="p-2 border rounded-lg">
+                            <option value="">Kategorie wählen</option>
+                        </select>
+                        <button onclick="addProduct()" class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Produkt hinzufügen</button>
+                    </div>
+                </div>
+
+                <h3 class="text-lg font-semibold mb-2">Bestehende Kategorien</h3>
+                <div id="category-list" class="space-y-2 mb-4">
+                    <p class="text-gray-500">Kategorien werden geladen...</p>
+                </div>
+
+                <h3 class="text-lg font-semibold mb-2">Bestehende Produkte</h3>
+                <div id="product-list" class="space-y-2">
+                    <p class="text-gray-500">Produkte werden geladen...</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-right">
+                <button onclick="closeModal('product-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="finalize-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
+            
+            <div class="mb-4 p-3 border-2 border-green-500 rounded-lg bg-green-50">
+                <p class="text-sm font-bold text-gray-700">Gesamtbetrag:</p>
+                <div id="finalize-total" class="text-4xl font-extrabold text-right text-green-700">0.00 €</div>
+            </div>
+
+            <h3 class="text-lg font-semibold mb-2">Zahlungsmethode</h3>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="finalizeTransaction('BAR')" class="p-4 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
+                    BAR
+                </button>
+                <button onclick="finalizeTransaction('KARTE')" class="p-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
+                    KARTE
+                </button>
+            </div>
+
+            <h3 class="text-lg font-semibold mb-2">Belegoptionen</h3>
+            <div class="flex space-x-2 mb-4">
+                <button onclick="printReceipt()" class="flex-grow p-3 rounded-xl font-bold text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
+                    Beleg drucken
+                </button>
+                <button onclick="printReceipt(true)" class="flex-grow p-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-md">
+                    Bewirtungsbeleg
+                </button>
+            </div>
+            
+            <div class="text-center">
+                <button onclick="closeModal('finalize-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400 w-full">Abbrechen / Zurück</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="transaction-reversal-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-bold mb-4 text-red-700">Letzte Transaktionen stornieren</h2>
+            <div id="transaction-list" class="space-y-3 mb-4">
+                <p class="text-gray-500">Transaktionen werden geladen...</p>
+            </div>
+            <div class="text-right">
+                <button onclick="closeModal('transaction-reversal-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 class="text-xl font-bold mb-4 text-yellow-700">Einstellungen (Belegkopf)</h2>
+            <form id="settings-form">
+                <div class="mb-4">
+                    <label for="company-name" class="block text-sm font-medium text-gray-700">Firmenname</label>
+                    <input type="text" id="company-name" class="mt-1 w-full p-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="address" class="block text-sm font-medium text-gray-700">Adresse</label>
+                    <input type="text" id="address" class="mt-1 w-full p-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label for="tax-id" class="block text-sm font-medium text-gray-700">Steuernummer/USt-IdNr.</label>
+                    <input type="text" id="tax-id" class="mt-1 w-full p-2 border rounded-lg">
+                </div>
+                <div class="mb-6">
+                    <label for="tax-rate" class="block text-sm font-medium text-gray-700">Standard Steuersatz (%)</label>
+                    <input type="number" id="tax-rate" step="0.1" class="mt-1 w-full p-2 border rounded-lg">
+                </div>
+                <button type="button" onclick="saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">Einstellungen speichern</button>
+            </form>
+            <div class="mt-4 text-right">
+                <button onclick="closeModal('settings-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="info-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-90 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 id="info-title" class="text-xl font-bold mb-4 text-blue-700">Information</h2>
+            <pre id="info-text" class="whitespace-pre-wrap font-mono text-sm bg-gray-100 p-3 rounded-lg overflow-x-auto"></pre>
+            <div class="mt-6 text-right">
+                <button onclick="closeModal('info-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
+            </div>
+        </div>
+    </div>
 
     <div id="kasse-content" style="display: none;">
 
@@ -163,16 +296,14 @@
             <div id="db-status" class="text-xs font-bold p-1.5 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
                 Datenbankmodul lädt...
             </div>
-  
-            <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
+          <h1 class="text-2xl font-bold text-center text-red-700">Glühweinstand </h1>
             <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v1.9 (Storno-Fix 2)</div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             
-          
             <div class="lg:col-span-1 space-y-3 order-2 lg:order-1">
-                
+               
                  <div class="bg-white p-3 rounded-xl shadow-lg">
                     <h2 class="text-lg font-semibold mb-2 text-indigo-800">Menge</h2>
                     <div class="flex items-center justify-between mb-3">
@@ -184,11 +315,11 @@
                         <button onclick="handleQuantityInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
                         <button onclick="handleQuantityInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
                         <button onclick="handleQuantityInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
-                        
+                    
                         <button onclick="handleQuantityInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
                         <button onclick="handleQuantityInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
                         <button onclick="handleQuantityInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
-                        
+                
                         <button onclick="handleQuantityInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
                         <button onclick="handleQuantityInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
                         <button onclick="handleQuantityInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
@@ -210,7 +341,7 @@
                         Neue Bestellung
                     </button>
                 </div>
-                
+          
        
                  <div class="flex flex-col gap-2">
                     <button onclick="openFinalizeModal()" class="product-btn w-full p-3 rounded-xl font-extrabold text-lg text-white bg-green-600 hover:bg-green-700 shadow-lg">
@@ -221,14 +352,16 @@
                          Produkte verwalten
                     </button>
 
-                    <div class="flex items-center space-x-2 bg-white p-3 rounded-xl shadow-lg border-2 border-blue-200">
+   
+                 <div class="flex items-center space-x-2 bg-white p-3 rounded-xl shadow-lg border-2 border-blue-200">
                         <label for="report-date" class="text-sm font-bold text-blue-700 whitespace-nowrap">Bericht für Tag:</label>
                         <input type="date" id="report-date" class="p-1 border rounded-lg text-sm flex-grow">
-                        <button onclick="setReportDateToday()" class="p-1 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 whitespace-nowrap">Heute</button>
+            
+            <button onclick="setReportDateToday()" class="p-1 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 whitespace-nowrap">Heute</button>
                     </div>
                     
                     <button onclick="runDailyReport('report')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
-                        Tagesabschluss (Bericht)
+                         Tagesabschluss (Bericht)
                     </button>
                     <button onclick="runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
                         Tagesabschluss (CSV Export)
@@ -241,21 +374,21 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-2 xl:col-span-2 space-y-3 order-1 lg:order-2">
+            <div class="lg:col-span-1 space-y-3 order-1 lg:order-2">
                 <div class="bg-white p-3 rounded-xl shadow-lg">
                     <h2 class="text-lg font-semibold mb-2 text-red-800">Produkte buchen</h2>
                     
                     <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-2 mb-3 border-b">
                         </div>
 
-                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
+                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                       <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
                     </div>
                 </div>
             </div>
             
             <div 
-            class="lg:col-span-3 xl:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3 order-3">
+            class="lg:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3 order-3">
                 <h2 class="text-lg font-semibold mb-2 text-gray-700">Aktueller Bon (Brutto)</h2>
                 <div id="receipt-content-interactive" class="bg-gray-50 p-2 rounded-lg text-xs text-gray-700 border border-gray-200 min-h-[150px]">
                     <p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>
@@ -264,1656 +397,764 @@
                     <div id="total-display" class="text-2xl font-extrabold text-right 
                     text-red-700">GESAMT: 0.00 €</div>
                 </div>
-            </div>
+           </div>
         </div>
     </div>
     
-    <div id="finalize-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
-            <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Zahlung abschließen</h3>
-            <div id="finalize-total-display" class="text-lg font-bold text-red-700 mb-4 text-center">...</div>
-
-            <button onclick="openPaymentModal(true)" class="w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 mb-2 shadow-lg">
-                Mit Bewirtungsbeleg (Zum Ausfüllen)
-            </button>
-            <button onclick="openPaymentModal(false)" class="w-full p-3 rounded-lg font-bold text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
-                Ohne Kassenzettel
-            </button>
-
-            <button onclick="closeModal('finalize-modal')" class="mt-4 w-full p-1 text-xs text-gray-500">Abbrechen</button>
-        </div>
-    </div>
-    
-    <div id="payment-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
-            <h3 class="text-xl font-bold text-gray-800 mb-3 text-center">Zahlung</h3>
-            <div id="payment-total-display" class="text-lg font-bold text-red-700 mb-4 text-center">...</div>
-
-            <button id="btn-confirm-card-pay" onclick="finishTransaction('card')" disabled class="mt-1 w-full p-2 rounded-lg font-bold text-white text-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 shadow-lg">
-                Karte Buchen (Exakt)
-            </button>
-            
-            <div class="text-center text-xs text-gray-500 my-2">-- oder --</div>
-
-            <label class="block text-sm font-medium text-gray-700 mb-1 text-center">Bar Erhalten (€):</label>
-         
-            <input type="text" id="input-received" readonly placeholder="0,00" value="0,00" 
-                   class="w-full px-3 py-2 border-2 border-green-600 rounded-lg text-2xl font-mono text-center mb-3 bg-gray-50 text-gray-800">
-
-            <div id="change-display" class="text-xl font-extrabold text-blue-600 mb-4 text-center">Rückgeld: 0.00 €</div>
-            
-            <div class="grid grid-cols-3 gap-1 mb-3"> 
-                <button onclick="handleQuickPay(5)" class="numpad-btn bg-blue-600 hover:bg-blue-700 text-white">5 €</button>
-                <button onclick="handleQuickPay(10)" class="numpad-btn bg-blue-600 hover:bg-blue-700 text-white">10 €</button>
-                <button onclick="handleQuickPay('exact')" class="numpad-btn bg-blue-600 hover:bg-blue-700 text-white">Exakt</button>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-1"> 
-                <button onclick="handlePaymentNumpadInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
-                <button onclick="handlePaymentNumpadInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
-                <button onclick="handlePaymentNumpadInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
-                
-                <button 
-                onclick="handlePaymentNumpadInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
-                <button onclick="handlePaymentNumpadInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
-                <button onclick="handlePaymentNumpadInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
-                
-                <button onclick="handlePaymentNumpadInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
-                <button onclick="handlePaymentNumpadInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
- 
-                <button onclick="handlePaymentNumpadInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
-
-                <button onclick="handlePaymentNumpadInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
-                <button onclick="handlePaymentNumpadInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
-                <button onclick="handlePaymentNumpadInput(',')" class="numpad-btn bg-gray-200 hover:bg-gray-300">,</button>
-            </div>
-       
-            <button id="btn-confirm-pay" onclick="finishTransaction('cash')" disabled class="mt-3 w-full p-2 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400">
-                Bar Buchen
-            </button>
-            <button onclick="closeModal('payment-modal'); openFinalizeModal();" class="mt-1 w-full p-1 text-xs text-gray-500">Abbrechen</button>
-        </div>
-    </div>
-
-
-    <div id="transaction-reversal-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold text-red-700 mb-3">Abgeschlossene Buchung stornieren</h3>
-            <p class="text-sm text-gray-600 mb-4">Wählen Sie eine der letzten 20 Buchungen zur Stornierung aus. **Achtung: Dies erzeugt eine negative Gegenbuchung.**</p>
-            
-            <div id="transaction-list-container" class="space-y-2 text-sm max-h-[50vh] overflow-y-auto pr-2">
-                <p class="text-gray-500 text-center p-4">Lade Transaktionen...</p>
-            </div>
-
-            <button onclick="closeModal('transaction-reversal-modal')" class="mt-4 w-full p-2 text-sm font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg">Schließen</button>
-        </div>
-    </div>
-
-
-    <div id="product-management-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold text-indigo-700 mb-3">Produkte verwalten</h3>
-            
-            <form id="product-form" class="bg-gray-100 p-3 rounded-lg mb-5 shadow-inner" onsubmit="event.preventDefault(); handleProductFormSubmit()">
-           
-                <h4 class="text-base font-semibold mb-2">Neues Produkt hinzufügen (Brutto-Preis)</h4>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Name:</label>
-                        <input type="text" id="product-name" required class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="z.B. Heiße Schokolade">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Preis Brutto (€):</label>
-                        <input type="number" step="0.01" id="product-price" required class="w-full px-2 py-1 border rounded-lg text-sm" placeholder="1.50">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">MwSt. Gruppe:</label>
-                        <select id="product-vat-group" required class="w-full px-2 py-1 border rounded-lg text-sm bg-white">
-                            <option value="standard">Standard (19%)</option>
-                            <option value="reduced">Reduziert (7%)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Kategorie:</label>
-                        <select id="product-category" required class="w-full px-2 py-1 border rounded-lg text-sm bg-white">
-                            <option value="Trinken">Trinken</option>
-                            <option value="Essen">Essen</option>
-                            <option value="Sonstiges">Sonstiges</option>
-                            <option value="Standard">Standard</option>
-                        </select>
-                    </div>
-
-                    <div class="md:col-span-5">
-                        <button type="submit" class="w-full p-2 rounded-lg font-bold text-sm text-white bg-green-600 hover:bg-green-700 self-end">
-                            Produkt speichern
-                        </button>
-                    </div>
-                </div>
-            </form>
-
-            <h4 class="text-base font-semibold mb-2">Deine Produkte (<span class="text-blue-600">Klicken Sie auf den Preis zum Bearbeiten</span>)</h4>
-            <div id="product-list-container" class="space-y-1.5 text-sm">
-  
-                <p class="text-gray-500">Lade Produkte...</p>
-            </div>
-
-            <button onclick="closeModal('product-management-modal')" class="mt-4 w-full p-2 text-sm font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg">Schließen</button>
-        </div>
-    </div>
-
-    <div id="settings-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold text-yellow-700 mb-3">Belegkopf-Einstellungen</h3>
-            <p class="text-sm text-gray-500 mb-4">Diese Daten werden im Browser (localStorage) gespeichert und für den Bewirtungsbeleg verwendet.</p>
-            
-            <form id="firm-details-form" onsubmit="event.preventDefault(); saveFirmDetails();">
-                <div class="space-y-3">
-                    <div>
-                        <label for="setting-firm-name" class="block text-sm font-medium text-gray-700">Firmenname:</label>
-                        <input type="text" id="setting-firm-name" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
-                    </div>
-                    <div>
-                        <label for="setting-firm-adresse" class="block text-sm font-medium text-gray-700">Adresse:</label>
-                        <input type="text" id="setting-firm-adresse" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
-                    </div>
-                    <div>
-                        <label for="setting-firm-steuer-nr" class="block text-sm font-medium text-gray-700">USt-IdNr.:</label>
-                        <input type="text" id="setting-firm-steuer-nr" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
-                    </div>
-                    <div>
-                        <label for="setting-firm-telefon" class="block text-sm font-medium text-gray-700">Telefon (optional):</label>
-                        <input type="text" id="setting-firm-telefon" class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
-                    </div>
-                </div>
-                
-                <button type="submit" class="w-full p-3 mt-5 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg">
-                    Einstellungen speichern
-                </button>
-            </form>
-
-            <button onclick="closeModal('settings-modal')" class="mt-4 w-full p-2 text-sm font-bold text-gray-500">Abbrechen</button>
-        </div>
-    </div>
-    
-    <div id="info-modal" style="display: none;"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-5 rounded-xl shadow-2xl w-full max-w-sm">
-            <h3 id="info-title" class="text-lg font-bold text-gray-800 mb-2">Info</h3>
-            <pre id="info-text" class="whitespace-pre-wrap text-xs font-mono bg-gray-100 p-2 rounded-lg"></pre>
-            <button onclick="closeModal('info-modal')" class="mt-4 w-full p-2 rounded-lg font-bold text-red-500">Schließen</button>
-        </div>
-    </div>
-
-
     <script>
-        // --- Globale Status Variablen ---
-        let kasseActive = false;
-        let USER_PRODUCTS = {}; 
-        let isDBReady = false; 
+        // Datenbank-Logik (vereinfacht, basierend auf der Struktur der Dateischnipsel)
 
-        let currentOrder = {}; // { 'Produktname': count }
-        let orderHistory = []; // [ 'Produktname1', 'Produktname2', ... ]
-        
-        let currentTotalGross = 0.0; 
-        let currentTaxDetails = {}; // { '19%': { net: 0, tax: 0 }, '7%': { net: 0, tax: 0 } }
-        
-        // NEU: Globale Variablen für Quantity und Kategorie Filter
-        let currentQuantityInput = 1;
-        let currentCategoryFilter = 'Alle'; // 'Alle' oder eine spezifische Kategorie
-        
-        let currentReceivedString = "0"; 
+        let DB_STATUS = 'disconnected';
+        let currentBestellung = [];
+        let currentQuantity = '1';
+        let products = {};
+        let categories = {};
+        let userSettings = {};
+        let transactionHistory = [];
+        let lastAction = null; 
 
-        // Globale UST/MwSt. Sätze (anpassbar)
-        const VAT_RATES = {
-            standard: 0.19, // 19%
-            reduced: 0.07   // 7%
-        };
-        
-        // GLOBALE VARIABLE FÜR FIRMENDETAILS (wird von localStorage geladen)
-        let FIRMA_DETAILS = {
-            NAME: "Glühweinstand GmbH & Co. KG",
-            ADRESSE: "Hauptstraße 12, 99084 Erfurt",
-            STEUER_NR: "DE987654321", // USt-IdNr.
-            TELEFON: "0361/1234567"
-        };
-
-
-        // --- Startet sofort ---
-        window.onload = function() {
-            loadFirmDetails();
-            setReportDateToday(); 
-            renderButtons(); // Wird jetzt von setProducts() neu aufgerufen, aber gut für den Start
-            updateUI();
-            updateQuantityDisplay(); // NEU: Initiale Anzeige der Menge
-        };
-
-        // --- AUTH/DB Status Logik (unverändert) ---
-        function loadFirmDetails() {
-            const savedDetails = localStorage.getItem('kasse_firm_details');
-            if (savedDetails) {
-                try {
-                    const loaded = JSON.parse(savedDetails);
-                    FIRMA_DETAILS = { ...FIRMA_DETAILS, ...loaded };
-                } catch (e) {
-                    console.error("Fehler beim Laden der Firmendetails aus localStorage", e);
-                }
+        // Initialisierung (Platzhalter, da der Original-Code fehlt)
+        async function initDB() {
+            try {
+                // Hier würde die Firebase/LocalDB Initialisierung stehen
+                await new Promise(resolve => setTimeout(resolve, 500)); // Simuliere Ladezeit
+                DB_STATUS = 'connected';
+                updateDBStatus(true);
+                // Laden von Settings, Products, Categories
+                await loadSettings();
+                await loadProductsAndCategories(); 
+                await loadTransactionHistory();
+                window.updateAppView('login');
+                showToast('Datenbank verbunden und Daten geladen.', 'success');
+            } catch (e) {
+                console.error("DB Initialisierungsfehler: ", e);
+                updateDBStatus(false);
+                showToast('Datenbankfehler! Daten konnten nicht geladen werden.', 'error');
+                window.updateAppView('login');
             }
         }
 
-        function saveFirmDetails() {
-            const newDetails = {
-                NAME: document.getElementById('setting-firm-name').value.trim(),
-                ADRESSE: document.getElementById('setting-firm-adresse').value.trim(),
-                STEUER_NR: document.getElementById('setting-firm-steuer-nr').value.trim(),
-                TELEFON: document.getElementById('setting-firm-telefon').value.trim()
-            };
+        // --- UI FUNKTIONEN ---
 
-            FIRMA_DETAILS = { ...FIRMA_DETAILS, ...newDetails };
-            localStorage.setItem('kasse_firm_details', JSON.stringify(FIRMA_DETAILS));
-
-            closeModal('settings-modal');
-            showToast("Belegkopf-Details gespeichert!", 'success');
-        }
-
-
-        function setReportDateToday() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('report-date').value = today;
-        }
-
-        function updateAppView(state, userDisplay = '') {
-            const kasseContent = document.getElementById('kasse-content');
-            const loginModal = document.getElementById('login-modal');
-            const authInfo = document.getElementById('auth-info');
-
-            if (state === 'logged_in') {
-                kasseContent.style.display = 'grid';
-                loginModal.style.display = 'none'; 
-                authInfo.innerHTML = `Angemeldet als: <b>${userDisplay}</b> | <button onclick="handleSignOut()" class="text-red-500 hover:text-red-700 font-bold">Abmelden</button>`;
-                document.getElementById('db-status').style.display = 'block';
-            } else { 
-                kasseContent.style.display = 'none';
-                loginModal.style.display = 'flex'; 
-                authInfo.innerHTML = 'Kasse v1.9 (Storno-Fix 2)'; // NEU: Version aktualisiert
-                document.getElementById('db-status').style.display = 'none';
-                window.setDBStatus(false, "Offline"); 
-                window.resetBestellung();
-            }
-        }
-        
-        function openLoginModal() {
-            document.getElementById('login-modal').style.display = 'flex';
-            document.getElementById('registration-modal').style.display = 'none';
-        }
-        
-        function openRegistrationModal() {
+        window.updateAppView = function(view) {
             document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('registration-modal').style.display = 'flex';
-        }
+            document.getElementById('registration-modal').style.display = 'none';
+            document.getElementById('kasse-content').style.display = 'none';
 
-        function handleLoginSubmit() {
-            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            window.authService.signIn(email, password);
-        }
-
-        function handleRegisterSubmit() {
-            if (!window.authService) return showInfo("Fehler", "Datenbankmodul lädt noch.");
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            
-            if (password.length < 6) {
-                return showInfo("Fehler", "Das Passwort muss mindestens 6 Zeichen lang sein.");
+            if (view === 'login') {
+                document.getElementById('login-modal').style.display = 'flex';
+            } else if (view === 'kasse') {
+                document.getElementById('kasse-content').style.display = 'block';
+            } else if (view === 'loading') {
+                // Optional: Lade-Overlay anzeigen
             }
-            window.authService.register(email, password);
         }
 
-        function handleSignOut() {
-            if (!window.authService) return;
-            window.authService.signOut();
+        function updateDBStatus(connected) {
+            const statusEl = document.getElementById('db-status');
+            if (connected) {
+                statusEl.className = "text-xs font-bold p-1.5 rounded-lg bg-green-500 shadow-sm transition-colors text-white";
+                statusEl.innerText = "Datenbank verbunden";
+            } else {
+                statusEl.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 shadow-sm transition-colors text-white";
+                statusEl.innerText = "Datenbank getrennt";
+            }
         }
 
         function showLoading(show) {
             document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
         }
 
-        function showToast(message, type = 'success', duration = 3000) {
+        function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `toast toast-${type} opacity-0`;
-            toast.textContent = message;
-
+            toast.className = `toast toast-${type}`;
+            toast.innerText = message;
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.remove('opacity-0');
-                toast.style.opacity = '1';
-            }, 10);
 
+            // Zeige den Toast an
+            setTimeout(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            }, 100);
+
+            // Verstecke und entferne den Toast nach 3 Sekunden
             setTimeout(() => {
                 toast.style.opacity = '0';
-                toast.addEventListener('transitionend', () => toast.remove());
-            }, duration);
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300); 
+            }, 3000);
         }
 
-
-        function setDBStatus(isActive, message) {
-            kasseActive = isActive;
-            const statusElement = document.getElementById('db-status');
-
-            statusElement.innerText = message;
-
-            if (isActive) {
-                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-green-600 text-white shadow-sm";
-            } else if (message.includes("Konfiguration fehlt") || message.includes("API Key fehlt")) {
-                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-800 text-white shadow-sm";
-            } else {
-                statusElement.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 text-white shadow-sm";
-            }
-        }
-        
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
         }
-
-        // NEU: Aktualisiert die Anzeige des Mengen-Numpads
-        function updateQuantityDisplay() {
-            document.getElementById('quantity-display').innerText = currentQuantityInput;
+        
+        function openLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
         }
 
-        // NEU: Numpad Logik für die Menge (Hauptansicht)
-        function handleQuantityInput(key) {
-            let currentString = currentQuantityInput.toString();
-            
-            if (key === 'clear') {
-                currentQuantityInput = 1;
-            } else if (key === 'set1') {
-                currentQuantityInput = 1;
-            } else if (!isNaN(parseInt(key))) { // Ziffern
-                if (currentString === "1" && currentString.length === 1) {
-                    currentString = key;
-                } else {
-                    currentString += key;
-                }
-                
-                // Max 3-stellige Menge
-                if (currentString.length > 3) {
-                    currentString = currentString.substring(currentString.length - 3);
-                }
-                
-                currentQuantityInput = parseInt(currentString);
-            }
-            
-            updateQuantityDisplay();
-        }
-
-
-        // Geändert: Numpad Logik für die Zahlung (Modal)
-        function handlePaymentNumpadInput(key) { 
-            const inputField = document.getElementById('input-received');
-
-            if (key === 'clear') {
-                currentReceivedString = "0";
-            } else if (key === ',') {
-                if (!currentReceivedString.includes(',')) {
-                    currentReceivedString += ',';
-                }
-            } else { 
-                if (currentReceivedString === "0" && !currentReceivedString.includes(',')) {
-                    currentReceivedString = key;
-                } else {
-                    if(currentReceivedString.includes(',') && currentReceivedString.split(',')[1].length >= 2) {
-                        
-                    } else {
-                        currentReceivedString += key;
-                    }
-                }
-            }
-
-            inputField.value = currentReceivedString.replace('.', ','); 
-            
-            calculateChange();
-        }
-
-        // --- Kasse UI Funktionen ---
-
-        function setProducts(products) { 
-            let productCategories = new Set();
-            
-            USER_PRODUCTS = products.reduce((acc, product) => {
-                const price = parseFloat(product.price);
-                const vatGroup = product.vatGroup || 'standard';
-                const vatRate = VAT_RATES[vatGroup] || VAT_RATES.standard;
-                const category = product.category ? product.category.trim() : 'Standard'; // NEU
-                
-                if (!isNaN(price) && price > 0) {
-                    acc[product.name] = { 
-                        price: price, 
-                        id: product.id,
-                        vatGroup: vatGroup,
-                        vatRate: vatRate,
-                        category: category // NEU
-                    }; 
-                    productCategories.add(category); // NEU
-                }
-                return acc;
-            }, {});
-            
-            renderCategoryTabs(productCategories); // NEU
-            renderButtons();
-            renderProductList(); // FIX: Jetzt aufgerufen und definiert
+        function openRegistrationModal() {
+            closeModal('login-modal');
+            document.getElementById('registration-modal').style.display = 'flex';
         }
         
-        // NEU: Rendert die Kategorie-Tabs
-        function renderCategoryTabs(categories) {
-            const container = document.getElementById('category-tabs');
-            container.innerHTML = '';
-            
-            const allButton = `<button onclick="setCategoryFilter('Alle')" class="p-2 text-sm font-bold rounded-lg transition-colors ${currentCategoryFilter === 'Alle' ? 'bg-red-700 text-white shadow-md' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}">Alle</button>`;
-            container.innerHTML += allButton;
+        // --- AUTH & SETTINGS ---
 
-            // Sortiert die Kategorien für konsistente Darstellung
-            [...categories].sort().forEach(category => {
-                const isActive = currentCategoryFilter === category;
-                const button = `<button onclick="setCategoryFilter('${category}')" class="p-2 text-sm font-bold rounded-lg transition-colors ${isActive ? 'bg-red-700 text-white shadow-md' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}">${category}</button>`;
-                container.innerHTML += button;
-            });
-        }
-        
-        // NEU: Setzt den Kategorie-Filter und rendert neu
-        function setCategoryFilter(category) {
-            currentCategoryFilter = category;
-            // Stelle sicher, dass die Liste der Kategorien für das Re-rendering aktuell ist
-            const allCategories = Object.keys(USER_PRODUCTS).map(name => USER_PRODUCTS[name].category);
-            renderCategoryTabs(new Set(allCategories)); 
-            renderButtons(); // Re-render Buttons mit neuem Filter
+        async function handleLoginSubmit() {
+            showLoading(true);
+            // Simuliere Login-Logik
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+            window.updateAppView('kasse');
+            showToast('Erfolgreich angemeldet!', 'success');
+            showLoading(false);
         }
 
-
-        function renderButtons() { 
-            const container = document.getElementById('product-grid');
-            container.innerHTML = '';
-            
-            const productKeys = Object.keys(USER_PRODUCTS)
-                .filter(name => currentCategoryFilter === 'Alle' || USER_PRODUCTS[name].category === currentCategoryFilter); // NEU: Filtern nach Kategorie
-            
-            if (productKeys.length === 0) {
-                 container.innerHTML = '<p class="text-gray-500 col-span-full text-center text-sm">Keine Produkte in dieser Kategorie.</p>';
-                 return;
-            }
-
-            for (let name of productKeys) {
-                const product = USER_PRODUCTS[name];
-                let price = product.price;
-
-                let colorClass = (name.toLowerCase().includes("wein") || name.toLowerCase().includes("punsch") || product.category.toLowerCase().includes("trinken")) ? "bg-red-700 hover:bg-red-800" : "bg-orange-800 hover:bg-orange-900";
-                
-                let btn = document.createElement('button');
-                btn.className = `product-btn p-2 rounded-lg font-bold text-sm text-white shadow-md transition-colors ${colorClass}`;
-                // NEU: Zeigt die aktuelle Menge im Button-Text an
-                btn.innerHTML = `${name}<br><span class="text-xs font-normal">(${price.toFixed(2).replace('.', ',')} €)</span>`;
-                btn.onclick = function() { addToCart(name); };
-                container.appendChild(btn);
-            }
+        async function handleRegisterSubmit() {
+            showLoading(true);
+            // Simuliere Registrierungs-Logik
+            await new Promise(resolve => setTimeout(resolve, 500));
+            showToast('Registrierung erfolgreich! Bitte melden Sie sich an.', 'success');
+            closeModal('registration-modal');
+            openLoginModal();
+            showLoading(false);
         }
 
-        // Geändert: Verwendet jetzt currentQuantityInput
-        function addToCart(name) {
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            const product = USER_PRODUCTS[name];
-            const price = product?.price;
-            const quantity = currentQuantityInput; // NEU: Menge verwenden
-            
-            if (typeof price === 'undefined' || quantity < 1) return showInfo("Fehler", `Ungültige Menge oder Preis für "${name}".`);
-            if (!currentOrder[name]) currentOrder[name] = 0;
-            
-            // Schleife für die korrekte History und Mengenbuchung
-            for (let i = 0; i < quantity; i++) {
-                currentOrder[name]++;
-                orderHistory.push(name);
-                
-                const vatRate = product.vatRate;
-                const netPrice = price / (1 + vatRate); 
-                const taxAmount = price - netPrice;
-
-                currentTotalGross += price;
-                
-                const rateKey = `${(vatRate * 100).toFixed(0)}%`;
-                if (!currentTaxDetails[rateKey]) {
-                    currentTaxDetails[rateKey] = { net: 0.0, tax: 0.0 };
-                }
-                currentTaxDetails[rateKey].net += netPrice;
-                currentTaxDetails[rateKey].tax += taxAmount;
-            }
-            
-            // Wichtig: Runden nach allen Additionen
-            currentTotalGross = Math.round(currentTotalGross * 100) / 100;
-            Object.keys(currentTaxDetails).forEach(rateKey => {
-                currentTaxDetails[rateKey].net = Math.round(currentTaxDetails[rateKey].net * 100) / 100;
-                currentTaxDetails[rateKey].tax = Math.round(currentTaxDetails[rateKey].tax * 100) / 100;
-            });
-
-
-            // NEU: Menge zurücksetzen
-            currentQuantityInput = 1;
-            updateQuantityDisplay();
-            showToast(`Artikel ${name} ${quantity}x gebucht.`, 'success'); // Feedback
-            updateUI();
-        }
-        
-        // NEU: Entfernt ein einzelnes Stück eines bestimmten Artikels (Storno-Basis)
-        function removeItemFromOrder(name) {
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            if (!currentOrder[name] || currentOrder[name] <= 0) return;
-            
-            const product = USER_PRODUCTS[name];
-            const price = product?.price;
-            
-            if (typeof price === 'undefined') return showInfo("Fehler", `Preis für "${name}" nicht gefunden.`);
-
-            currentOrder[name]--;
-            
-            // Entferne den Eintrag aus der OrderHistory (für 'Storno Letzte' Konsistenz)
-            const indexToRemove = orderHistory.lastIndexOf(name);
-            if (indexToRemove > -1) {
-                orderHistory.splice(indexToRemove, 1);
-            }
-            
-            // Neuberechnung (Invertierung der addToCart Logik für 1 Stück)
-            const vatRate = product.vatRate;
-            const netPrice = price / (1 + vatRate);
-            const taxAmount = price - netPrice;
-
-            currentTotalGross -= price;
-            
-            const rateKey = `${(vatRate * 100).toFixed(0)}%`;
-            if (currentTaxDetails[rateKey]) {
-                currentTaxDetails[rateKey].net -= netPrice;
-                currentTaxDetails[rateKey].tax -= taxAmount;
-            }
-            
-            // Wichtig: Runden nach Subtraktion
-            currentTotalGross = Math.round(currentTotalGross * 100) / 100;
-            Object.keys(currentTaxDetails).forEach(rateKey => {
-                 currentTaxDetails[rateKey].net = Math.round(currentTaxDetails[rateKey].net * 100) / 100;
-                 currentTaxDetails[rateKey].tax = Math.round(currentTaxDetails[rateKey].tax * 100) / 100;
-                
-                 if (currentTaxDetails[rateKey].net < 0.005 && currentTaxDetails[rateKey].tax < 0.005) {
-                    delete currentTaxDetails[rateKey];
-                }
-            });
-            
-            // Aufräumen von 0-Einträgen
-            if (currentOrder[name] <= 0) delete currentOrder[name];
-            
-            showToast(`1x ${name} storniert.`, 'info'); // FIX: Feedback hinzugefügt
-            
-            updateUI();
+        async function loadSettings() {
+            // Simuliere Laden der Einstellungen
+            userSettings = {
+                companyName: localStorage.getItem('companyName') || "Glühweinstand Glühlichter",
+                address: localStorage.getItem('address') || "Hauptstraße 1, 12345 Glühheim",
+                taxId: localStorage.getItem('taxId') || "DE123456789",
+                taxRate: parseFloat(localStorage.getItem('taxRate')) || 19.0
+            };
         }
 
-
-        // FIX: Die Hauptfunktion für den Storno-Button
-        function undoLastAction() {
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            if (orderHistory.length === 0) return showInfo("Info", "Nichts zu stornieren.");
-            
-            let lastItem = orderHistory[orderHistory.length - 1]; // Letzten Namen holen
-            // Ruft die neue gezielte Entfernung für den letzten Artikel auf
-            removeItemFromOrder(lastItem); 
-            
-            // Der Toast ist jetzt in removeItemFromOrder enthalten.
-        }
-
-        function resetBestellung() {
-            currentOrder = {};
-            orderHistory = [];
-            currentTotalGross = 0.0;
-            currentTaxDetails = {};
-            currentQuantityInput = 1; // NEU
-            updateQuantityDisplay(); // NEU
-            updateUI();
-        }
-
-        // Stark geändert: Rendert jetzt interaktives HTML
-        function updateUI() {
-            let totalNet = 0.0;
-            let totalTax = 0.0;
-
-            const container = document.getElementById('receipt-content-interactive');
-            let receiptHTML = `<div class="font-sans text-xs">`;
-            
-            if (Object.keys(currentOrder).length === 0) {
-                container.innerHTML = '<p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>';
-            } else {
-            
-                receiptHTML += `<div class="text-xs text-gray-500 font-bold mb-1">--- ARTIKEL (BRUTTO) ------------------</div>`;
-                
-                for (let [name, count] of Object.entries(currentOrder).sort()) {
-                    const product = USER_PRODUCTS[name];
-                    if (!product || count === 0) continue;
-                    
-                    const itemGross = count * product.price;
-                    
-                    // NEU: Interaktive Zeile mit Lösch-Button
-                    receiptHTML += `
-                        <div class="flex justify-between items-center py-0.5 border-b border-gray-100 group">
-                            <span class="font-semibold text-gray-800 flex-grow">${count}x ${name}</span>
-                            <span class="text-red-700 font-bold w-1/4 text-right">${itemGross.toFixed(2).replace('.', ',')} €</span>
-                            <button onclick="removeItemFromOrder('${name}')" 
-                                    class="ml-2 w-5 text-xs text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
-                                ❌
-                            </button>
-                        </div>
-                    `;
-                }
-
-                receiptHTML += `<div class="my-2 border-t border-dashed border-gray-300"></div>`;
-
-                // Detaillierte Steuer-Aufschlüsselung (als HTML)
-                const sortedTaxKeys = Object.keys(currentTaxDetails).sort((a, b) => parseFloat(b) - parseFloat(a));
-                
-                receiptHTML += `<div class="space-y-0.5">`;
-                for (const rateKey of sortedTaxKeys) {
-                    const details = currentTaxDetails[rateKey];
-                    totalNet += details.net;
-                    totalTax += details.tax;
-                    
-                    receiptHTML += `<div class="flex justify-between text-gray-600"><span>Netto (${rateKey}):</span> <span class="text-right">${details.net.toFixed(2).replace('.', ',')} €</span></div>`;
-                    receiptHTML += `<div class="flex justify-between text-gray-600"><span>Steuer (${rateKey}):</span> <span class="text-right">${details.tax.toFixed(2).replace('.', ',')} €</span></div>`;
-                }
-                receiptHTML += `</div>`;
-                
-                totalNet = Math.round(totalNet * 100) / 100;
-                totalTax = Math.round(totalTax * 100) / 100;
-                const finalGross = totalNet + totalTax;
-
-                receiptHTML += `<div class="my-2 border-t border-dashed border-gray-300"></div>`;
-                receiptHTML += `<div class="flex justify-between text-gray-800 font-bold"><span>GESAMT NETTO:</span> <span class="text-right">${totalNet.toFixed(2).replace('.', ',')} €</span></div>`;
-                receiptHTML += `<div class="flex justify-between text-gray-800 font-bold"><span>GESAMT STEUER:</span> <span class="text-right">${totalTax.toFixed(2).replace('.', ',')} €</span></div>`;
-                receiptHTML += `</div>`;
-                
-                container.innerHTML = receiptHTML;
-            }
-
-            document.getElementById('total-display').innerText = "GESAMT: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
-        }
-
-
-        // --- Produktverwaltung Logik (Aktualisiert für Kategorie) ---
-
-        function openProductModal() { 
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            document.getElementById('product-management-modal').style.display = 'flex';
-            renderProductList();
-        }
-
-        // FIX: Hinzugefügt - Rendert die Liste der Produkte im Modal
-        function renderProductList() { 
-            const container = document.getElementById('product-list-container');
-            container.innerHTML = '';
-            
-            const productKeys = Object.keys(USER_PRODUCTS);
-
-            if (productKeys.length === 0) {
-                container.innerHTML = '<p class="text-gray-500">Noch keine Produkte vorhanden. Fügen Sie oben neue hinzu.</p>';
-                return;
-            }
-
-            for (let name of productKeys) {
-                const product = USER_PRODUCTS[name];
-                const vatDisplay = product.vatGroup === 'reduced' ? '7%' : '19%';
-                
-                const productHtml = `
-                    <div class="flex justify-between items-center p-2 rounded-lg bg-white shadow-sm border border-gray-200">
-                        <div class="flex-grow">
-                            <span class="font-bold text-gray-800">${name}</span>
-                            <span class="text-xs text-gray-500 block">Kategorie: ${product.category}</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm font-semibold text-blue-600 cursor-pointer" 
-                                onclick="editProductPrice('${product.id}', '${name}', ${product.price}, '${product.vatGroup}', '${product.category}')">
-                                ${product.price.toFixed(2).replace('.', ',')} € (${vatDisplay})
-                            </span>
-                            <button onclick="deleteProduct('${product.id}')" class="text-red-500 hover:text-red-700 text-sm font-bold p-1 rounded-full">
-                                🗑️
-                            </button>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += productHtml;
-            }
-        }
-        
-        // FIX: Hinzugefügt - Helferfunktion zum Löschen
-        function deleteProduct(productId) {
-            if (confirm("Produkt wirklich löschen?")) {
-                 window.productsDB.deleteProduct(productId);
-            }
-        }
-
-        // FIX: Hinzugefügt - Helferfunktion zum Bearbeiten
-        function editProductPrice(id, name, currentPrice, currentVatGroup, currentCategory) {
-            const newPriceStr = prompt(`Neuen Brutto-Preis für ${name} eingeben:`, currentPrice.toFixed(2).replace('.', ','));
-            if (newPriceStr === null) return;
-            const newPrice = parseFloat(newPriceStr.replace(',', '.'));
-            
-            if (isNaN(newPrice) || newPrice <= 0) {
-                return showInfo("Fehler", "Ungültiger Preis eingegeben.");
-            }
-            
-            const newVatGroup = prompt(`Neue MwSt.-Gruppe für ${name} (standard / reduced):`, currentVatGroup);
-            if (newVatGroup === null) return;
-            if (newVatGroup !== 'standard' && newVatGroup !== 'reduced') {
-                return showInfo("Fehler", "Ungültige MwSt.-Gruppe. Verwenden Sie 'standard' oder 'reduced'.");
-            }
-            
-            const newCategory = prompt(`Neue Kategorie für ${name} eingeben (Trinken/Essen/Sonstiges/Standard):`, currentCategory);
-            if (newCategory === null || newCategory.trim() === "") {
-                return showInfo("Fehler", "Kategorie darf nicht leer sein.");
-            }
-            
-            // Optional: Prüfen, ob die Kategorie gültig ist
-            const validCategories = ["Trinken", "Essen", "Sonstiges", "Standard"];
-            if (!validCategories.includes(newCategory.trim())) {
-                if (!confirm(`Die Kategorie "${newCategory.trim()}" ist keine Standard-Kategorie. Trotzdem verwenden?`)) {
-                    return;
-                }
-            }
-
-
-            window.productsDB.updateProduct(id, newPrice, newVatGroup, newCategory);
-        }
-
-        // NEU: Füllt die Firmendetails und setzt Kategorie-Dropdown
         function openSettingsModal() {
-            // Füllt die Felder mit gespeicherten Werten
-            document.getElementById('setting-firm-name').value = FIRMA_DETAILS.NAME;
-            document.getElementById('setting-firm-adresse').value = FIRMA_DETAILS.ADRESSE;
-            document.getElementById('setting-firm-steuer-nr').value = FIRMA_DETAILS.STEUER_NR;
-            document.getElementById('setting-firm-telefon').value = FIRMA_DETAILS.TELEFON || '';
-
+            document.getElementById('company-name').value = userSettings.companyName;
+            document.getElementById('address').value = userSettings.address;
+            document.getElementById('tax-id').value = userSettings.taxId;
+            document.getElementById('tax-rate').value = userSettings.taxRate;
             document.getElementById('settings-modal').style.display = 'flex';
         }
 
-        async function handleProductFormSubmit() { 
-            if (!window.productsDB) return showInfo("Fehler", "Datenbankmodul lädt noch.");
-            const name = document.getElementById('product-name').value.trim();
-            const price = parseFloat(document.getElementById('product-price').value.replace(',', '.'));
-            const vatGroup = document.getElementById('product-vat-group').value; 
-            const category = document.getElementById('product-category').value.trim(); 
+        function saveSettings() {
+            userSettings.companyName = document.getElementById('company-name').value;
+            userSettings.address = document.getElementById('address').value;
+            userSettings.taxId = document.getElementById('tax-id').value;
+            userSettings.taxRate = parseFloat(document.getElementById('tax-rate').value);
             
-            if (name === "" || isNaN(price) || price <= 0 || category === "") {
-                return showInfo("Eingabefehler", "Bitte gültigen Namen, Preis, MwSt. und Kategorie auswählen.");
-            }
+            // Speichern in Local Storage
+            localStorage.setItem('companyName', userSettings.companyName);
+            localStorage.setItem('address', userSettings.address);
+            localStorage.setItem('taxId', userSettings.taxId);
+            localStorage.setItem('taxRate', userSettings.taxRate);
 
-            const productData = { name: name, price: price, vatGroup: vatGroup, category: category }; 
-            
-            await window.productsDB.saveProduct(productData);
-            
-            document.getElementById('product-form').reset();
-            // Die Auswahl im Dropdown bleibt, was gut ist.
-            document.getElementById('product-name').focus();
+            showToast('Einstellungen gespeichert.', 'success');
+            closeModal('settings-modal');
         }
 
-        // --- Transaktions-Storno Logik (NEU) ---
-        
-        function openTransactionReversalModal() {
-            if (!kasseActive || !window.cloudReportFunction) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            
-            document.getElementById('transaction-reversal-modal').style.display = 'flex';
-            
-            // NEU: Ruft die Datenbankfunktion auf, um die letzten Transaktionen zu holen
-            window.cloudReportFunction('recent', null); 
-        }
+        // --- PRODUKT LOGIK ---
 
-        function renderTransactionList(transactions) {
-            const container = document.getElementById('transaction-list-container');
-            container.innerHTML = '';
-            
-            if (!transactions || transactions.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center p-4">Keine Buchungen gefunden.</p>';
-                return;
-            }
-
-            transactions.forEach(tx => {
-                const isReversed = tx.total < 0; // Transaktionen mit negativem Total sind Stornos
-                const paymentDisplay = tx.paymentType ? `(${tx.paymentType.toUpperCase()})` : '';
-                
-                const itemSummary = tx.items.map(i => `${i.count}x ${i.name}`).join(', ');
-                const date = new Date(tx.timestamp).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
-
-                const div = document.createElement('div');
-                div.className = `p-3 rounded-lg shadow-sm flex justify-between items-center ${isReversed ? 'bg-red-200 border border-red-500' : 'bg-green-50 border border-green-300'}`;
-                
-                div.innerHTML = `
-                    <div class="flex-grow min-w-0 pr-4">
-                        <p class="font-bold text-lg ${isReversed ? 'text-red-700' : 'text-green-800'}">
-                            ${tx.total.toFixed(2).replace('.', ',')} € ${isReversed ? '(STORNIERT)' : ''}
-                        </p>
-                        <p class="text-xs text-gray-500 truncate" title="${itemSummary}">${date} ${paymentDisplay} - ${itemSummary}</p>
-                    </div>
-                    <div>
-                        <button onclick="confirmReverseTransaction('${tx.id}', ${tx.total}, ${JSON.stringify(tx.items)}, ${JSON.stringify(tx.taxDetails)})" 
-                                class="p-2 text-xs font-bold text-white ${isReversed ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} rounded-lg transition-colors"
-                                ${isReversed ? 'disabled' : ''}>
-                            ${isReversed ? 'Storno gebucht' : 'Storno buchen'}
-                        </button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-        
-        // GEÄNDERT: Mit zusätzlicher Prüfung auf window.cloudSaveFunction
-        function confirmReverseTransaction(id, total, items, taxDetails) {
-            // NEUE PRÜFUNG: Sicherstellen, dass die Cloud-Speicherfunktion verfügbar ist
-            if (!window.cloudSaveFunction) {
-                closeModal('transaction-reversal-modal');
-                return showInfo("Fehler", "Datenbanksystem nicht bereit. Storno kann nicht gebucht werden.");
-            }
-        
-            if (total < 0) {
-                 return showInfo("Fehler", "Diese Buchung ist bereits ein Storno.");
-            }
-            if (window.confirm(`Wollen Sie die Buchung vom ${new Date(taxDetails.timestamp).toLocaleTimeString()} in Höhe von ${total.toFixed(2)} € wirklich stornieren? Dies erzeugt eine negative Gegenbuchung.`)) {
-                
-                // Ruft die Datenbankfunktion zur Erstellung der negativen Transaktion auf
-                window.cloudSaveFunction({ 
-                    items: items,
-                    total: -total, // Wichtig: Negativer Betrag
-                    paymentType: 'reversal', 
-                    taxDetails: taxDetails,
-                    timestamp: new Date().toISOString(),
-                    isReversal: true, // Markierung
-                    originalTxId: id
-                });
-
-                // Schließt das Modal und zeigt eine Erfolgsmeldung
-                closeModal('transaction-reversal-modal');
-                showToast(`Storno für ${total.toFixed(2)} € gebucht!`, 'success');
-            }
-        }
-
-
-        function showInfo(title, text) {
-            document.getElementById('info-title').innerText = title;
-            document.getElementById('info-text').innerText = text;
-            document.getElementById('info-modal').style.display = 'flex';
-        }
-        
-        function openFinalizeModal() {
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            if (currentTotalGross <= 0) return showInfo("Info", "Bitte erst etwas buchen.");
-            
-            document.getElementById('finalize-total-display').innerText = "Gesamt: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
-            document.getElementById('finalize-modal').style.display = 'flex';
-        }
-        
-        function openPaymentModal(printReceipt) { 
-            closeModal('finalize-modal'); 
-            
-            document.getElementById('payment-modal').dataset.printReceipt = printReceipt; 
-
-            document.getElementById('payment-total-display').innerText = "Zu zahlen: " + currentTotalGross.toFixed(2).replace('.', ',') + " €";
-            
-            currentReceivedString = "0"; 
-            document.getElementById('input-received').value = "0,00"; 
-            
-            calculateChange(); 
-            
-            document.getElementById('payment-modal').style.display = 'flex';
-        }
-
-        // Quick Pay Logik
-        function handleQuickPay(value) {
-            const inputField = document.getElementById('input-received');
-            
-            if (value === 'exact') {
-                currentReceivedString = currentTotalGross.toFixed(2).replace('.', ',');
-            } else {
-                currentReceivedString = parseFloat(value).toFixed(2).replace('.', ',');
-            }
-
-            inputField.value = currentReceivedString; 
-            calculateChange();
-        }
-
-        function calculateChange() { 
-            let val = document.getElementById('input-received').value.replace(',', '.');
-            let received = parseFloat(val); 
-
-            let btnCash = document.getElementById('btn-confirm-pay'); 
-            let btnCard = document.getElementById('btn-confirm-card-pay'); 
-            let display = document.getElementById('change-display');
-
-            // --- Barzahlung Logik ---
-            if (isNaN(received) || received < 0.01) {
-                display.innerText = "Ungültig";
-                btnCash.disabled = true;
-            } else {
-                let change = received - currentTotalGross;
-                change = Math.round(change * 100) / 100; 
-
-                if (change >= -0.01) { 
-                    display.innerText = "Rückgeld: " + change.toFixed(2).replace('.', ',') + " €";
-                    btnCash.disabled = false;
-                } else {
-                    display.innerText = "Fehlt: " + Math.abs(change).toFixed(2).replace('.', ',') + " €";
-                    btnCash.disabled = true;
-                }
-            }
-            
-            // --- Kartenzahlung Logik ---
-            btnCard.disabled = currentTotalGross <= 0.005;
-        }
-
-        function finishTransaction(paymentType) { 
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            
-            if (paymentType === 'cash' && document.getElementById('btn-confirm-pay').disabled) return;
-            if (paymentType === 'card' && document.getElementById('btn-confirm-card-pay').disabled) return;
-
-            closeModal('payment-modal');
-            
-            const itemsWithPrice = Object.entries(currentOrder).map(([name, count]) => ({
-                name: name,
-                count: count,
-                price: USER_PRODUCTS[name]?.price || 0,
-                vatRate: USER_PRODUCTS[name]?.vatRate || VAT_RATES.standard
-            }));
-            
-            const printReceipt = document.getElementById('payment-modal').dataset.printReceipt === 'true'; 
-            
-            const hostPlaceholder = "_________________________";
-            const reasonPlaceholder = "__________________________________________________"; 
-
-            let receivedAmount = 0;
-            let changeAmount = 0;
-
-            if (paymentType === 'cash') {
-                receivedAmount = parseFloat(document.getElementById('input-received').value.replace(',', '.'));
-                changeAmount = receivedAmount - currentTotalGross; 
-                changeAmount = Math.round(changeAmount * 100) / 100; 
-            } else if (paymentType === 'card') {
-                receivedAmount = currentTotalGross; 
-                changeAmount = 0;
-            }
-
-
-            let transactionData = {
-                items: itemsWithPrice,
-                total: currentTotalGross, 
-                received: receivedAmount, 
-                change: changeAmount, 
-                paymentType: paymentType, 
-                taxDetails: currentTaxDetails, 
-                timestamp: new Date().toISOString()
+        async function loadProductsAndCategories() {
+            // Simuliere Laden von Produkten und Kategorien (Dummy-Daten)
+            products = JSON.parse(localStorage.getItem('products')) || {
+                'prod1': { id: 'prod1', name: 'Glühwein', price: 4.00, categoryId: 'cat1' },
+                'prod2': { id: 'prod2', name: 'Kinderpunsch', price: 3.00, categoryId: 'cat1' },
+                'prod3': { id: 'prod3', name: 'Bratwurst', price: 3.50, categoryId: 'cat2' },
+                'prod4': { id: 'prod4', name: 'Pommes', price: 3.00, categoryId: 'cat2' },
+                'prod5': { id: 'prod5', name: 'Pfand', price: 2.00, categoryId: 'cat3' }
             };
 
-            if (printReceipt) {
-                printKassenzettel(transactionData, { host: hostPlaceholder, reason: reasonPlaceholder });
+            categories = JSON.parse(localStorage.getItem('categories')) || {
+                'cat1': { id: 'cat1', name: 'Getränke' },
+                'cat2': { id: 'cat2', name: 'Essen' },
+                'cat3': { id: 'cat3', name: 'Pfand' }
+            };
+
+            renderCategoryTabs();
+            renderProductGrid('cat1'); 
+            renderProductModalContent();
+        }
+
+        function saveProductsAndCategories() {
+            localStorage.setItem('products', JSON.stringify(products));
+            localStorage.setItem('categories', JSON.stringify(categories));
+            renderCategoryTabs();
+            renderProductGrid(document.querySelector('#category-tabs .bg-red-600')?.dataset.category || 'cat1');
+            renderProductModalContent();
+        }
+
+        function renderCategoryTabs() {
+            const container = document.getElementById('category-tabs');
+            container.innerHTML = '';
+
+            Object.values(categories).forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'flex-shrink-0 px-3 py-1 rounded-lg text-sm font-semibold transition-colors bg-red-100 text-red-700 hover:bg-red-200';
+                button.dataset.category = category.id;
+                button.innerText = category.name;
+                button.onclick = () => renderProductGrid(category.id);
+                container.appendChild(button);
+            });
+        }
+
+        function renderProductGrid(categoryId) {
+            const container = document.getElementById('product-grid');
+            const tabs = document.querySelectorAll('#category-tabs button');
+            container.innerHTML = '';
+            
+            tabs.forEach(tab => {
+                tab.classList.remove('bg-red-600', 'text-white');
+                tab.classList.add('bg-red-100', 'text-red-700');
+                if (tab.dataset.category === categoryId) {
+                    tab.classList.add('bg-red-600', 'text-white');
+                    tab.classList.remove('bg-red-100', 'text-red-700');
+                }
+            });
+
+            const filteredProducts = Object.values(products).filter(p => p.categoryId === categoryId);
+
+            if (filteredProducts.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center p-4">Keine Produkte in dieser Kategorie.</p>';
+                return;
             }
+
+            filteredProducts.forEach(product => {
+                const button = document.createElement('button');
+                button.className = 'product-btn p-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 shadow-md flex flex-col justify-center items-center text-center';
+                button.innerHTML = `
+                    <span class="text-sm">${product.name}</span>
+                    <span class="text-lg font-extrabold">${product.price.toFixed(2).replace('.', ',')} €</span>
+                `;
+                button.onclick = () => addToBestellung(product.id);
+                container.appendChild(button);
+            });
+        }
+
+        function renderProductModalContent() {
+            const categorySelect = document.getElementById('new-product-category');
+            categorySelect.innerHTML = '<option value="">Kategorie wählen</option>';
+            
+            const categoryList = document.getElementById('category-list');
+            categoryList.innerHTML = '';
+            
+            const productList = document.getElementById('product-list');
+            productList.innerHTML = '';
+
+            // Kategorien für Select und Liste
+            Object.values(categories).forEach(category => {
+                // Select
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.innerText = category.name;
+                categorySelect.appendChild(option);
+
+                // Liste
+                categoryList.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg border">
+                        <span class="font-semibold">${category.name}</span>
+                        <button onclick="deleteCategory('${category.id}')" class="text-red-500 hover:text-red-700 text-sm">Löschen</button>
+                    </div>
+                `;
+            });
+
+            // Produkte Liste
+            Object.values(products).forEach(product => {
+                productList.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg border">
+                        <span class="font-semibold">${product.name}</span>
+                        <span class="text-sm text-gray-600">${product.price.toFixed(2).replace('.', ',')} € (${categories[product.categoryId]?.name || 'N/A'})</span>
+                        <button onclick="deleteProduct('${product.id}')" class="text-red-500 hover:text-red-700 text-sm">Löschen</button>
+                    </div>
+                `;
+            });
+        }
+
+        function openProductModal() {
+            renderProductModalContent();
+            document.getElementById('product-modal').style.display = 'flex';
+        }
+
+        function addCategory() {
+            const name = document.getElementById('new-category-name').value.trim();
+            if (!name) {
+                showToast('Bitte einen Kategorienamen eingeben.', 'error');
+                return;
+            }
+            const id = 'cat' + Date.now();
+            categories[id] = { id, name };
+            saveProductsAndCategories();
+            document.getElementById('new-category-name').value = '';
+            showToast('Kategorie hinzugefügt.', 'success');
+        }
+
+        function addProduct() {
+            const name = document.getElementById('new-product-name').value.trim();
+            const price = parseFloat(document.getElementById('new-product-price').value);
+            const categoryId = document.getElementById('new-product-category').value;
+
+            if (!name || isNaN(price) || price <= 0 || !categoryId) {
+                showToast('Bitte alle Produktfelder korrekt ausfüllen.', 'error');
+                return;
+            }
+
+            const id = 'prod' + Date.now();
+            products[id] = { id, name, price, categoryId };
+            saveProductsAndCategories();
+            document.getElementById('new-product-name').value = '';
+            document.getElementById('new-product-price').value = '';
+            showToast('Produkt hinzugefügt.', 'success');
+        }
+
+        function deleteCategory(id) {
+            if (!confirm(`Soll die Kategorie "${categories[id]?.name}" und ALLE zugehörigen Produkte gelöscht werden?`)) return;
+
+            // Produkte löschen
+            Object.keys(products).forEach(prodId => {
+                if (products[prodId].categoryId === id) {
+                    delete products[prodId];
+                }
+            });
+            // Kategorie löschen
+            delete categories[id];
+            saveProductsAndCategories();
+            showToast('Kategorie und Produkte gelöscht.', 'info');
+        }
+
+        function deleteProduct(id) {
+            if (!confirm(`Soll das Produkt "${products[id]?.name}" gelöscht werden?`)) return;
+            delete products[id];
+            saveProductsAndCategories();
+            showToast('Produkt gelöscht.', 'info');
+        }
+
+
+        // --- BESTELLUNG LOGIK ---
+
+        function handleQuantityInput(value) {
+            lastAction = { type: 'quantity', oldValue: currentQuantity };
+
+            if (value === 'clear') {
+                currentQuantity = '1';
+            } else if (value === 'set1') {
+                currentQuantity = '1';
+            } else if (currentQuantity === '1' && value !== '0') {
+                currentQuantity = value;
+            } else if (currentQuantity.length < 5) {
+                currentQuantity += value;
+            }
+            
+            document.getElementById('quantity-display').innerText = currentQuantity;
+        }
+
+        function addToBestellung(productId) {
+            const product = products[productId];
+            const quantity = parseInt(currentQuantity);
+            
+            if (!product || isNaN(quantity) || quantity <= 0) return;
+
+            const taxRate = userSettings.taxRate;
+            const itemPriceBrutto = product.price;
+            const itemPriceNetto = itemPriceBrutto / (1 + (taxRate / 100));
+            const taxAmount = itemPriceBrutto - itemPriceNetto;
+
+            for (let i = 0; i < quantity; i++) {
+                const item = {
+                    id: Date.now() + i, 
+                    name: product.name,
+                    brutto: itemPriceBrutto,
+                    netto: itemPriceNetto,
+                    tax: taxAmount,
+                    taxRate: taxRate,
+                    productId: productId
+                };
+                currentBestellung.push(item);
+            }
+            
+            // Speichere die aktuelle Aktion für Storno
+            lastAction = { type: 'add', items: currentBestellung.slice(-quantity) };
+
+            renderReceipt();
+            // Menge auf 1 zurücksetzen
+            currentQuantity = '1';
+            document.getElementById('quantity-display').innerText = currentQuantity;
+        }
+
+        function undoLastAction() {
+            if (!lastAction) {
+                showToast('Keine letzte Aktion zum Stornieren gefunden.', 'info');
+                return;
+            }
+
+            if (lastAction.type === 'add') {
+                const itemIdsToUndo = lastAction.items.map(item => item.id);
+                const originalLength = currentBestellung.length;
+
+                // Entferne die Artikel, die in der letzten 'add'-Aktion hinzugefügt wurden
+                currentBestellung = currentBestellung.filter(item => !itemIdsToUndo.includes(item.id));
+
+                if (currentBestellung.length < originalLength) {
+                    showToast(`${originalLength - currentBestellung.length} Artikel storniert.`, 'success');
+                    lastAction = null; // Storno selbst ist nicht stornierbar
+                } else {
+                    showToast('Fehler beim Stornieren der letzten Buchung.', 'error');
+                }
+            } else if (lastAction.type === 'quantity') {
+                currentQuantity = lastAction.oldValue;
+                document.getElementById('quantity-display').innerText = currentQuantity;
+                showToast('Menge zurückgesetzt.', 'success');
+                lastAction = null;
+            }
+            
+            renderReceipt();
+        }
+
+        function renderReceipt(forPrint = false, isBewirtung = false) {
+            const container = document.getElementById(forPrint ? 'receipt-print-content' : 'receipt-content-interactive');
+            let content = '';
+            let totalBrutto = 0;
+            const itemCounts = {};
+
+            currentBestellung.forEach(item => {
+                const key = item.name + '_' + item.brutto.toFixed(2);
+                if (!itemCounts[key]) {
+                    itemCounts[key] = {
+                        name: item.name,
+                        brutto: item.brutto,
+                        count: 0
+                    };
+                }
+                itemCounts[key].count++;
+                totalBrutto += item.brutto;
+            });
+            
+            if (currentBestellung.length === 0) {
+                content = '<p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>';
+            } else {
+                
+                if (forPrint) {
+                    // Druckansicht
+                    content += `<div class="center">${userSettings.companyName}</div>`;
+                    content += `<div class="center">${userSettings.address}</div>`;
+                    content += `<div class="center">Ust-IdNr.: ${userSettings.taxId}</div>`;
+                    content += `<div class="center">${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}</div>`;
+                    content += "<hr>";
+
+                    if (isBewirtung) {
+                        content += "<div class='center'>*** BEWIRTUNGSBELEG ***</div>";
+                        content += "<hr>";
+                        // Platzhalter für Bewirtungsdaten
+                        content += "<div>Anlass: ____________</div>";
+                        content += "<div>Ort: ____________</div>";
+                        content += "<div>Teilnehmer: ____________</div>";
+                        content += "<hr>";
+                    }
+
+                    content += `<div class="line"><strong>Artikel</strong><strong>Preis</strong></div>`;
+                    content += "<hr>";
+                    
+                    Object.values(itemCounts).forEach(item => {
+                        const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
+                        content += `<div class="line"><span class="item-name">${item.count}x ${item.name}</span><span class="item-price">${price} €</span></div>`;
+                    });
+
+                    content += "<hr>";
+                    content += `<div class="line"><strong>GESAMT BRUTTO</strong><strong>${totalBrutto.toFixed(2).replace('.', ',')} €</strong></div>`;
+                    
+                    content += "<hr>";
+                    
+                    // Steueraufschlüsselung
+                    const taxDetails = {};
+                    currentBestellung.forEach(item => {
+                        const rate = item.taxRate.toFixed(2) + '%';
+                        if (!taxDetails[rate]) {
+                            taxDetails[rate] = { netto: 0, tax: 0 };
+                        }
+                        taxDetails[rate].netto += item.netto;
+                        taxDetails[rate].tax += item.tax;
+                    });
+                    
+                    Object.entries(taxDetails).sort(([, a], [, b]) => a.tax - b.tax).forEach(([rate, details]) => {
+                        content += `<div class="line"><span class="item-name">Enth. ${rate} MwSt.</span><span class="item-price">${details.tax.toFixed(2).replace('.', ',')} €</span></div>`;
+                    });
+
+                    content += "<hr>";
+                    content += "<div class='center'>Vielen Dank für Ihren Besuch!</div>";
+
+                } else {
+                    // Interaktive Ansicht
+                    Object.values(itemCounts).forEach(item => {
+                        const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
+                        content += `
+                            <div class="flex justify-between">
+                                <span class="font-semibold">${item.count}x ${item.name}</span>
+                                <span class="font-bold">${price} €</span>
+                            </div>
+                        `;
+                    });
+                }
+            }
+
+            container.innerHTML = content;
+            document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
+        }
+
+        function resetBestellung() {
+            currentBestellung = [];
+            lastAction = null;
+            currentQuantity = '1';
+            document.getElementById('quantity-display').innerText = currentQuantity;
+            renderReceipt();
+            showToast('Bestellung zurückgesetzt.', 'info');
+        }
+
+        // --- TRANSAKTIONEN ---
+
+        async function loadTransactionHistory() {
+            // Simuliere Laden der Transaktionen
+            transactionHistory = JSON.parse(localStorage.getItem('transactionHistory')) || [];
+        }
+
+        async function saveTransaction(transaction) {
+            transactionHistory.push(transaction);
+            // Begrenze den Verlauf auf die letzten 50 Transaktionen
+            if (transactionHistory.length > 50) {
+                transactionHistory = transactionHistory.slice(transactionHistory.length - 50);
+            }
+            localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
+        }
+
+        function openFinalizeModal() {
+            if (currentBestellung.length === 0) {
+                showToast('Bitte buchen Sie zuerst Artikel.', 'error');
+                return;
+            }
+            const total = currentBestellung.reduce((sum, item) => sum + item.brutto, 0);
+            document.getElementById('finalize-total').innerText = total.toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('finalize-modal').style.display = 'flex';
+        }
+
+        async function finalizeTransaction(paymentMethod) {
+            showLoading(true);
+            
+            const totalBrutto = currentBestellung.reduce((sum, item) => sum + item.brutto, 0);
+
+            const transaction = {
+                id: 'tx' + Date.now(),
+                timestamp: new Date().toISOString(),
+                totalBrutto: totalBrutto,
+                paymentMethod: paymentMethod,
+                items: JSON.parse(JSON.stringify(currentBestellung)) // Deep copy
+            };
+
+            await saveTransaction(transaction);
+            
+            showToast(`Transaktion (${paymentMethod}) abgeschlossen!`, 'success');
+            
+            // optional: Beleg drucken
+            // printReceipt();
 
             resetBestellung();
-
-            if (window.cloudSaveFunction) {
-                window.cloudSaveFunction(transactionData); 
-            } else {
-                showInfo("Offline", "Gebucht! (Datenbank nicht verbunden)");
-            }
-        }
-        
-        function printKassenzettel(transactionData, bewirtungDetails) {
-            
-            const FIRMA_NAME = FIRMA_DETAILS.NAME;
-            const FIRMA_ADRESSE = FIRMA_DETAILS.ADRESSE;
-            const FIRMA_STEUER_NR = FIRMA_DETAILS.STEUER_NR; 
-            const FIRMA_TELEFON = FIRMA_DETAILS.TELEFON;
-            
-            let receiptHTML = `
-                <div class="receipt-print">
-                    <div class="header center">
-                        <strong style="font-size: 11pt;">${FIRMA_NAME}</strong><br>
-                        ${FIRMA_ADRESSE}<br>
-                        USt-IdNr: ${FIRMA_STEUER_NR}<br>
-                        Tel: ${FIRMA_TELEFON}<br>
-                        <hr>
-                        <strong style="font-size: 10pt;">BEWIRTUNGSBELEG</strong><br>
-                        Datum: ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}<br>
-                        <hr>
-                        
-                        <div style="font-size: 8pt; text-align: left; margin-bottom: 5px;">
-                            <strong style="font-weight: bold;">Gastgeber (Bewirtender):</strong><br>
-                            ${bewirtungDetails.host}<br>
-                        </div>
-                        <div style="font-size: 8pt; text-align: left; margin-bottom: 5px;">
-                            <strong style="font-weight: bold;">Anlass der Bewirtung:</strong><br>
-                            ${bewirtungDetails.reason}<br>
-                        </div>
-                        <hr>
-                    </div>
-                    
-                    <div class="item-list">
-            `;
-            
-            let totalNet = 0;
-            let totalTax = 0;
-
-            transactionData.items.forEach(item => {
-                const itemGross = item.count * item.price;
-                const vatRate = item.vatRate || VAT_RATES.standard;
-                const itemNet = itemGross / (1 + vatRate);
-                const itemTax = itemGross - itemNet;
-                
-                totalNet += itemNet;
-                totalTax += itemTax;
-
-                receiptHTML += `
-                    <div class="line">
-                        <span class="item-name">${item.count}x ${item.name}</span>
-                        <span class="item-price">${itemGross.toFixed(2).replace('.', ',')} €</span>
-                    </div>
-                `;
-            });
-            
-            totalNet = Math.round(totalNet * 100) / 100;
-            totalTax = Math.round(totalTax * 100) / 100;
-            
-            receiptHTML += `
-                    </div>
-                    <hr>
-                    <div class="line">
-                        <strong>GESAMT BRUTTO:</strong>
-                        <strong style="font-size: 11pt;">${transactionData.total.toFixed(2).replace('.', ',')} €</strong>
-                    </div>
-                    <hr>
-                    <div class="line" style="font-size: 9pt;">
-                        <span>Zahlungsart:</span>
-                        <span>${transactionData.paymentType === 'cash' ? 'BAR' : 'KARTE'}</span>
-                    </div>
-                    <div class="line" style="font-size: 9pt;">
-                        <span>Gegeben:</span>
-                        <span>${transactionData.received.toFixed(2).replace('.', ',')} €</span>
-                    </div>
-                    <div class="line" style="font-size: 9pt;">
-                        <span>Rückgeld:</span>
-                        <span>${transactionData.change.toFixed(2).replace('.', ',')} €</span>
-                    </div>
-                    
-                    <div class="vat-summary" style="font-size: 8pt; margin-top: 5px;">
-                        <div class="center"><hr></div>
-                        <strong>STEUERAUFSCHLÜSSELUNG:</strong><br>
-                        
-                        <div class="line"><span>NETTO Gesamt:</span> <span>${totalNet.toFixed(2).replace('.', ',')} €</span></div>
-                        <div class="line"><span>STEUER Gesamt:</span> <span>${totalTax.toFixed(2).replace('.', ',')} €</span></div>
-                        
-                        
-            `;
-            
-            const sortedTaxKeys = Object.keys(transactionData.taxDetails || {}).sort((a, b) => parseFloat(b) - parseFloat(a));
-            sortedTaxKeys.forEach(rateKey => {
-                const details = transactionData.taxDetails[rateKey];
-                receiptHTML += `
-                    <div class="line"><span>${rateKey} Netto:</span> <span>${details.net.toFixed(2).replace('.', ',')} €</span></div>
-                    <div class="line"><span>${rateKey} Steuer:</span> <span>${details.tax.toFixed(2).replace('.', ',')} €</span></div>
-                `;
-            });
-            
-            receiptHTML += `
-                    </div>
-                    <div class="footer center" style="margin-top: 10px;">
-                        <hr>
-                        <strong style="font-size: 8pt;">Namen der bewirteten Personen:</strong><br>
-                        <br>
-                        __________________________________<br>
-                        __________________________________<br>
-                        __________________________________<br>
-                        <hr>
-                        <strong style="font-size: 8pt;">Ort, Datum und Unterschrift (Gastgeber):</strong><br>
-                        <br>
-                        __________________________________<br>
-                        <hr>
-                        Vielen Dank für Ihren Besuch!
-                    </div>
-                </div>
-            `;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>Bewirtungsbeleg</title>');
-
-            printWindow.document.write('<style>');
-            printWindow.document.write('body { font-family: "Consolas", "Courier New", monospace; font-size: 9pt; margin: 0; padding: 0; }');
-            printWindow.document.write('.receipt-print { width: 80mm; color: #000; padding: 5px; box-sizing: border-box; }');
-            printWindow.document.write('.receipt-print strong { font-weight: bold; }');
-            printWindow.document.write('.receipt-print .center { text-align: center; }');
-            printWindow.document.write('.receipt-print .line { display: flex; justify-content: space-between; margin-bottom: 1px; }');
-            printWindow.document.write('.receipt-print .item-name { width: 60%; }');
-            printWindow.document.write('.receipt-print .item-price { width: 30%; text-align: right; }');
-            printWindow.document.write('.receipt-print hr { border: 0; border-top: 1px dashed #000; margin: 3px 0; }');
-            printWindow.document.write('@page { size: auto; margin: 0; }'); 
-            printWindow.document.write('</style>');
-
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(receiptHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            
-            setTimeout(() => {
-                printWindow.print();
-            }, 300); 
+            closeModal('finalize-modal');
+            showLoading(false);
         }
 
-        function runDailyReport(type) { 
-            if (!kasseActive) return showInfo("Aktion blockiert", "Kasse ist offline oder Datenbank nicht verbunden.");
-            
-            const selectedDate = document.getElementById('report-date').value;
-            if (!selectedDate && type !== 'recent') {
-                 return showInfo("Fehler", "Bitte wählen Sie ein Datum für den Bericht aus.");
-            }
-            
-            if (window.cloudReportFunction) {
-                window.cloudReportFunction(type, selectedDate);
-            } else {
-                showInfo("Fehler", "Datenbank noch nicht verbunden.");
-            }
-        }
-    </script>
-
-    <script type="module">
-        import { 
-            initializeApp 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            onAuthStateChanged,
-            signInWithEmailAndPassword, 
-            createUserWithEmailAndPassword,     
-            signOut                         
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            addDoc, 
-            getDocs, 
-            query, 
-            onSnapshot,
-            deleteDoc,
-            doc,
-            updateDoc,
-            where,
-            orderBy,
-            limit
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // =================================================================
-        // ⚠️ HIER FIREBASE KONFIGURATION EINFÜGEN ⚠️
-        // =================================================================
-        const PLACEHOLDER_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc", 
-            authDomain: "kassensystem-85412.firebaseapp.com",
-            projectId: "kassensystem-85412",
-            storageBucket: "kassensystem-85412.firebaseApp.com",
-            messagingSenderId: "916536785810",
-            appId: "1:916536785810:web:0d0319ef565af65d279f4b"
-        };
-        // =================================================================
-        
-        const appId = typeof __app_id !== 'undefined' ?
-        __app_id : 'external-kasse-glühwein';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : PLACEHOLDER_FIREBASE_CONFIG;
-
-
-        let db, auth, userId;
-        let unsubscribeProducts = null;
-        let isDefaultProductsAdded = false;
-
-        // GEÄNDERT: Default Products mit neuen Kategorien
-        const DEFAULT_PRODUCTS = [
-            { name: "Glühwein", price: 3.50, vatGroup: 'standard', category: 'Trinken' },
-            { name: "Kinderpunsch", price: 2.50, vatGroup: 'standard', category: 'Trinken' },
-            { name: "Bratwurst", price: 4.00, vatGroup: 'reduced', category: 'Essen' }, // 7%
-            { name: "Pommes", price: 3.00, vatGroup: 'reduced', category: 'Essen' }, // 7%
-            { name: "Wasser", price: 1.50, vatGroup: 'reduced', category: 'Trinken' } // 7%
-        ];
-
-        async function initDB() {
-            if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("HIER")) { 
-                window.setDBStatus(false, "DB-Fehler (API Key fehlt). Bitte Firebase Config einfügen!");
-                window.updateAppView('logged_out');
-                window.isDBReady = false; 
+        function printReceipt(isBewirtung = false) {
+            if (currentBestellung.length === 0) {
+                showToast('Keine Artikel für den Beleg.', 'error');
                 return;
             }
             
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                window.authService = {
-                    signIn: signInUser,
-                    register: registerUser,
-                    signOut: signOutUser 
-                };
-                window.isDBReady = true;
-                window.setDBStatus(false, "Verbinde...");
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        const userDisplay = user.email || `UID: ${userId.substr(0, 8)}...`;
-       
-                        setupProductsListener(userId);
-
-                        window.setDBStatus(true, `Online (User: ${user.email ? user.email.split('@')[0] : userId.substr(0, 8)}...)`);
-    
-                        window.updateAppView('logged_in', userDisplay);
-                        
-                        window.cloudSaveFunction = saveToCloud;
-                        window.cloudReportFunction = generateReport;
-   
-                        window.productsDB = productsDB; 
-
-                    } else {
-                        if (unsubscribeProducts) {
-                            unsubscribeProducts();
-                            unsubscribeProducts = null;
-                        }
-                        userId = null;
-                        isDefaultProductsAdded = false;
-                        window.setProducts([]); 
-                        window.setDBStatus(false, "Offline");
-                        window.updateAppView('logged_out');
-                        
-                        window.cloudSaveFunction = null;
-                        window.cloudReportFunction = null;
-                        window.productsDB = null;
-
-                        window.openLoginModal();
-                    }
-                });
-
-            } catch (e) {
-                console.error("DB INIT FEHLER:", e);
-                window.setDBStatus(false, "Fehler beim Start der Kasse");
-                window.showInfo("Fehler", "Datenbank konnte nicht initialisiert werden: " + e.message);
-                window.updateAppView('logged_out');
-                window.isDBReady = false; 
-                window.openLoginModal();
-            }
-        }
-
-        // --- Firebase AUTH Implementierung (unverändert) ---
-        async function signInUser(email, password) {
-            if (!auth) return;
-            window.showLoading(true);
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                window.showToast("Anmeldung erfolgreich!", 'success'); 
-                window.closeModal('login-modal');
-            } catch (error) {
-                console.error("Login Fehler:", error);
-                window.showInfo("Anmeldefehler", "Anmeldung fehlgeschlagen: " + getFirebaseErrorText(error.code));
-            } finally {
-                window.showLoading(false);
-            }
-        }
-
-        async function registerUser(email, password) {
-            if (!auth) return;
-            window.showLoading(true);
-            try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                window.showToast("Registrierung erfolgreich!", 'success'); 
-                window.closeModal('registration-modal');
-            } catch (error) {
-                console.error("Registrierungsfehler:", error);
-                window.showInfo("Registrierungsfehler", "Registrierung fehlgeschlagen: " + getFirebaseErrorText(error.code));
-            } finally {
-                window.showLoading(false);
-            }
-        }
-
-        async function signOutUser() {
-            try {
-                await signOut(auth);
-                window.resetBestellung(); 
-                window.showToast("Sie wurden abgemeldet.", 'info'); 
-            } catch (error) {
-                console.error("Logout Fehler:", error);
-                window.showInfo("Abmeldefehler", "Fehler beim Abmelden: " + error.message);
-            }
-        }
-
-        function getFirebaseErrorText(errorCode) {
-            switch (errorCode) {
-                case 'auth/invalid-credential':
-                    return 'Die Kombination aus E-Mail und Passwort ist ungültig. Bitte überprüfen Sie Ihre Eingaben.';
-                case 'auth/wrong-password':
-                    return 'Falsches Passwort.';
-                case 'auth/user-not-found':
-                    return 'Kein Benutzer mit dieser E-Mail gefunden. Haben Sie sich registriert?';
-                case 'auth/invalid-email':
-                    return 'Ungültiges E-Mail-Format.';
-                case 'auth/email-already-in-use':
-                    return 'Diese E-Mail-Adresse wird bereits verwendet.';
-                case 'auth/weak-password':
-                    return 'Das Passwort ist zu schwach (mind. 6 Zeichen).';
-                default:
-                    return `Ein unbekannter Fehler ist aufgetreten: ${errorCode}.`;
-            }
-        }
-
-        // --- Produkt-Management Logik (Aktualisiert für Kategorie) ---
-
-        const getProductsPath = (id) => `artifacts/${appId}/users/${id}/products`;
-        function setupProductsListener(id) { 
-            if (unsubscribeProducts) unsubscribeProducts();
-            const productsCol = collection(db, getProductsPath(id));
+            // Erzeuge ein temporäres Element für den Druck
+            const printArea = document.createElement('div');
+            printArea.className = 'receipt-print';
+            printArea.id = 'receipt-print-area';
             
-            unsubscribeProducts = onSnapshot(productsCol, async (snapshot) => {
-                const products = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    price: parseFloat(doc.data().price), 
-                    name: doc.data().name,
-                    vatGroup: doc.data().vatGroup || 'standard',
-                    category: doc.data().category || 'Standard' // NEU
-                }));
-           
-                if (products.length === 0 && !isDefaultProductsAdded) {
-                     await addDefaultProductsIfEmpty(id);
-                     isDefaultProductsAdded = true; 
-                }
+            const contentContainer = document.createElement('div');
+            contentContainer.id = 'receipt-print-content';
+            printArea.appendChild(contentContainer);
+            
+            document.body.appendChild(printArea);
+            
+            renderReceipt(true, isBewirtung); // Rendert den Inhalt in den printArea
 
-           
-                window.setProducts(products);
+            window.print();
 
-            }, (error) => {
-                console.error("Produkt-Listener Fehler:", error);
-                if (error.code === 'permission-denied') {
-                    window.showInfo("Datenbankfehler: Lesezugriff verweigert!", "Die Sicherheitsregeln in der Firebase Konsole verhindern das Laden der Produkte. Bitte die Firestore 'Rules' überprüfen. (Lesezugriff muss für Ihre UID erlaubt sein)");
-                } else {
-                    window.showInfo("Datenbankfehler", "Konnte Produktliste nicht laden: " + error.message);
-                }
+            document.body.removeChild(printArea);
+        }
+
+        // --- STORNO / RÜCKABWICKLUNG ---
+
+        function openTransactionReversalModal() {
+            const listContainer = document.getElementById('transaction-list');
+            listContainer.innerHTML = '';
+            
+            if (transactionHistory.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500">Keine abgeschlossenen Transaktionen gefunden.</p>';
+                document.getElementById('transaction-reversal-modal').style.display = 'flex';
+                return;
+            }
+
+            // Zeige die letzten 10 Transaktionen (neueste zuerst)
+            const recentTransactions = transactionHistory.slice().reverse().slice(0, 10);
+
+            recentTransactions.forEach(tx => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200';
+                item.innerHTML = `
+                    <div>
+                        <span class="font-bold text-lg">${tx.totalBrutto.toFixed(2).replace('.', ',')} €</span>
+                        <span class="text-sm text-gray-600 ml-2">(${tx.paymentMethod})</span>
+                        <div class="text-xs text-gray-500">${new Date(tx.timestamp).toLocaleString('de-DE')}</div>
+                    </div>
+                    <button onclick="reverseTransaction('${tx.id}')" class="p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 shadow-md">
+                        Stornieren
+                    </button>
+                `;
+                listContainer.appendChild(item);
             });
+
+            document.getElementById('transaction-reversal-modal').style.display = 'flex';
+        }
+
+        async function reverseTransaction(id) {
+            if (!confirm("Soll diese Transaktion wirklich storniert werden? Dies ist NICHT rückgängig zu machen.")) return;
+            
+            showLoading(true);
+
+            const txIndex = transactionHistory.findIndex(tx => tx.id === id);
+            
+            if (txIndex === -1) {
+                showToast('Transaktion nicht gefunden.', 'error');
+                showLoading(false);
+                return;
+            }
+
+            // Transaktion als storniert markieren (oder entfernen, hier entfernen wir sie, um es einfach zu halten)
+            const [reversedTx] = transactionHistory.splice(txIndex, 1);
+            
+            // Speichere den reduzierten Verlauf
+            localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
+
+            showToast(`Transaktion ${id} über ${reversedTx.totalBrutto.toFixed(2).replace('.', ',')} € storniert.`, 'success');
+            
+            // UI aktualisieren
+            closeModal('transaction-reversal-modal');
+            await loadTransactionHistory();
+            openTransactionReversalModal();
+            showLoading(false);
         }
         
-        async function addDefaultProductsIfEmpty(id) {
-             const productsCol = collection(db, getProductsPath(id));
-            for (const product of DEFAULT_PRODUCTS) {
-                 await addDoc(productsCol, product); 
-            }
+        // --- BERICHTE ---
+
+        function setReportDateToday() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('report-date').value = today;
         }
 
-        const productsDB = { 
-            saveProduct: async (productData) => {
-                if (!userId || !db) return;
-                window.showLoading(true);
-                productData.price = parseFloat(productData.price); 
-                productData.category = productData.category.trim(); 
-                try {
-                    await addDoc(collection(db, getProductsPath(userId)), productData);
-                    window.showToast("Produkt hinzugefügt!", 'success'); 
-                } catch (e) {
-                    console.error("Produkt speichern Fehler", e);
-                    window.showInfo("Fehler", "Produkt konnte nicht gespeichert werden.");
-                } finally {
-                    window.showLoading(false);
-                }
-            },
-            deleteProduct: async (productId) => {
-                if (!userId || !db) return;
-                window.showLoading(true);
-                try {
-                    const productDoc = doc(db, getProductsPath(userId), productId);
-                    await deleteDoc(productDoc);
-                    window.showToast("Produkt gelöscht.", 'info'); 
-                } catch (e) {
-                    console.error("Produkt löschen Fehler", e);
-                    window.showInfo("Fehler", "Produkt konnte nicht gelöscht werden.");
-                } finally {
-                    window.showLoading(false);
-                }
-            },
-            updateProduct: async (productId, newPrice, newVatGroup, newCategory) => { 
-                if (!userId || !db) return;
-                window.showLoading(true);
-                try {
-                    const priceNumber = parseFloat(newPrice); 
-                    const productDocRef = doc(db, getProductsPath(userId), productId);
-                    
-                    await updateDoc(productDocRef, {
-                        price: priceNumber, 
-                        vatGroup: newVatGroup,
-                        category: newCategory.trim() 
-                    });
-                    
-                    window.showToast("Produkt aktualisiert!", 'success'); 
-
-                } catch (e) {
-                    console.error("Produkt aktualisieren Fehler", e);
-                    window.showInfo("Fehler", "Produkt konnte nicht aktualisiert werden: " + e.message);
-                } finally {
-                    window.showLoading(false);
-                }
+        async function runDailyReport(type) {
+            const reportDateString = document.getElementById('report-date').value;
+            if (!reportDateString) {
+                showToast('Bitte ein Datum für den Bericht auswählen.', 'error');
+                return;
             }
-        };
 
-        // --- Transaktions Logik ---
-
-        async function saveToCloud(data) {
-            if (!userId || !db) return;
-            window.showLoading(true);
-            try {
-                const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
-                await addDoc(collection(db, path), data);
-                window.showToast("Buchung abgeschlossen.", 'success'); 
-            } catch (e) {
-                console.error("Save error", e);
-                window.showInfo("Fehler", "Transaktion konnte nicht gespeichert werden.");
-            } finally {
-                window.showLoading(false);
-            }
-        }
-
-        function summarizedTransactionsToCSV(productStats, totalRevenue, paymentStats, taxSummary, selectedDate) {
-            let csv = `Berichtsdatum: ${selectedDate}\n\n`;
-            csv += "Produktname;Gesamtstueckzahl;Gesamterloes Brutto (€)\n"; 
+            showLoading(true);
+            // Start und Ende des ausgewählten Tages (UTC)
+            const reportStart = new Date(reportDateString);
+            reportStart.setHours(0, 0, 0, 0);
+            const reportEnd = new Date(reportDateString);
+            reportEnd.setHours(23, 59, 59, 999);
             
-            const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
-
-            sortedProducts.forEach(([name, stats]) => {
-                const cleanName = name.replace(/(\r\n|\n|\r|;)/gm," ");
-                csv += `${cleanName};${stats.count};${stats.revenue.toFixed(2)}\n`;
+            const transactionsToday = transactionHistory.filter(tx => {
+                const txDate = new Date(tx.timestamp);
+                return txDate >= reportStart && txDate <= reportEnd;
             });
 
-            const totalCount = sortedProducts.reduce((sum, [, stats]) => sum + stats.count, 0);
+            // Berichtslogik (aus dem Schnipsel rekonstruiert)
+            let totalRevenue = 0;
+            let revenueByMethod = { 'BAR': 0, 'KARTE': 0 };
+            let revenueByTax = {};
+            let productStats = {};
 
-            csv += `\nGESAMTSUMME BRUTTO;${totalCount};${totalRevenue.toFixed(2)}\n`;
-            
-            csv += `\nZahlungsarten Übersicht (Brutto):\n`;
-            csv += `Barzahlungen (€);${(paymentStats.cash || 0).toFixed(2)}\n`;
-            csv += `Kartenzahlungen (€);${(paymentStats.card || 0).toFixed(2)}\n`;
-            
-            csv += `\nSteuerzusammenfassung:\n`;
-            csv += `Steuersatz;Netto (€);Steuer (€)\n`;
-            
-            Object.entries(taxSummary).sort(([rateA], [rateB]) => parseFloat(b.replace('%', '')) - parseFloat(a.replace('%', ''))).forEach(([rate, details]) => {
-                 csv += `${rate};${details.net.toFixed(2)};${details.tax.toFixed(2)}\n`;
+            transactionsToday.forEach(tx => {
+                totalRevenue += tx.totalBrutto;
+                revenueByMethod[tx.paymentMethod] = (revenueByMethod[tx.paymentMethod] || 0) + tx.totalBrutto;
+
+                tx.items.forEach(item => {
+                    const rate = item.taxRate.toFixed(2) + '%';
+                    if (!revenueByTax[rate]) {
+                        revenueByTax[rate] = { netto: 0, tax: 0 };
+                    }
+                    revenueByTax[rate].netto += item.netto;
+                    revenueByTax[rate].tax += item.tax;
+
+                    const productName = item.name;
+                    if (!productStats[productName]) {
+                        productStats[productName] = { count: 0, revenue: 0 };
+                    }
+                    productStats[productName].count++;
+                    productStats[productName].revenue += item.brutto;
+                });
             });
 
+            if (type === 'csv') {
+                // Generiere CSV (vereinfacht)
+                let csvContent = "Artikel;Anzahl;Umsatz Brutto (€)\n";
+                Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB)).forEach(([name, stats]) => {
+                    csvContent += `${name};${stats.count};${stats.revenue.toFixed(2).replace('.', ',')}\n`;
+                });
+                csvContent += `\nGESAMT BAR;${revenueByMethod['BAR'].toFixed(2).replace('.', ',')}\n`;
+                csvContent += `GESAMT KARTE;${revenueByMethod['KARTE'].toFixed(2).replace('.', ',')}\n`;
+                csvContent += `GESAMT UMSATZ;${totalRevenue.toFixed(2).replace('.', ',')}\n`;
 
-            return csv.replace(/\./g, ','); 
-        }
-
-        function downloadReportCSV(csvContent) {
-            const dateStr = document.getElementById('report-date').value || new Date().toISOString().slice(0, 10);
-            const filename = `Tagesabschluss_Produkte_${dateStr}.csv`;
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            
-            if (link.download !== undefined) { 
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", filename);
-                link.style.visibility = 'hidden';
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.setAttribute('download', `Tagesbericht_${reportDateString}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                window.showToast("CSV erfolgreich heruntergeladen!", 'success');
+                showToast('CSV-Export gestartet.', 'success');
+
             } else {
-                window.showInfo("Fehler", "Ihr Browser unterstützt den automatischen Download nicht.");
-            }
-        }
+                // Generiere Text-Bericht (für Info-Modal)
+                let report = `Tagesabschluss Bericht für den ${reportDateString}\n`;
+                report += "========================================\n\n";
 
+                report += `Gesamtumsatz (Brutto): ${totalRevenue.toFixed(2).replace('.', ',')} €\n\n`;
 
-        // Überarbeitete Berichtsfunktion mit Datumsauswahl und NEU: 'recent' für Storno
-        async function generateReport(type, selectedDate) { 
-            if (!userId || !db) return;
-            window.showLoading(true);
-            try {
-                const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
-                let q;
+                report += "Umsatz nach Zahlart:\n";
+                report += `  - BAR:   ${revenueByMethod['BAR'].toFixed(2).replace('.', ',')} €\n`;
+                report += `  - KARTE: ${revenueByMethod['KARTE'].toFixed(2).replace('.', ',')} €\n\n`;
 
-                if (type === 'recent') {
-                    // NEU: Holt die letzten 20 Transaktionen, sortiert nach Zeitstempel
-                    q = query(
-                        collection(db, path),
-                        orderBy("timestamp", "desc"),
-                        limit(20)
-                    );
-                } else {
-                    // Bestehende Logik für Tagesbericht (report/csv)
-                    const reportDate = new Date(selectedDate);
-                    reportDate.setHours(0, 0, 0, 0); 
-                    const startOfTodayISO = reportDate.toISOString(); 
-
-                    const nextDay = new Date(reportDate);
-                    nextDay.setDate(reportDate.getDate() + 1);
-                    const endOfTodayISO = nextDay.toISOString();
-
-                    q = query(
-                        collection(db, path),
-                        where("timestamp", ">=", startOfTodayISO),
-                        where("timestamp", "<", endOfTodayISO)
-                    );
-                }
-                
-                const snapshot = await getDocs(q);
-
-                if (type === 'recent') {
-                    const transactions = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    window.renderTransactionList(transactions); // Rendert die Liste im Storno-Modal
-                    window.showLoading(false);
-                    return;
-                }
-                
-                // --- Logik für Tagesabschluss (report/csv) ---
-                let totalSum = 0;
-                let count = 0;
-                let productStats = {}; 
-                let paymentStats = { cash: 0.0, card: 0.0, reversal: 0.0 }; // NEU: reversal
-                let taxSummary = {};
-
-                snapshot.forEach(doc => {
-                    let d = doc.data();
-                    d.total = parseFloat(d.total || 0); 
-                    totalSum += d.total;
-                    count++;
-                    
-                    const pType = d.paymentType || 'cash'; 
-                    paymentStats[pType] = Math.round((paymentStats[pType] + d.total) * 100) / 100;
-
-                    if (d.taxDetails) {
-                        Object.entries(d.taxDetails).forEach(([rate, details]) => {
-                            const net = parseFloat(details.net || 0);
-                            const tax = parseFloat(details.tax || 0);
-
-                            if (!taxSummary[rate]) {
-                                taxSummary[rate] = { net: 0.0, tax: 0.0 };
-                            }
-                            taxSummary[rate].net = Math.round((taxSummary[rate].net + net) * 100) / 100;
-                            taxSummary[rate].tax = Math.round((taxSummary[rate].tax + tax) * 100) / 100;
-                        });
-                    }
-
-                    if(d.items && Array.isArray(d.items)) {
-                        d.items.forEach(item => {
-                             const name = item.name;
-                             // Bei Storno (negatives Total) müssen wir die Mengen abziehen
-                             const multiplier = d.total < 0 ? -1 : 1; 
-                             const item_count = parseInt(item.count || 0) * multiplier;
-                             const price = parseFloat(item.price || 0); 
-                             const lineRevenue = item_count * price;
-                             
-                             if (!productStats[name]) {
-                                 productStats[name] = { count: 0, revenue: 0.0 };
-                             }
-                             productStats[name].count += item_count;
-                             productStats[name].revenue = Math.round((productStats[name].revenue + lineRevenue) * 100) / 100;
-                        });
-                    }
-                });
-                
-                if (count === 0) {
-                    window.showInfo("Tagesabschluss", `Keine Buchungen für den ${selectedDate} gefunden.`);
-                    return;
-                }
-
-                if(type === 'csv') {
-                    const csvContent = summarizedTransactionsToCSV(productStats, totalSum, paymentStats, taxSummary, selectedDate);
-                    downloadReportCSV(csvContent);
-                    return;
-                }
-
-                // Standard Report (type === 'report')
-                let report = `Tagesabschluss (${new Date(selectedDate).toLocaleDateString('de-DE')})\n\n`;
-                report += `Anzahl Buchungen: ${count}\n`;
-                report += `GESAMTSUMME (BRUTTO): ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
-                
-                report += "Zahlungen (Brutto):\n";
-                report += `- Bar: ${paymentStats.cash.toFixed(2).replace('.', ',')} €\n`;
-                report += `- Karte: ${paymentStats.card.toFixed(2).replace('.', ',')} €\n`;
-                report += `- Stornos (Gegenbuchung): ${paymentStats.reversal.toFixed(2).replace('.', ',')} €\n\n`;
-                
-                report += "Steuerzusammenfassung (Brutto = Netto + Steuer):\n";
-                Object.entries(taxSummary).sort(([rateA], [rateB]) => parseFloat(b.replace('%', '')) - parseFloat(a.replace('%', ''))).forEach(([rate, details]) => {
-                    report += `  - ${rate} Netto: ${details.net.toFixed(2).replace('.', ',')} €\n`;
+                report += "Umsatz nach Steuersatz (MwSt. bereits enthalten):\n";
+                Object.entries(revenueByTax).sort(([rateA], [rateB]) => parseFloat(rateB.replace('%', '')) - parseFloat(rateA.replace('%', ''))).forEach(([rate, details]) => {
+                    report += `  - ${rate} Netto: ${details.netto.toFixed(2).replace('.', ',')} €\n`;
                     report += `  - ${rate} Steuer: ${details.tax.toFixed(2).replace('.', ',')} €\n`;
                 });
                 report += "\n";
                 
-                report += "Verkaufte Artikel (inkl. Stornos):\n";
+                report += "Verkaufte Artikel:\n";
                 
                 const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
                 for(const [name, stats] of sortedProducts) {
                     report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} € Brutto)\n`;
                 }
 
-                window.showInfo("Tagesabschluss", report);
-                
-            } catch (e) {
-                console.error(e);
-                window.showInfo("Fehler", "Konnte Bericht nicht laden: " + e.message);
-            } finally {
-                window.showLoading(false);
+                document.getElementById('info-title').innerText = "Tagesabschluss";
+                document.getElementById('info-text').innerText = report;
+                document.getElementById('info-modal').style.display = 'flex';
             }
+
+            showLoading(false);
         }
 
-        function showInfo(title, text) {
-            document.getElementById('info-title').innerText = title;
-            document.getElementById('info-text').innerText = text;
-            document.getElementById('info-modal').style.display = 'flex';
-        }
-        
         // --- STARTE DIE DB INITIALISIERUNG ---
         window.updateAppView('loading');
+        setReportDateToday();
         initDB();
 
     </script>
