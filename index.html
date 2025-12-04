@@ -69,18 +69,18 @@
                 <h2 class="text-xl font-semibold mb-3 text-red-800">Produkte buchen</h2>
                 <!-- Feste Spaltenanordnung für bessere Strukturierung -->
                 <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
-                    <!-- Produkt-Buttons werden hier von JavaScript eingefügt -->
+                    <!-- Produkt-Buttons werden hier von JavaScript mit INLINE-ONCLICK eingefügt -->
                 </div>
             </div>
 
             <!-- Storno & Reset -->
             <div class="bg-white p-4 rounded-xl shadow-lg flex flex-wrap gap-3 justify-between">
-                <!-- Inline-Handler entfernt -->
+                <!-- Event-Listener über JS gebunden -->
                 <button id="undo-button" 
                         class="product-btn w-full md:w-1/2 p-3 rounded-lg font-bold text-base text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
                     ↩️ Letzte Buchung rückgängig machen
                 </button>
-                <!-- Inline-Handler entfernt -->
+                <!-- Event-Listener über JS gebunden -->
                 <button id="reset-button" 
                         class="product-btn w-full md:w-[48%] p-3 rounded-lg font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
                     Neue Bestellung / Reset
@@ -89,12 +89,12 @@
             
             <!-- Abschluss Buttons -->
             <div class="flex flex-col gap-3">
-                <!-- Inline-Handler entfernt -->
+                <!-- Event-Listener über JS gebunden -->
                 <button id="show-payment-button" 
                         class="product-btn w-full p-4 rounded-xl font-extrabold text-xl text-white bg-green-600 hover:bg-green-700 shadow-lg">
                     🧾 Bon erstellen & Buchen
                 </button>
-                <!-- Inline-Handler entfernt -->
+                <!-- Event-Listener über JS gebunden -->
                 <button id="tages-abschluss-button" 
                         class="product-btn w-full p-4 rounded-xl font-bold text-lg text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
                     💰 Tagesabschluss anzeigen
@@ -127,13 +127,13 @@
             <div id="payment-total" class="text-xl font-bold text-red-700 mb-6 text-center">Zu zahlen: 0.00 €</div>
 
             <label for="received-amount" class="block text-sm font-medium text-gray-700 mb-1">Erhaltene Summe (€):</label>
-            <!-- Inline-Handler entfernt -->
+            <!-- Event-Listener über JS gebunden -->
             <input type="text" id="received-amount" placeholder="0,00"
                    class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-center focus:outline-none focus:ring-2 focus:ring-green-500 mb-4">
 
             <div id="change-display" class="text-2xl font-extrabold text-blue-600 mb-6 text-center">Rückgeld: 0.00 €</div>
 
-            <!-- Inline-Handler entfernt -->
+            <!-- Event-Listener über JS gebunden -->
             <button id="confirm-payment-button" disabled
                     class="product-btn w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400 hover:bg-green-600 transition-colors">
                 Zahlung Buchen
@@ -204,15 +204,39 @@
         let bestellung = {}; // Aggregierte Ansicht für den Bon {Produkt: Anzahl}
         let buchungs_historie = []; // Reihenfolge der einzelnen Buchungen [Produkt1, Produkt2, ...]
         let gesamt_summe = 0.0;
+
+        // --- 2. Kernfunktion (MUSS global verfügbar sein für 'onclick') ---
+
+        /**
+         * Bucht ein Produkt zur aktuellen Bestellung hinzu.
+         * Diese Funktion MUSS global registriert werden, damit 'onclick' im HTML funktioniert.
+         */
+        function produktBuchen(produktName) {
+            if (isFirebaseConfigValid && !userId) {
+                // Bei aktiver Datenbank: Warnung anzeigen, wenn Auth noch läuft
+                showInfoModal("Fehler", "Benutzerkonto wird noch geladen. Bitte warten Sie kurz.");
+                return;
+            }
+            const preis = PREISE[produktName];
+            bestellung[produktName] = (bestellung[produktName] || 0) + 1;
+            // Wichtig: Arithmetische Operationen mit 2 Nachkommastellen für präzise Währung
+            gesamt_summe = parseFloat((gesamt_summe + preis).toFixed(2));
+            buchungs_historie.push(produktName); 
+            updateDisplay();
+        }
         
-        // --- 2. Initialisierung der Oberfläche & Firebase ---
+        // *WICHTIG:* Funktion global im Window-Scope verfügbar machen!
+        window.produktBuchen = produktBuchen;
+
+
+        // --- 3. Initialisierung der Oberfläche & Firebase ---
 
         document.addEventListener('DOMContentLoaded', () => {
             renderProductButtons();
             // Starte Firebase-Setup, da dies asynchron ist
             setupFirebase();
             
-            // NEU: Binde alle Events NUR über JavaScript
+            // Binde alle Events, die KEIN 'onclick' Attribut verwenden (Undo, Payment, Reset)
             bindEventListeners();
         });
 
@@ -241,9 +265,10 @@
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
-                        document.getElementById('user-id-display').textContent = userId.substring(0, 8) + '...'; // Gekürzte ID im UI
+                        // Zeige gekürzte ID im UI (voller String für Debugging im Log)
+                        document.getElementById('user-id-display').textContent = userId.substring(0, 8) + '...'; 
                         document.getElementById('loading-overlay').classList.add('hidden');
-                        updateDisplay(); // Zeigt die Kasse nach dem Laden an
+                        updateDisplay(); 
                     } else {
                         document.getElementById('user-id-display').textContent = 'FEHLER';
                         document.getElementById('loading-overlay').textContent = 'Fehler beim Anmelden des Benutzers.';
@@ -257,8 +282,7 @@
         }
         
         /**
-         * NEU: Bindet ALLE Klick- und Eingabe-Ereignisse im DOM. 
-         * Löst das Problem mit den nicht funktionierenden Inline-Handlern.
+         * Bindet alle Events, die NICHT über 'onclick' im HTML definiert wurden.
          */
         function bindEventListeners() {
             // Haupt-Aktionen
@@ -302,6 +326,9 @@
             closeInfoButton.addEventListener('click', hideInfoModal);
         }
 
+        /**
+         * Generiert die Produkt-Buttons und nutzt den simplen 'onclick'-Handler.
+         */
         function renderProductButtons() {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
@@ -318,27 +345,14 @@
                 button.className = `product-btn p-3 rounded-lg font-bold text-white shadow-md ${bgColor} ${hoverColor} transition-colors`;
                 button.innerHTML = `${name}<br><span class="text-sm font-normal">(${preis.toFixed(2)} €)</span>`;
                 
-                // NEU: Event-Listener wird direkt beim Erstellen des Buttons gebunden!
-                button.addEventListener('click', () => produktBuchen(name));
+                // *WICHTIGSTE ÄNDERUNG*: Inline-onclick, das die global registrierte Funktion aufruft
+                button.setAttribute('onclick', `produktBuchen('${name}')`);
                 
                 grid.appendChild(button);
             }
         }
 
-        // --- 3. Kernfunktionen ---
-
-        function produktBuchen(produktName) {
-            if (isFirebaseConfigValid && !userId) {
-                showInfoModal("Fehler", "Benutzerkonto wird noch geladen. Bitte warten Sie kurz.");
-                return;
-            }
-            const preis = PREISE[produktName];
-            bestellung[produktName] = (bestellung[produktName] || 0) + 1;
-            // Wichtig: Arithmetische Operationen mit 2 Nachkommastellen für präzise Währung
-            gesamt_summe = parseFloat((gesamt_summe + preis).toFixed(2));
-            buchungs_historie.push(produktName); 
-            updateDisplay();
-        }
+        // --- 4. Alle weiteren Kernfunktionen ---
 
         function undoLastAction() {
             if (buchungs_historie.length === 0) {
@@ -396,7 +410,7 @@
             showInfoModal("Reset", "Bestellung zurückgesetzt. Neue Buchung möglich.");
         }
 
-        // --- 4. Zahlungsdialog Logik ---
+        // --- 5. Zahlungsdialog Logik ---
         
         function showPaymentDialog() {
             if (gesamt_summe <= 0) {
@@ -476,7 +490,7 @@
             }
         }
 
-        // --- 5. Logging & Bericht (Firestore) ---
+        // --- 6. Logging & Bericht (Firestore) ---
         
         function getTransactionCollection() {
             // Privater Pfad für den aktuellen Benutzer: /artifacts/{appId}/users/{userId}/kasse_transaktionen
@@ -589,17 +603,15 @@
             showInfoModal("💰 Tagesabschluss Ergebnis", bericht);
         }
         
-        // --- 6. Custom Modal (Ersatz für Tkinter-Messagebox) ---
+        // --- 7. Custom Modal (Ersatz für alert()) ---
 
         function showInfoModal(title, content) {
             document.getElementById('info-title').textContent = title;
             document.getElementById('info-content').textContent = content;
-            // Korrekte Anzeige über Klasse
             document.getElementById('info-modal').classList.remove('modal-hidden');
         }
 
         function hideInfoModal() {
-            // Korrekte Ausblendung über Klasse
             document.getElementById('info-modal').classList.add('modal-hidden');
         }
         
