@@ -1059,19 +1059,20 @@
             }
         }
 
-        // NEU: Aggregiert die Produktstatistik in ein CSV-Format
-        function summarizedTransactionsToCSV(productStats) {
+        // Aggregiert die Produktstatistik in ein CSV-Format
+        function summarizedTransactionsToCSV(productStats, totalRevenue) {
             let csv = "Produktname;Gesamtstueckzahl;Gesamterloes (€)\n"; // Semikolon als Trennzeichen
             
-            // Sortierung nach Produktname für bessere Übersicht
             const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
 
+            // Fügt die einzelnen Produkte hinzu
             sortedProducts.forEach(([name, stats]) => {
-                // Zeilenumbruch und Semikolon im Namen entfernen
                 const cleanName = name.replace(/(\r\n|\n|\r|;)/gm," ");
-                // stats.count ist die Stückzahl, stats.revenue der Erlös
                 csv += `${cleanName};${stats.count};${stats.revenue.toFixed(2)}\n`;
             });
+
+            // Fügt die Gesamtsumme hinzu
+            csv += `\nGESAMTSUMME;${sortedProducts.reduce((sum, [, stats]) => sum + stats.count, 0)};${totalRevenue.toFixed(2)}\n`;
 
             return csv.replace(/\./g, ','); // Ersetze Dezimalpunkt durch Komma
         }
@@ -1097,14 +1098,14 @@
         }
 
 
-        // Überarbeitete Berichtsfunktion mit Aggregation
+        // Überarbeitete Berichtsfunktion mit robuster Aggregation
         async function generateReport(type) { 
             if (!userId || !db) return;
             window.showLoading(true);
             try {
                 const path = `artifacts/${appId}/users/${userId}/kasse_transaktionen`;
                 
-                // Zeitfilter: Nur heutige Transaktionen
+                // Zeitfilter: Nur heutige Transaktionen (ab 00:00 Uhr)
                 const today = new Date();
                 today.setHours(0, 0, 0, 0); 
                 const startOfTodayISO = today.toISOString(); 
@@ -1118,24 +1119,28 @@
                 
                 let totalSum = 0;
                 let count = 0;
-                // NEU: productStats speichert Zähler und Erlös
                 let productStats = {}; 
 
                 snapshot.forEach(doc => {
                     let d = doc.data();
-                    d.total = parseFloat(d.total); 
+                    // Stelle sicher, dass total eine Zahl ist
+                    d.total = parseFloat(d.total || 0); 
                     totalSum += d.total;
                     count++;
 
                     if(d.items && Array.isArray(d.items)) {
                         d.items.forEach(item => {
                              const name = item.name;
-                             const lineRevenue = item.count * item.price;
+                             // NEU: Robuste Typkonvertierung
+                             const price = parseFloat(item.price || 0); 
+                             const item_count = parseInt(item.count || 0);
+                             
+                             const lineRevenue = item_count * price;
                              
                              if (!productStats[name]) {
                                  productStats[name] = { count: 0, revenue: 0.0 };
                              }
-                             productStats[name].count += item.count;
+                             productStats[name].count += item_count;
                              // Korrekte Rundung des Gesamterlöses
                              productStats[name].revenue = Math.round((productStats[name].revenue + lineRevenue) * 100) / 100;
                         });
@@ -1148,8 +1153,8 @@
                 }
 
                 if(type === 'csv') {
-                    // NEU: Übergabe des aggregierten productStats-Objekts
-                    const csvContent = summarizedTransactionsToCSV(productStats);
+                    // Übergabe des aggregierten productStats-Objekts und der Gesamtsumme
+                    const csvContent = summarizedTransactionsToCSV(productStats, totalSum);
                     downloadReportCSV(csvContent);
                     return;
                 }
@@ -1160,7 +1165,6 @@
                 report += `GESAMTSUMME: ${totalSum.toFixed(2).replace('.', ',')} €\n\n`;
                 report += "Verkaufte Artikel:\n";
                 
-                // NEU: Iteration über die neue Struktur
                 const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
                 for(const [name, stats] of sortedProducts) {
                     report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} €)\n`;
