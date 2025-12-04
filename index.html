@@ -115,13 +115,14 @@
     </div>
 
     <!-- Modal für Zahlungsdialog -->
+    <!-- ACHTUNG: Der onclick Handler auf dem Overlay MUSS auf das Modal selbst prüfen, damit Klicks auf den Inhalt ignoriert werden. -->
     <div id="payment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id === 'payment-modal') hidePaymentDialog()">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
             <h3 class="text-2xl font-bold text-gray-800 mb-4">Zahlung</h3>
             <div id="payment-total" class="text-xl font-bold text-red-700 mb-6 text-center">Zu zahlen: 0.00 €</div>
 
             <label for="received-amount" class="block text-sm font-medium text-gray-700 mb-1">Erhaltene Summe (€):</label>
-            <input type="text" id="received-amount" placeholder="0.00"
+            <input type="text" id="received-amount" placeholder="0,00"
                    class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-center focus:outline-none focus:ring-2 focus:ring-green-500 mb-4" 
                    oninput="calculateChange()" onkeyup="if(event.key === 'Enter') handlePaymentConfirm()">
 
@@ -131,6 +132,7 @@
                     class="product-btn w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400 hover:bg-green-600 transition-colors">
                 Zahlung Buchen
             </button>
+            <!-- HIER WURDE DER HANDLER KORRIGIERT: onclick="hidePaymentDialog()" -->
             <button onclick="hidePaymentDialog()" class="mt-3 w-full p-2 text-sm text-gray-500 hover:text-gray-700">
                 Abbrechen
             </button>
@@ -138,10 +140,12 @@
     </div>
 
     <!-- Modal für Mitteilungen/Bericht -->
+    <!-- HIER WURDE DER HANDLER KORRIGIERT: onclick="if(event.target.id === 'info-modal') hideInfoModal()" -->
     <div id="info-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id === 'info-modal') hideInfoModal()">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
             <h3 id="info-title" class="text-xl font-bold text-gray-800 mb-3">Mitteilung</h3>
             <pre id="info-content" class="whitespace-pre-wrap text-sm font-mono bg-gray-100 p-3 rounded-lg"></pre>
+            <!-- HIER WURDE DER HANDLER KORRIGIERT: onclick="hideInfoModal()" -->
             <button onclick="hideInfoModal()" class="mt-5 w-full p-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
                 Schließen
             </button>
@@ -268,6 +272,7 @@
                 const button = document.createElement('button');
                 button.className = `product-btn p-3 rounded-lg font-bold text-white shadow-md ${bgColor} ${hoverColor} transition-colors`;
                 button.innerHTML = `${name}<br><span class="text-sm font-normal">(${preis.toFixed(2)} €)</span>`;
+                // Füge die Funktion direkt dem Element hinzu, da die globale Zuweisung unten das Problem löst
                 button.onclick = () => produktBuchen(name);
                 
                 grid.appendChild(button);
@@ -377,33 +382,43 @@
             const confirmButton = document.getElementById('confirm-payment-button');
             const gesamt = gesamt_summe;
             
-            try {
-                // Erlaubt Komma oder Punkt als Dezimaltrennzeichen
-                const input_text = receivedAmountInput.value.replace(',', '.');
-                const erhalten = input_text ? parseFloat(input_text) : 0.0;
+            // --- KORREKTUR DER EINGABE-VERARBEITUNG ---
+            let erhalten;
+            const input_text = receivedAmountInput.value.trim();
 
-                if (isNaN(erhalten)) {
-                     changeDisplay.textContent = "Ungültige Eingabe!";
-                     confirmButton.disabled = true;
-                     return;
-                }
+            if (input_text === '') {
+                erhalten = 0.0;
+            } else {
+                // Erlaubt Komma oder Punkt als Dezimaltrennzeichen und parst den Wert.
+                // Ersetzen des Kommas durch einen Punkt für parseFloat
+                const clean_input = input_text.replace(',', '.');
+                erhalten = parseFloat(clean_input);
+            }
 
-                const rueckgeld = erhalten - gesamt;
-
-                if (rueckgeld >= 0) {
-                    changeDisplay.textContent = `Rückgeld: ${rueckgeld.toFixed(2).replace('.', ',')} €`;
-                    confirmButton.disabled = false;
-                } else {
-                    changeDisplay.textContent = "FEHLBETRAG!";
-                    confirmButton.disabled = true;
-                }
-            } catch (e) {
+            if (isNaN(erhalten) || erhalten < 0) {
                 changeDisplay.textContent = "Ungültige Eingabe!";
                 confirmButton.disabled = true;
+                return;
             }
+            
+            const rueckgeld = erhalten - gesamt;
+
+            if (rueckgeld >= 0) {
+                changeDisplay.textContent = `Rückgeld: ${rueckgeld.toFixed(2).replace('.', ',')} €`;
+                confirmButton.disabled = (gesamt > 0 && erhalten < gesamt); // Wenn Gesamt > 0, muss erhalten >= Gesamt sein
+            } else {
+                // Bei Fehlbetrag wird der Betrag als positiver Wert angezeigt.
+                changeDisplay.textContent = `FEHLBETRAG: ${Math.abs(rueckgeld).toFixed(2).replace('.', ',')} €`;
+                confirmButton.disabled = true;
+            }
+            
+            // Wenn der Gesamtbetrag 0 ist, sollte der Button auch deaktiviert sein (falls das Modal fälschlicherweise geöffnet wird)
+            if (gesamt <= 0) {
+                 confirmButton.disabled = true;
+            }
+            // ------------------------------------------
         }
         
-        // Die extra Erfolgsmeldung nach dem Buchen wird hier entfernt.
         async function handlePaymentConfirm() {
             // Führt Zahlung nur aus, wenn der Button nicht deaktiviert ist
             if (!document.getElementById('confirm-payment-button').disabled) {
@@ -541,12 +556,16 @@
             document.getElementById('info-modal').classList.add('hidden');
         }
 
-        // NEUE ZUWEISUNGEN: MUSS explizit in das globale Window-Objekt exportiert werden, damit
+        // MUSS explizit in das globale Window-Objekt exportiert werden, damit
         // die inline-onclick-Handler aus dem HTML-Code die Funktionen finden.
         window.undoLastAction = undoLastAction;
         window.resetBestellung = resetBestellung;
         window.showPaymentDialog = showPaymentDialog;
         window.tagesAbschluss = tagesAbschluss;
+        // WICHTIGE ERGÄNZUNG: Modalfunktionen müssen auch global sein
+        window.hidePaymentDialog = hidePaymentDialog;
+        window.hideInfoModal = hideInfoModal;
+        window.calculateChange = calculateChange;
         
     </script>
 </body>
