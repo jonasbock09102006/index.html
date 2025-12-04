@@ -38,6 +38,10 @@
             font-size: 1.5rem;
             font-weight: bold;
         }
+        /* Definiert eine Klasse, um Modals auszublenden, wird von JS gesteuert */
+        .modal-hidden {
+            display: none;
+        }
     </style>
 </head>
 <body class="min-h-screen p-2 md:p-6 bg-red-500/10">
@@ -115,8 +119,8 @@
     </div>
 
     <!-- Modal für Zahlungsdialog -->
-    <!-- ACHTUNG: Der onclick Handler auf dem Overlay MUSS auf das Modal selbst prüfen, damit Klicks auf den Inhalt ignoriert werden. -->
-    <div id="payment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id === 'payment-modal') hidePaymentDialog()">
+    <!-- WICHTIG: KEIN INLINE-ONCLICK HIER ODER AUF DEN BUTTONS MEHR! -->
+    <div id="payment-modal" class="modal-hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
             <h3 class="text-2xl font-bold text-gray-800 mb-4">Zahlung</h3>
             <div id="payment-total" class="text-xl font-bold text-red-700 mb-6 text-center">Zu zahlen: 0.00 €</div>
@@ -132,21 +136,21 @@
                     class="product-btn w-full p-3 rounded-lg font-bold text-white bg-green-500 disabled:bg-gray-400 hover:bg-green-600 transition-colors">
                 Zahlung Buchen
             </button>
-            <!-- HIER WURDE DER HANDLER KORRIGIERT: onclick="hidePaymentDialog()" -->
-            <button onclick="hidePaymentDialog()" class="mt-3 w-full p-2 text-sm text-gray-500 hover:text-gray-700">
+            <!-- ID zum Binden des Event-Listeners in JS hinzugefügt -->
+            <button id="cancel-payment-button" class="mt-3 w-full p-2 text-sm text-gray-500 hover:text-gray-700">
                 Abbrechen
             </button>
         </div>
     </div>
 
     <!-- Modal für Mitteilungen/Bericht -->
-    <!-- HIER WURDE DER HANDLER KORRIGIERT: onclick="if(event.target.id === 'info-modal') hideInfoModal()" -->
-    <div id="info-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onclick="if(event.target.id === 'info-modal') hideInfoModal()">
+    <!-- WICHTIG: KEIN INLINE-ONCLICK HIER ODER AUF DEN BUTTONS MEHR! -->
+    <div id="info-modal" class="modal-hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
             <h3 id="info-title" class="text-xl font-bold text-gray-800 mb-3">Mitteilung</h3>
             <pre id="info-content" class="whitespace-pre-wrap text-sm font-mono bg-gray-100 p-3 rounded-lg"></pre>
-            <!-- HIER WURDE DER HANDLER KORRIGIERT: onclick="hideInfoModal()" -->
-            <button onclick="hideInfoModal()" class="mt-5 w-full p-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
+            <!-- ID zum Binden des Event-Listeners in JS hinzugefügt -->
+            <button id="close-info-button" class="mt-5 w-full p-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
                 Schließen
             </button>
         </div>
@@ -170,8 +174,7 @@
         // Globale Firebase-Variablen, wie im Canvas-Umfeld bereitgestellt
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // Platzhalter-Konfiguration für GitHub Pages / lokale Nutzung, da die Canvas-Umgebungsvariablen 
-        // außerhalb dieses Editors nicht existieren.
+        // Platzhalter-Konfiguration für lokale Nutzung ohne Canvas-Umgebungsvariablen
         const defaultFirebaseConfig = {
             apiKey: "DUMMY_KEY_DEMO_12345",
             authDomain: "demo-kasse.firebaseapp.com",
@@ -186,7 +189,7 @@
             ? JSON.parse(__firebase_config) 
             : defaultFirebaseConfig;
 
-        // Prüfen, ob eine gültige Firebase-Konfiguration vorhanden ist (typischerweise in der Canvas-Umgebung)
+        // Prüfen, ob eine gültige Firebase-Konfiguration vorhanden ist
         const isFirebaseConfigValid = firebaseConfig.apiKey !== defaultFirebaseConfig.apiKey;
 
 
@@ -207,9 +210,12 @@
             // Starte Firebase-Setup, da dies asynchron ist
             setupFirebase();
             
+            // Setze Event-Listener für Modal-Schließen-Funktionen (Fix für Problem 1)
+            setupModalEventListeners();
+
             // Bindet die Enter-Taste für den gesamten Body, wenn das Dialogfenster nicht aktiv ist.
             document.body.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter' && document.getElementById('payment-modal').classList.contains('hidden')) {
+                if (e.key === 'Enter' && document.getElementById('payment-modal').classList.contains('modal-hidden')) {
                     showPaymentDialog();
                 }
             });
@@ -217,8 +223,7 @@
 
         async function setupFirebase() {
             if (!isFirebaseConfigValid) {
-                // Auf GitHub Pages wird diese Meldung erscheinen. Die App funktioniert lokal, aber ohne Datenbank.
-                console.warn("ACHTUNG: Firebase-Datenbank ist nicht konfiguriert oder die Platzhalter-Werte sind in Gebrauch. Transaktionen werden NICHT gespeichert.");
+                console.warn("ACHTUNG: Firebase-Datenbank ist nicht konfiguriert. Transaktionen werden NICHT gespeichert.");
                 document.getElementById('user-id-display').textContent = 'KEINE DB';
                 document.getElementById('loading-overlay').classList.add('hidden');
                 updateDisplay();
@@ -245,7 +250,6 @@
                         document.getElementById('loading-overlay').classList.add('hidden');
                         updateDisplay(); // Zeigt die Kasse nach dem Laden an
                     } else {
-                        // Sollte nicht passieren, wenn die anonyme Anmeldung fehlschlägt
                         document.getElementById('user-id-display').textContent = 'FEHLER';
                         document.getElementById('loading-overlay').textContent = 'Fehler beim Anmelden des Benutzers.';
                     }
@@ -257,6 +261,35 @@
             }
         }
         
+        function setupModalEventListeners() {
+            // Zahlung Modal
+            const paymentModal = document.getElementById('payment-modal');
+            const cancelPaymentButton = document.getElementById('cancel-payment-button');
+
+            // Overlay Klick: Prüfen, ob wirklich das Overlay geklickt wurde (und nicht der Dialog selbst)
+            paymentModal.addEventListener('click', (e) => {
+                if (e.target === paymentModal) {
+                    hidePaymentDialog();
+                }
+            });
+            // Abbrechen Button Klick
+            cancelPaymentButton.addEventListener('click', hidePaymentDialog);
+
+
+            // Info Modal
+            const infoModal = document.getElementById('info-modal');
+            const closeInfoButton = document.getElementById('close-info-button');
+
+            // Overlay Klick
+            infoModal.addEventListener('click', (e) => {
+                if (e.target === infoModal) {
+                    hideInfoModal();
+                }
+            });
+            // Schließen Button Klick
+            closeInfoButton.addEventListener('click', hideInfoModal);
+        }
+
         function renderProductButtons() {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = '';
@@ -272,7 +305,7 @@
                 const button = document.createElement('button');
                 button.className = `product-btn p-3 rounded-lg font-bold text-white shadow-md ${bgColor} ${hoverColor} transition-colors`;
                 button.innerHTML = `${name}<br><span class="text-sm font-normal">(${preis.toFixed(2)} €)</span>`;
-                // Füge die Funktion direkt dem Element hinzu, da die globale Zuweisung unten das Problem löst
+                // Inline onclick ist hier akzeptabel, da es sich um die Haupt-Buttons handelt.
                 button.onclick = () => produktBuchen(name);
                 
                 grid.appendChild(button);
@@ -288,7 +321,8 @@
             }
             const preis = PREISE[produktName];
             bestellung[produktName] = (bestellung[produktName] || 0) + 1;
-            gesamt_summe += preis;
+            // Wichtig: Arithmetische Operationen mit 2 Nachkommastellen für präzise Währung
+            gesamt_summe = parseFloat((gesamt_summe + preis).toFixed(2));
             buchungs_historie.push(produktName); 
             updateDisplay();
         }
@@ -308,8 +342,8 @@
                 delete bestellung[storniertesProdukt];
             }
                 
-            // Gesamtsumme korrigieren
-            gesamt_summe -= preis;
+            // Gesamtsumme korrigieren (mit 2 Nachkommastellen fixieren)
+            gesamt_summe = parseFloat((gesamt_summe - preis).toFixed(2));
             
             updateDisplay();
         }
@@ -335,7 +369,7 @@
             document.getElementById('receipt-content').textContent = bonVorschau;
         }
 
-        // Neue Funktion: Setzt nur die Daten zurück, ohne Meldung
+        // Setzt die Daten zurück
         function resetData() {
             bestellung = {};
             gesamt_summe = 0.0;
@@ -343,7 +377,7 @@
             updateDisplay();
         }
 
-        // Alte Funktion: Setzt Daten zurück und zeigt die Meldung
+        // Setzt Daten zurück und zeigt die Meldung
         function resetBestellung() {
             resetData();
             showInfoModal("Reset", "Bestellung zurückgesetzt. Neue Buchung möglich.");
@@ -363,17 +397,19 @@
 
             totalElement.textContent = `Zu zahlen: ${gesamt_summe.toFixed(2).replace('.', ',')} €`;
             
-            // Feld am Anfang leer lassen
+            // Feld am Anfang leeren
             amountInput.value = ''; 
             
             calculateChange(); // Initialisiert Rückgeld-Anzeige und Button-Status
             
-            modal.classList.remove('hidden');
+            // Korrekte Anzeige über Klasse
+            modal.classList.remove('modal-hidden');
             amountInput.focus();
         }
         
         function hidePaymentDialog() {
-            document.getElementById('payment-modal').classList.add('hidden');
+            // Korrekte Ausblendung über Klasse
+            document.getElementById('payment-modal').classList.add('modal-hidden');
         }
 
         function calculateChange() {
@@ -382,7 +418,6 @@
             const confirmButton = document.getElementById('confirm-payment-button');
             const gesamt = gesamt_summe;
             
-            // --- KORREKTUR DER EINGABE-VERARBEITUNG ---
             let erhalten;
             const input_text = receivedAmountInput.value.trim();
 
@@ -390,7 +425,6 @@
                 erhalten = 0.0;
             } else {
                 // Erlaubt Komma oder Punkt als Dezimaltrennzeichen und parst den Wert.
-                // Ersetzen des Kommas durch einen Punkt für parseFloat
                 const clean_input = input_text.replace(',', '.');
                 erhalten = parseFloat(clean_input);
             }
@@ -401,31 +435,31 @@
                 return;
             }
             
-            const rueckgeld = erhalten - gesamt;
+            // Berechnung des Rückgelds und Fixierung auf zwei Nachkommastellen
+            const rueckgeld = parseFloat((erhalten - gesamt).toFixed(2));
 
-            if (rueckgeld >= 0) {
+            // Fix: Eine minimale Toleranz für 0.00, um Floating-Point-Fehler zu vermeiden
+            if (rueckgeld >= -0.0001) { 
                 changeDisplay.textContent = `Rückgeld: ${rueckgeld.toFixed(2).replace('.', ',')} €`;
-                confirmButton.disabled = (gesamt > 0 && erhalten < gesamt); // Wenn Gesamt > 0, muss erhalten >= Gesamt sein
+                // Button aktivieren, wenn die Summe bezahlt wurde
+                confirmButton.disabled = false;
             } else {
-                // Bei Fehlbetrag wird der Betrag als positiver Wert angezeigt.
+                // Bei Fehlbetrag (Rueckgeld negativ)
                 changeDisplay.textContent = `FEHLBETRAG: ${Math.abs(rueckgeld).toFixed(2).replace('.', ',')} €`;
                 confirmButton.disabled = true;
             }
             
-            // Wenn der Gesamtbetrag 0 ist, sollte der Button auch deaktiviert sein (falls das Modal fälschlicherweise geöffnet wird)
+            // Zusätzliche Deaktivierung, falls der Gesamtbetrag 0 ist (kann nur passieren, wenn das Modal fälschlicherweise geöffnet wird)
             if (gesamt <= 0) {
                  confirmButton.disabled = true;
             }
-            // ------------------------------------------
         }
         
         async function handlePaymentConfirm() {
             // Führt Zahlung nur aus, wenn der Button nicht deaktiviert ist
             if (!document.getElementById('confirm-payment-button').disabled) {
-                // logTransaction führt entweder echtes Logging durch ODER gibt true zurück (wenn DB deaktiviert)
                 if (await logTransaction()) { 
                     hidePaymentDialog();
-                    // Nur Reset, damit die Kasse sofort wieder auf 0 ist.
                     resetData(); 
                 }
             }
@@ -513,9 +547,9 @@
                     const preis = PREISE[name] || 0.0; 
                     
                     if (preis > 0) {
-                        umsatzProProdukt[name] += preis * anzahl;
+                        umsatzProProdukt[name] = parseFloat((umsatzProProdukt[name] + preis * anzahl).toFixed(2));
                         anzahlProProdukt[name] += anzahl;
-                        gesamteinnahmen += preis * anzahl;
+                        gesamteinnahmen = parseFloat((gesamteinnahmen + preis * anzahl).toFixed(2));
                     }
                 }
             });
@@ -549,24 +583,26 @@
         function showInfoModal(title, content) {
             document.getElementById('info-title').textContent = title;
             document.getElementById('info-content').textContent = content;
-            document.getElementById('info-modal').classList.remove('hidden');
+            // Korrekte Anzeige über Klasse
+            document.getElementById('info-modal').classList.remove('modal-hidden');
         }
 
         function hideInfoModal() {
-            document.getElementById('info-modal').classList.add('hidden');
+            // Korrekte Ausblendung über Klasse
+            document.getElementById('info-modal').classList.add('modal-hidden');
         }
 
         // MUSS explizit in das globale Window-Objekt exportiert werden, damit
         // die inline-onclick-Handler aus dem HTML-Code die Funktionen finden.
+        window.produktBuchen = produktBuchen; // Für Produkt-Buttons (werden per JS generiert)
         window.undoLastAction = undoLastAction;
         window.resetBestellung = resetBestellung;
         window.showPaymentDialog = showPaymentDialog;
         window.tagesAbschluss = tagesAbschluss;
-        // WICHTIGE ERGÄNZUNG: Modalfunktionen müssen auch global sein
-        window.hidePaymentDialog = hidePaymentDialog;
-        window.hideInfoModal = hideInfoModal;
         window.calculateChange = calculateChange;
-        
+        window.handlePaymentConfirm = handlePaymentConfirm;
+        // Die Modal-Hide-Funktionen werden jetzt primär über EventListener gesteuert, 
+        // müssen aber für den Enter-Key Handler im Payment-Dialog global bleiben.
     </script>
 </body>
 </html>
