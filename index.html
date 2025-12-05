@@ -19,8 +19,9 @@
 
         /* Numpad Button Style (Extrem hoch & fett) */
         .numpad-btn {
-            /* KORREKTUR: h-40 (ca. 160px) macht die Tasten extrem hoch und optisch schmal. */
-            @apply w-full h-40 rounded-xl font-extrabold text-3xl shadow-lg transition-colors; 
+            /* KORREKTUR V5.0: Feste, forcierte Höhe (ca. 180px) für maximale Sichtbarkeit. */
+            height: 180px !important; /* Sehr hohe, feste Höhe */
+            @apply w-full rounded-xl font-extrabold text-4xl shadow-lg transition-colors; 
          line-height: 1; 
             display: flex;
             justify-content: center;
@@ -279,9 +280,9 @@
                     <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
                     <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
                     
-                    <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-2xl">C</button> 
+                    <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button> 
                     <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
-                    <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-4xl">.</button> 
+                    <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-4xl">,</button> 
                 </div>
                 <div class="mt-3 grid grid-cols-3 gap-2">
                     <button onclick="setCashExact()" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">Exakt</button>
@@ -395,7 +396,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v4.0 (Große Tasten)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.0 (Forcierte Höhe)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
@@ -429,9 +430,9 @@
                         <button onclick="handleQuantityInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
            
-                         <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-2xl">C</button> 
+                         <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button> 
                         <button onclick="handleQuantityInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
-                        <button onclick="handleQuantityInput('set1')" class="numpad-btn bg-green-500 hover:bg-green-600 text-white text-xl">1x</button> 
+                        <button onclick="handleQuantityInput('set1')" class="numpad-btn bg-green-500 hover:bg-green-600 text-white text-2xl">1x</button> 
                     </div>
    
                  </div>
@@ -967,6 +968,7 @@
             if (value === 'clear') {
                 current = '0';
             } else if (value === 'dot') {
+                // Das '.' wird intern verwendet, aber ',' wird angezeigt.
                 if (decimalIndex === -1) {
                     current += '.';
                 }
