@@ -19,8 +19,8 @@
 
         /* Numpad Button Style (Hochformat / Schmaler und Höher) */
         .numpad-btn {
-            /* Anpassung: h-32 (ca. 128px) macht sie deutlich höher. px-2 reduziert den horizontalen Platz für den "schmaleren" Look. */
-            @apply w-full h-32 px-2 rounded-xl font-extrabold text-2xl shadow-lg transition-colors; 
+            /* NEUE ANPASSUNG: h-40 (ca. 160px) macht die Tasten extrem hoch und optisch schmal. Entfernen des horizontalen Paddings (px-2) für maximalen Schmalheits-Effekt. */
+            @apply w-full h-40 rounded-xl font-extrabold text-3xl shadow-lg transition-colors; 
          line-height: 1; 
             display: flex;
             justify-content: center;
@@ -279,14 +279,14 @@
                     <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
                     <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
                     
-                    <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
+                    <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-2xl">C</button> 
                     <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
-                    <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-2xl">.</button> 
+                    <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-4xl">.</button> 
                 </div>
                 <div class="mt-3 grid grid-cols-3 gap-2">
-                    <button onclick="setCashExact()" class="numpad-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl">Exakt</button>
-                    <button onclick="addCashShortcut(5)" class="numpad-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl">+5 €</button>
-                    <button onclick="addCashShortcut(10)" class="numpad-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl">+10 €</button>
+                    <button onclick="setCashExact()" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">Exakt</button>
+                    <button onclick="addCashShortcut(5)" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">+5 €</button>
+                    <button onclick="addCashShortcut(10)" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">+10 €</button>
                 </div>
                 </div>
             <div id="finalize-button-container" class="mt-4">
@@ -395,7 +395,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.8 (Hochformat-Tasten)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.9 (Extrem Hochformat-Tasten)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
@@ -429,7 +429,7 @@
                         <button onclick="handleQuantityInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
 
            
-                         <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white">C</button> 
+                         <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-2xl">C</button> 
                         <button onclick="handleQuantityInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
                         <button onclick="handleQuantityInput('set1')" class="numpad-btn bg-green-500 hover:bg-green-600 text-white text-xl">1x</button> 
                     </div>
