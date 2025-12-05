@@ -1,1637 +1,925 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kassensystem (Bewirtungsbeleg)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Grundlegendes Styling */
-        body { font-family: 'Inter', sans-serif;
-         background-color: #f7f7f7; }
-        /* Höhe der Beleg-Anzeige weiter begrenzen */
-        /* NEU: Flexiblerer Bon-Container */
-        #receipt-content-interactive { overflow-y: auto;
-         max-height: 40vh; } 
-        /* Klick-Effekt für Buttons */
-        .product-btn:active { transform: scale(0.98);
-         }
-
-        /* Numpad Button Style (Moderierte Höhe und Schrift) */
-        .numpad-btn {
-            /* V5.6 NEU: Höhe weiter reduziert (60px -> 50px) für kompaktere Ansicht */
-            height: 50px; 
-            @apply w-full rounded-xl font-extrabold text-2xl shadow-lg transition-colors; 
-            line-height: 1; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-         }
-        .numpad-btn:active { transform: scale(0.95);
-         }
-
-        /* ASYNC LOADING OVERLAY */
-        #async-loading-overlay {
-            position: fixed;
-         top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(255, 255, 255, 0.8);
-            z-index: 100;
-            display: none;
-            justify-content: center;
-         align-items: center;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-         border-top: 4px solid #b91c1c;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-         }
-        @keyframes spin {
-            0% { transform: rotate(0deg);
-         }
-            100% { transform: rotate(360deg);
-         }
-        }
-
-        /* TOAST NOTIFICATIONS */
-        #toast-container {
-            position: fixed;
-         top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            pointer-events: none; /* Macht den Container klickbar durch */
-        }
-        .toast {
-            @apply p-3 rounded-lg shadow-xl text-sm text-white transition-opacity duration-300;
-         opacity: 0;
-        }
-        .toast-success { @apply bg-green-500;
-         }
-        .toast-error { @apply bg-red-600;
-         }
-        .toast-info { @apply bg-blue-600;
-         }
-
-        /* Druck-Styles für Kassenbondrucker (Monospace) */
-        @media print {
-            body * {
-                visibility: hidden;
-         }
-            .receipt-print, .receipt-print * {
-                visibility: visible;
-         }
-            .receipt-print {
-                position: absolute;
-         left: 0;
-                top: 0;
-                width: 80mm; /* Standard-Bondruckerbreite */
-                font-family: 'Consolas', 'Courier New', monospace;
-         /* Monospace für Spaltenausrichtung */
-                font-size: 9pt;
-         /* Kleinere Schrift für Bons */
-                color: #000;
-         padding: 0;
-                margin: 0;
-            }
-            .receipt-print strong { font-weight: bold;
-         }
-            .receipt-print .center { text-align: center;
-         }
-            /* NEU: Flexbox für die Zeilenstruktur */
-            .receipt-print .line { 
-                display: flex; 
-                justify-content: space-between;
-                margin-bottom: 0px; /* Kein extra Abstand */
-                line-height: 1.2;
-            }
-            .receipt-print .item-name { 
-                /* Platz für Artikelname und Menge */
-                width: 70%;
-                overflow: hidden; 
-                white-space: nowrap;
-            }
-            .receipt-print .item-price { 
-                /* Feste Breite für den Preis, rechtsbündig */
-                width: 30%; 
-                text-align: right;
-            }
-            .receipt-print hr { border: 0;
-         border-top: 1px dashed #000; margin: 3px 0; }
-            /* NEU: Größere Schrift für wichtige Titel */
-            .receipt-print .font-bold { font-weight: bold; }
-            .receipt-print .text-lg { font-size: 11pt; }
-        }
-
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kassensystem (Bewirtungsbeleg) - Firestore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* --- Styles (aus deiner Originaldatei, leicht angepasst) --- */
+    body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+    #receipt-content-interactive { overflow-y: auto; max-height: 40vh; }
+    .product-btn:active { transform: scale(0.98); }
+    .numpad-btn { height: 50px; display:flex; justify-content:center; align-items:center; }
+    #async-loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); z-index:100; display:none; justify-content:center; align-items:center; }
+    .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #b91c1c; border-radius: 50%; width:40px; height:40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+    #toast-container { position: fixed; top:1rem; right:1rem; z-index:1000; pointer-events:none; }
+    .toast { padding: .75rem 1rem; border-radius: .5rem; color: #fff; margin-bottom:.5rem; opacity:0; transition: opacity .25s ease; }
+    .toast-success { background: #16a34a; } .toast-error { background:#dc2626 } .toast-info { background:#2563eb }
+    .receipt-print { font-family: 'Consolas', 'Courier New', monospace; }
+    /* Print styles */
+    @media print {
+      body * { visibility: hidden; }
+      .receipt-print, .receipt-print * { visibility: visible; }
+      .receipt-print { position: absolute; left: 0; top: 0; width: 80mm; font-family: monospace; font-size:9pt; color:#000; padding:0; margin:0; }
+      .receipt-print .line { display:flex; justify-content:space-between; line-height:1.2; margin-bottom:0; }
+      .receipt-print .item-name { width:70%; overflow:hidden; white-space:nowrap; }
+      .receipt-print .item-price { width:30%; text-align:right; }
+    }
+  </style>
 </head>
 <body class="min-h-screen p-4 md:p-4 bg-red-500/10 overflow-x-hidden">
 
-    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+  <!-- Loading + Toast -->
+  <div id="toast-container"></div>
+  <div id="async-loading-overlay"><div class="spinner"></div></div>
+
+  <!-- ===========================
+       ALL MODALS & MAIN UI
+       (this is the UI from your uploaded Code.html; unchanged structure)
+       Source: deine Datei. :contentReference[oaicite:1]{index=1}
+       =========================== -->
+
+  <!-- Login Modal -->
+  <div id="login-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h1 class="text-3xl font-bold text-center text-red-700 mb-2">Kassensystem</h1>
+      <p class="text-sm text-center text-gray-500 mb-6">Bitte mit Ihren Zugangsdaten anmelden.</p>
+      <form id="login-form" onsubmit="event.preventDefault(); handleLoginSubmit()">
+        <div class="mb-4">
+          <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+          <input type="email" id="login-email" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+        </div>
+        <div class="mb-6">
+          <label for="login-password" class="block text-sm font-medium text-gray-700">Passwort</label>
+          <input type="password" id="login-password" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+        </div>
+        <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700">Anmelden</button>
+      </form>
+      <div class="mt-4 text-center">
+        <button onclick="openRegistrationModal()" class="text-sm text-indigo-600 hover:text-indigo-800">Noch kein Konto? Hier registrieren.</button><br/>
+        <button onclick="openForgotPasswordModal()" class="mt-2 text-sm text-red-600 hover:text-red-800">Passwort vergessen?</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registration Modal -->
+  <div id="registration-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-center text-indigo-700 mb-4">Konto erstellen</h2>
+      <form id="register-form" onsubmit="event.preventDefault(); handleRegisterSubmit()">
+        <div class="mb-4">
+          <label for="register-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+          <input type="email" id="register-email" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+        </div>
+        <div class="mb-6">
+          <label for="register-password" class="block text-sm font-medium text-gray-700">Passwort (min. 6 Zeichen)</label>
+          <input type="password" id="register-password" required minlength="6" class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+        </div>
+        <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700">Registrieren</button>
+      </form>
+      <button onclick="closeModal('registration-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
+    </div>
+  </div>
+
+  <!-- Forgot password -->
+  <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-center text-red-700 mb-4">Passwort zurücksetzen</h2>
+      <p class="text-sm text-center text-gray-500 mb-6">Bitte geben Sie Ihre E-Mail Adresse ein.</p>
+      <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
+        <div class="mb-6">
+          <label for="reset-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+          <input type="email" id="reset-email" required class="mt-1 w-full px-3 py-2 border rounded-lg shadow-sm">
+        </div>
+        <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700">Link senden</button>
+      </form>
+      <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
+    </div>
+  </div>
+
+  <!-- Product Modal -->
+  <div id="product-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4 text-indigo-700">Produkt- und Kategorie-Verwaltung</h2>
+      <div id="product-modal-content">
+        <div class="mb-4 border-b pb-3">
+          <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt anlegen</h3>
+          <div class="flex space-x-2 mb-2">
+            <input type="text" id="new-category-name" placeholder="Name der Kategorie (z.B. Getränke)" class="flex-grow p-2 border rounded-lg">
+            <button onclick="addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Kategorie hinzufügen</button>
+          </div>
+          <div class="grid grid-cols-5 gap-2 items-end">
+            <input type="text" id="new-product-name" placeholder="Name des Produkts" class="col-span-2 p-2 border rounded-lg">
+            <input type="number" id="new-product-price" placeholder="Preis (€)" step="0.01" class="p-2 border rounded-lg">
+            <select id="new-product-category" class="p-2 border rounded-lg"><option value="">Kategorie wählen</option></select>
+            <button onclick="addProduct()" class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Produkt hinzufügen</button>
+          </div>
         </div>
 
-    <div id="async-loading-overlay">
-        <div class="spinner"></div>
+        <h3 class="text-lg font-semibold mb-2">Bestehende Kategorien</h3>
+        <div id="category-list" class="space-y-2 mb-4"><p class="text-gray-500">Kategorien werden geladen...</p></div>
+
+        <h3 class="text-lg font-semibold mb-2">Bestehende Produkte (Preise anpassen)</h3>
+        <div id="product-list" class="space-y-2"><p class="text-gray-500">Produkte werden geladen...</p></div>
+      </div>
+      <div class="mt-6 text-right"><button onclick="closeModal('product-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button></div>
     </div>
+  </div>
 
-    <div id="login-modal" style="display: none;"
-         class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
-            <h1 class="text-3xl font-bold text-center text-red-700 mb-2">Kassensystem</h1>
-            <p class="text-sm text-center text-gray-500 mb-6">Bitte mit Ihren Zugangsdaten anmelden.</p>
+  <!-- Finalize modal -->
+  <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-3 rounded-xl shadow-2xl w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
+      <div class="mb-3 p-2 border-2 border-green-500 rounded-lg bg-green-50">
+        <p class="text-xs font-bold text-gray-700">Gesamtbetrag:</p>
+        <div id="finalize-total" class="text-3xl font-extrabold text-right text-green-700">0.00 €</div>
+      </div>
 
-            <form id="login-form" onsubmit="event.preventDefault(); handleLoginSubmit()">
-                <div class="mb-4">
-        
-                <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
-                    <input type="email" id="login-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
-                </div>
-                <div class="mb-6">
-                <label for="login-password" class="block text-sm 
-                 font-medium text-gray-700">Passwort</label>
-                    <input type="password" id="login-password" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
-                </div>
-                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">
-                   Anmelden
-      
-                   </button>
-            </form>
-            <div class="mt-4 text-center">
-                <button onclick="openRegistrationModal()" class="text-sm text-indigo-600 hover:text-indigo-800">
-                    Noch kein Konto? Hier registrieren.
-                </button>
-                <button onclick="openForgotPasswordModal()" class="block w-full mt-2 text-sm text-red-600 hover:text-red-800">
-                    Passwort vergessen?
-                </button>
-            </div>
+      <div id="payment-buttons" class="grid grid-cols-1 gap-3 mb-4">
+        <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">KARTE ZAHLUNG</button>
+      </div>
+
+      <div id="cash-payment-area" class="mt-4 p-3 border rounded-lg bg-gray-50">
+        <h3 class="text-lg font-semibold mb-2 flex justify-between items-center text-blue-700">
+          BAR Zahlung (Rückgeld)
+          <span id="btn-bar-indicator" class="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">AKTIV</span>
+        </h3>
+
+        <label class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag</label>
+        <div id="cash-received-display" class="w-full h-10 flex items-center justify-end px-3 py-2 border rounded-xl text-xl font-extrabold text-gray-800 bg-white shadow-inner">0,00</div>
+
+        <div class="mt-3 pt-2 border-t flex justify-between items-center">
+          <span class="text-lg font-bold text-gray-700">Rückgeld:</span>
+          <span id="change-display" class="text-2xl font-extrabold text-green-700">0,00 €</span>
         </div>
-    </div>
 
-    <div id="registration-modal" style="display: none;"
-         class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-center text-indigo-700 mb-4">Konto erstellen</h2>
-            <form id="register-form" onsubmit="event.preventDefault(); handleRegisterSubmit()">
-                <div class="mb-4">
-                    <label for="register-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
-  
-                    <input type="email" id="register-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
-                </div>
-                <div class="mb-6">
-                    <label for="register-password" class="block text-sm font-medium text-gray-700">Passwort (min. 6 Zeichen)</label>
-          
-                    <input type="password" id="register-password" required minlength="6" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
-                </div>
-                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 transition-colors">
-                    Registrieren
-                </button>
- 
-           </form>
-            <button onclick="closeModal('registration-modal');
-         openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
+        <div id="cash-numpad-container" class="mt-4 grid grid-cols-3 gap-2">
+          <button onclick="handleCashInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
+          <button onclick="handleCashInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
+          <button onclick="handleCashInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
+
+          <button onclick="handleCashInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
+          <button onclick="handleCashInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
+          <button onclick="handleCashInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
+
+          <button onclick="handleCashInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
+          <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
+          <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
+
+          <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button>
+          <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
+          <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-4xl">,</button>
         </div>
-    </div>
 
-    <div id="forgot-password-modal" style="display: none;"
-         class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
-            <h2 class="text-2xl font-bold text-center text-red-700 mb-4">Passwort zurücksetzen</h2>
-            <p class="text-sm text-center text-gray-500 mb-6">Bitte geben Sie Ihre E-Mail Adresse ein. Sie erhalten eine Anleitung zum Zurücksetzen.</p>
-
-            <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
-                <div class="mb-6">
-                    <label for="reset-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
-                    <input type="email" id="reset-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
-                </div>
-                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">
-                    Link senden
-                </button>
-            </form>
-            <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
+        <div class="mt-3 grid grid-cols-3 gap-2">
+          <button onclick="setCashExact()" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">Exakt</button>
+          <button onclick="addCashShortcut(5)" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">+5 €</button>
+          <button onclick="addCashShortcut(10)" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">+10 €</button>
         </div>
-    </div>
+      </div>
 
-    <div id="product-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 class="text-xl font-bold mb-4 text-indigo-700">Produkt- und Kategorie-Verwaltung</h2>
-            
-            <div id="product-modal-content">
-      
-                <div class="mb-4 border-b pb-3">
-                    <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt anlegen</h3>
-                    <div class="flex space-x-2 mb-2">
-                        <input type="text" id="new-category-name" placeholder="Name der Kategorie (z.B. Getränke)" class="flex-grow p-2 border rounded-lg">
-    
-                        <button onclick="addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">Kategorie hinzufügen</button>
-                    </div>
-                    <div class="grid grid-cols-5 gap-2 items-end">
-                        <input type="text" id="new-product-name" placeholder="Name des 
-                 Produkts" class="col-span-2 p-2 border rounded-lg">
-                        <input type="number" id="new-product-price" placeholder="Preis (€)" step="0.01" class="p-2 border rounded-lg">
-                        <select id="new-product-category" class="p-2 border rounded-lg">
-                            <option value="">Kategorie wählen</option>
-      
-                    </select>
-                        <button onclick="addProduct()" class="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Produkt hinzufügen</button>
-                    </div>
-                </div>
-
-               
-                 <h3 class="text-lg font-semibold mb-2">Bestehende Kategorien</h3>
-                <div id="category-list" class="space-y-2 mb-4">
-                    <p class="text-gray-500">Kategorien werden geladen...</p>
-                </div>
-
-                <h3 class="text-lg font-semibold mb-2">Bestehende Produkte (Preise anpassen)</h3>
-                <div 
-                 id="product-list" class="space-y-2">
-                    <p class="text-gray-500">Produkte werden geladen...</p>
-                </div>
-            </div>
-            
-            <div class="mt-6 text-right">
-                <button onclick="closeModal('product-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
- 
-            </div>
+      <div id="finalize-button-container" class="mt-4">
+        <div id="cash-finalize-buttons" style="display:block;">
+          <p class="text-sm text-center text-gray-500 mb-2 font-semibold">Transaktion abschließen:</p>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="handleFinalizeAction('BAR','none')" disabled id="btn-cash-none" class="p-3 rounded-xl font-extrabold text-white bg-red-400">Ohne Beleg</button>
+            <button onclick="handleFinalizeAction('BAR','standard')" disabled id="btn-cash-standard" class="p-3 rounded-xl font-extrabold text-white bg-green-400">Standard Bon</button>
+            <button onclick="handleFinalizeAction('BAR','bewirtung')" disabled id="btn-cash-bewirtung" class="p-3 rounded-xl font-extrabold text-white bg-red-600/70">Bewirtungsbeleg</button>
+          </div>
         </div>
-    </div>
 
-    <div id="finalize-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-3 rounded-xl shadow-2xl w-full max-w-md"> 
-            <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
-            
-            <div class="mb-3 p-2 border-2 border-green-500 rounded-lg bg-green-50">
-                <p class="text-xs font-bold text-gray-700">Gesamtbetrag:</p>
-                <div id="finalize-total" class="text-3xl font-extrabold text-right text-green-700">0.00 €</div>
-            </div>
-
-            <div id="payment-buttons" class="grid grid-cols-1 gap-3 mb-4">
-                <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg border-4 border-transparent transition-all duration-300">
-                    KARTE ZAHLUNG
-                </button>
-            </div>
-
-
-            <div id="cash-payment-area" class="mt-4 p-3 border rounded-lg bg-gray-50">
-                <h3 class="text-lg font-semibold mb-2 flex justify-between items-center text-blue-700">
-                    BAR Zahlung (Rückgeld)
-                    <span id="btn-bar-indicator" class="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">AKTIV</span>
-                </h3>
-                
-                <label class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag</label>
-                <div id="cash-received-display" class="w-full h-10 flex items-center justify-end px-3 py-2 border border-gray-300 rounded-xl text-xl font-extrabold text-gray-800 focus:ring-green-500 focus:border-green-500 bg-white shadow-inner transition-all">0,00</div>
-                
-                <div class="mt-3 pt-2 border-t flex justify-between items-center">
-                    <span class="text-lg font-bold text-gray-700">Rückgeld:</span>
-                    <span id="change-display" class="text-2xl font-extrabold text-green-700">0,00 €</span>
-                </div>
-
-                <div id="cash-numpad-container" class="mt-4 grid grid-cols-3 gap-2">
-                    <button onclick="handleCashInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
-                    <button onclick="handleCashInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
-                    <button onclick="handleCashInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
-
-                    <button onclick="handleCashInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
-                    <button onclick="handleCashInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
-                    <button onclick="handleCashInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
-
-                    <button onclick="handleCashInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
-                    <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
-                    <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
-                    
-                    <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button> 
-                    <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
-                    <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-4xl">,</button> 
-                </div>
-                <div class="mt-3 grid grid-cols-3 gap-2">
-                    <button onclick="setCashExact()" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">Exakt</button>
-                    <button onclick="addCashShortcut(5)" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">+5 €</button>
-                    <button onclick="addCashShortcut(10)" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">+10 €</button>
-                </div>
-                </div>
-            <div id="finalize-button-container" class="mt-4">
-                
-                <div id="cash-finalize-buttons" style="display: block;">
-                    <p class="text-sm text-center text-gray-500 mb-2 font-semibold">Transaktion abschließen:</p>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="handleFinalizeAction('BAR', 'none')" disabled id="btn-cash-none" class="col-span-1 p-3 rounded-xl font-extrabold text-white bg-red-400 shadow-lg transition-colors text-sm">
-                            Ohne Beleg
-                        </button>
-                        <button onclick="handleFinalizeAction('BAR', 'standard')" disabled id="btn-cash-standard" class="col-span-1 p-3 rounded-xl font-extrabold text-white bg-green-400 shadow-lg transition-colors text-sm">
-                            Standard Bon
-                        </button>
-                        <button onclick="handleFinalizeAction('BAR', 'bewirtung')" disabled id="btn-cash-bewirtung" class="col-span-1 p-3 rounded-xl font-extrabold text-white bg-red-600/70 shadow-lg transition-colors text-sm">
-                            Bewirtungsbeleg
-                        </button>
-                    </div>
-                </div>
-
-                <div id="card-finalize-buttons" style="display: none;">
-                    <p class="text-lg font-bold text-center text-indigo-700 mb-3">Belegoptionen:</p>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="handleFinalizeAction('KARTE', 'none')" class="p-3 rounded-xl font-extrabold text-white bg-gray-500 hover:bg-gray-600 shadow-lg transition-colors text-sm">
-                            NEIN (Abschließen)
-                        </button>
-                        <button onclick="handleFinalizeAction('KARTE', 'standard')" class="p-3 rounded-xl font-extrabold text-white bg-green-600 hover:bg-green-700 shadow-lg transition-colors text-sm">
-                            Standard Bon
-                        </button>
-                        <button onclick="handleFinalizeAction('KARTE', 'bewirtung')" class="p-3 rounded-xl font-extrabold text-white bg-red-700 hover:bg-red-800 shadow-lg transition-colors text-sm">
-                            Bewirtungsbeleg
-                        </button>
-                    </div>
-                </div>
-                
-            </div>
-            <div class="text-center mt-6">
-                <button onclick="closeModal('finalize-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400 w-full">Abbrechen / Zurück</button>
-            </div>
+        <div id="card-finalize-buttons" style="display:none;">
+          <p class="text-lg font-bold text-center text-indigo-700 mb-3">Belegoptionen:</p>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="handleFinalizeAction('KARTE','none')" class="p-3 rounded-xl font-extrabold text-white bg-gray-500">NEIN (Abschließen)</button>
+            <button onclick="handleFinalizeAction('KARTE','standard')" class="p-3 rounded-xl font-extrabold text-white bg-green-600">Standard Bon</button>
+            <button onclick="handleFinalizeAction('KARTE','bewirtung')" class="p-3 rounded-xl font-extrabold text-white bg-red-700">Bewirtungsbeleg</button>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <div id="transaction-reversal-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 
-                 class="text-xl font-bold mb-4 text-red-700">Letzte Transaktionen stornieren</h2>
-            <div id="transaction-list" class="space-y-3 mb-4">
-                <p class="text-gray-500">Transaktionen werden geladen...</p>
-            </div>
-            <div class="text-right">
-                <button onclick="closeModal('transaction-reversal-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
-            </div>
-   
-         </div>
+      <div class="text-center mt-6"><button onclick="closeModal('finalize-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400 w-full">Abbrechen / Zurück</button></div>
     </div>
+  </div>
 
-    <div id="settings-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-            <h2 class="text-xl font-bold mb-4 text-yellow-700">Einstellungen (Belegkopf)</h2>
-            <form id="settings-form">
-                <div class="mb-4">
-              
-                   <label for="company-name" class="block text-sm font-medium text-gray-700">Firmenname</label>
-                    <input type="text" id="company-name" class="mt-1 w-full p-2 border rounded-lg">
-                </div>
-                <div class="mb-4">
-                    <label for="address" class="block text-sm font-medium text-gray-700">Adresse</label>
-    
-                 <input type="text" id="address" class="mt-1 w-full p-2 border rounded-lg">
-                </div>
-                <div class="mb-4">
-                    <label for="tax-id" class="block text-sm font-medium text-gray-700">Steuernummer/USt-IdNr.</label>
-                   
-                 <input type="text" id="tax-id" class="mt-1 w-full p-2 border rounded-lg">
-                </div>
-                <div class="mb-6">
-                    <label for="tax-rate" class="block text-sm font-medium text-gray-700">Standard Steuersatz (%)</label>
-                    <input type="number" id="tax-rate" step="0.1" class="mt-1 w-full p-2 border rounded-lg">
-    
-                 </div>
-                <button type="button" onclick="saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">Einstellungen speichern</button>
-            </form>
-            <div class="mt-4 text-right">
-                <button onclick="closeModal('settings-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
-            </div>
-  
-         </div>
+  <!-- Transaction reversal modal -->
+  <div id="transaction-reversal-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4 text-red-700">Letzte Transaktionen stornieren</h2>
+      <div id="transaction-list" class="space-y-3 mb-4"><p class="text-gray-500">Transaktionen werden geladen...</p></div>
+      <div class="text-right"><button onclick="closeModal('transaction-reversal-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button></div>
     </div>
+  </div>
 
-    <div id="info-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 id="info-title" class="text-xl font-bold mb-4 text-blue-700">Information</h2>
-            <pre id="info-text" class="whitespace-pre-wrap font-mono text-sm bg-gray-100 p-3 rounded-lg overflow-x-auto"></pre>
-            <div class="mt-6 text-right">
-       
-             <button onclick="closeModal('info-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button>
-            </div>
+  <!-- Settings modal -->
+  <div id="settings-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+      <h2 class="text-xl font-bold mb-4 text-yellow-700">Einstellungen (Belegkopf)</h2>
+      <form id="settings-form">
+        <div class="mb-4">
+          <label for="company-name" class="block text-sm font-medium text-gray-700">Firmenname</label>
+          <input type="text" id="company-name" class="mt-1 w-full p-2 border rounded-lg">
         </div>
+        <div class="mb-4">
+          <label for="address" class="block text-sm font-medium text-gray-700">Adresse</label>
+          <input type="text" id="address" class="mt-1 w-full p-2 border rounded-lg">
+        </div>
+        <div class="mb-4">
+          <label for="tax-id" class="block text-sm font-medium text-gray-700">Steuernummer/USt-IdNr.</label>
+          <input type="text" id="tax-id" class="mt-1 w-full p-2 border rounded-lg">
+        </div>
+        <div class="mb-6">
+          <label for="tax-rate" class="block text-sm font-medium text-gray-700">Standard Steuersatz (%)</label>
+          <input type="number" id="tax-rate" step="0.1" class="mt-1 w-full p-2 border rounded-lg">
+        </div>
+        <button type="button" onclick="saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700">Einstellungen speichern</button>
+      </form>
+      <div class="mt-4 text-right"><button onclick="closeModal('settings-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button></div>
     </div>
+  </div>
 
-    <div id="kasse-content" style="display: none;">
-
-        <header class="flex justify-between items-center mb-3">
-            <div id="db-status" class="text-xs font-bold p-1.5 rounded-lg bg-yellow-300 shadow-sm transition-colors text-gray-800">
-                Datenbankmodul lädt...
-     
-            </div>
-          <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
-          <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.7 (Kompakteres Zahlfeld & Reset)</div>
-                <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
-                    Logout
-                </button>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            
-            <div class="lg:col-span-1 space-y-3 order-2 lg:order-1">
-           
-         
-                 <div class="bg-white p-3 rounded-xl shadow-lg">
-                    <h2 class="text-lg font-semibold mb-2 text-indigo-800">Menge</h2>
-                    
-                    <div id="quantity-display-wrapper" class="w-full mb-3">
-                        <span class="text-sm font-bold text-gray-600 block mb-1">Aktuelle Menge:</span>
-                        <div id="quantity-display" class="w-full h-10 flex items-center justify-center text-xl font-extrabold text-red-600 bg-red-100 rounded-xl shadow-inner transition-all">1</div>
-                    </div>
-                    
-                    <div id="main-numpad-container" class="grid grid-cols-3 gap-2"> 
-                        <button onclick="handleQuantityInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
-                        <button onclick="handleQuantityInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
-                        <button onclick="handleQuantityInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
-               
-                        <button onclick="handleQuantityInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
-                        <button onclick="handleQuantityInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
-                        <button onclick="handleQuantityInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
-           
-                        <button onclick="handleQuantityInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
-                        <button onclick="handleQuantityInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
-                        <button onclick="handleQuantityInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
-
-           
-                         <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button> 
-                        <button onclick="handleQuantityInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
-                        <button onclick="handleQuantityInput('set1')" class="numpad-btn bg-green-500 hover:bg-green-600 text-white text-2xl">1x</button> 
-                    </div>
-   
-                 </div>
-
-                <div class="bg-white p-3 rounded-xl shadow-lg flex flex-col gap-2">
-                    <button onclick="undoLastAction()" class="product-btn w-full p-2 rounded-lg font-bold text-sm text-gray-800 bg-yellow-400 hover:bg-yellow-500 shadow-md">
-                         Storno (Letzte)
-       
-                     </button>
-                    <button onclick="openTransactionReversalModal()" class="product-btn w-full p-2 rounded-lg font-bold text-sm text-white bg-red-700 hover:bg-red-800 shadow-md">
-                        Letzte Buchungen stornieren
-                   </button>
-           
-                     <button onclick="resetBestellung()" class="product-btn w-full p-2 rounded-lg font-bold text-sm text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-md">
-                        Neue Bestellung
-                    </button>
-                </div>
-          
-       
-  
-                <div class="flex flex-col gap-2">
-                    <button onclick="openFinalizeModal()" class="product-btn w-full p-3 rounded-xl font-extrabold text-lg text-white bg-green-600 hover:bg-green-700 shadow-lg">
-                         Zur Zahlung
-                    </button>
-     
-          
-                    <button onclick="openProductModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg">
-                         Produkte verwalten
-                    </button>
-
-   
-               
-                    <div class="flex items-center space-x-2 bg-white p-3 rounded-xl shadow-lg border-2 border-blue-200">
-                        <label for="report-date" class="text-sm font-bold text-blue-700 whitespace-nowrap">Bericht für Tag:</label>
-                        <input type="date" id="report-date" class="p-1 border rounded-lg text-sm flex-grow">
-            
-            <button onclick="setReportDateToday()" class="p-1 
-                 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 whitespace-nowrap">Heute</button>
-                    </div>
-                    
-                    <button onclick="runDailyReport('report')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700 shadow-lg">
-                       
-                   Tagesabschluss (Bericht)
-                    </button>
-                    <button onclick="runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400 shadow-lg">
-                        Tagesabschluss (CSV Export)
-                    
-                 </button>
-                    
-                    <button onclick="openSettingsModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-yellow-600 hover:bg-yellow-700 shadow-lg">
-                         Einstellungen (Belegkopf)
-                    </button>
-
-   
-                 </div>
-            </div>
-
-            <div class="lg:col-span-1 space-y-3 order-1 lg:order-2">
-                <div class="bg-white p-3 rounded-xl shadow-lg">
-                    <h2 class="text-lg font-semibold mb-2 text-red-800">Produkte buchen</h2>
-              
-             
-                    <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-2 mb-3 border-b">
-                        </div>
-
-                    <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
-                
-                       <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="receipt-column" 
-            class="lg:col-span-1 bg-white 
-                 p-3 rounded-xl shadow-lg h-full sticky top-3 order-3">
-                <h2 class="text-lg font-semibold mb-2 text-gray-700">Aktueller Bon (Brutto)</h2>
-                <div id="receipt-content-interactive" class="bg-gray-50 p-2 rounded-lg text-xs text-gray-700 border border-gray-200 min-h-[150px]">
-                    <p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>
-                </div>
-  
-               <div class="mt-3 pt-3 border-t-2 border-red-700">
-                    <div id="total-display" class="text-2xl font-extrabold text-right 
-                    text-red-700">GESAMT: 0.00 €</div>
-                </div>
-           </div>
-        
-         </div>
+  <!-- Info modal (reports) -->
+  <div id="info-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <h2 id="info-title" class="text-xl font-bold mb-4 text-blue-700">Information</h2>
+      <pre id="info-text" class="whitespace-pre-wrap font-mono text-sm bg-gray-100 p-3 rounded-lg overflow-x-auto"></pre>
+      <div class="mt-6 text-right"><button onclick="closeModal('info-modal')" class="p-2 bg-gray-300 rounded-lg hover:bg-gray-400">Schließen</button></div>
     </div>
-    
-    <script>
-        // Datenbank-Logik (vereinfacht, basierend auf der Struktur der Dateischnipsel)
+  </div>
 
-        let DB_STATUS = 'disconnected';
-         let currentBestellung = [];
-        let currentQuantity = '1';
-        let cashReceivedInput = '0'; // Wichtig: Beim Öffnen auf '0' setzen
-        let products = {};
-        let categories = {};
-        let userSettings = {};
-         let transactionHistory = [];
-        let lastAction = null; 
-        
-        // Globale Variablen für Rückgeldfunktion
-        let selectedPaymentMethod = null;
-        let totalBrutto = 0;
+  <!-- Main Kasse content -->
+  <div id="kasse-content" style="display:none;">
+    <header class="flex justify-between items-center mb-3">
+      <div id="db-status" class="text-xs font-bold p-1.5 rounded-lg bg-yellow-300 text-gray-800">Datenbankmodul lädt...</div>
+      <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
+      <div class="flex flex-col items-end">
+        <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.7</div>
+        <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg">Logout</button>
+      </div>
+    </header>
 
-        // Initialisierung (Platzhalter, da der Original-Code fehlt)
-        async function initDB() {
-            try {
-                // Hier würde die Firebase/LocalDB Initialisierung stehen
-                await new Promise(resolve => setTimeout(resolve, 500));
-         // Simuliere Ladezeit
-                DB_STATUS = 'connected';
-         updateDBStatus(true);
-                // Laden von Settings, Products, Categories
-                await loadSettings();
-         await loadProductsAndCategories(); 
-                await loadTransactionHistory();
-                // Wenn man bereits im Login ist, muss man das View NICHT ändern
-                // Hier würde ggf. geprüft, ob der User noch eingeloggt ist.
-                // Wir lassen es leer, da updateAppView('login') bereits im DOMContentLoaded ist.
-                // showToast('Datenbank verbunden und Daten geladen.', 'success');
-         } catch (e) {
-                console.error("DB Initialisierungsfehler: ", e);
-         updateDBStatus(false);
-                showToast('Datenbankfehler! Daten konnten nicht geladen werden.', 'error');
-            }
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- left column (numpad, controls) -->
+      <div class="lg:col-span-1 space-y-3 order-2 lg:order-1">
+        <div class="bg-white p-3 rounded-xl shadow-lg">
+          <h2 class="text-lg font-semibold mb-2 text-indigo-800">Menge</h2>
+          <div id="quantity-display-wrapper" class="w-full mb-3">
+            <span class="text-sm font-bold text-gray-600 block mb-1">Aktuelle Menge:</span>
+            <div id="quantity-display" class="w-full h-10 flex items-center justify-center text-xl font-extrabold text-red-600 bg-red-100 rounded-xl shadow-inner">1</div>
+          </div>
+          <div id="main-numpad-container" class="grid grid-cols-3 gap-2">
+            <button onclick="handleQuantityInput('7')" class="numpad-btn bg-gray-200 hover:bg-gray-300">7</button>
+            <button onclick="handleQuantityInput('8')" class="numpad-btn bg-gray-200 hover:bg-gray-300">8</button>
+            <button onclick="handleQuantityInput('9')" class="numpad-btn bg-gray-200 hover:bg-gray-300">9</button>
+            <button onclick="handleQuantityInput('4')" class="numpad-btn bg-gray-200 hover:bg-gray-300">4</button>
+            <button onclick="handleQuantityInput('5')" class="numpad-btn bg-gray-200 hover:bg-gray-300">5</button>
+            <button onclick="handleQuantityInput('6')" class="numpad-btn bg-gray-200 hover:bg-gray-300">6</button>
+            <button onclick="handleQuantityInput('1')" class="numpad-btn bg-gray-200 hover:bg-gray-300">1</button>
+            <button onclick="handleQuantityInput('2')" class="numpad-btn bg-gray-200 hover:bg-gray-300">2</button>
+            <button onclick="handleQuantityInput('3')" class="numpad-btn bg-gray-200 hover:bg-gray-300">3</button>
+            <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 hover:bg-red-600 text-white text-3xl">C</button>
+            <button onclick="handleQuantityInput('0')" class="numpad-btn bg-gray-200 hover:bg-gray-300">0</button>
+            <button onclick="handleQuantityInput('set1')" class="numpad-btn bg-green-500 hover:bg-green-600 text-white text-2xl">1x</button>
+          </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl shadow-lg flex flex-col gap-2">
+          <button onclick="undoLastAction()" class="product-btn w-full p-2 rounded-lg font-bold text-sm text-gray-800 bg-yellow-400 hover:bg-yellow-500">Storno (Letzte)</button>
+          <button onclick="openTransactionReversalModal()" class="product-btn w-full p-2 rounded-lg font-bold text-sm text-white bg-red-700 hover:bg-red-800">Letzte Buchungen stornieren</button>
+          <button onclick="resetBestellung()" class="product-btn w-full p-2 rounded-lg font-bold text-sm text-gray-800 bg-gray-300 hover:bg-gray-400">Neue Bestellung</button>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button onclick="openFinalizeModal()" class="product-btn w-full p-3 rounded-xl font-extrabold text-lg text-white bg-green-600 hover:bg-green-700">Zur Zahlung</button>
+          <button onclick="openProductModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-indigo-600 hover:bg-indigo-700">Produkte verwalten</button>
+          <div class="flex items-center space-x-2 bg-white p-3 rounded-xl shadow-lg border-2 border-blue-200">
+            <label for="report-date" class="text-sm font-bold text-blue-700 whitespace-nowrap">Bericht für Tag:</label>
+            <input type="date" id="report-date" class="p-1 border rounded-lg text-sm flex-grow">
+            <button onclick="setReportDateToday()" class="p-1 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600">Heute</button>
+          </div>
+          <button onclick="runDailyReport('report')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600 hover:bg-blue-700">Tagesabschluss (Bericht)</button>
+          <button onclick="runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300 hover:bg-gray-400">Tagesabschluss (CSV Export)</button>
+          <button onclick="openSettingsModal()" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-yellow-600 hover:bg-yellow-700">Einstellungen (Belegkopf)</button>
+        </div>
+      </div>
+
+      <!-- middle column (product grid) -->
+      <div class="lg:col-span-1 space-y-3 order-1 lg:order-2">
+        <div class="bg-white p-3 rounded-xl shadow-lg">
+          <h2 class="text-lg font-semibold mb-2 text-red-800">Produkte buchen</h2>
+          <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-2 mb-3 border-b"></div>
+          <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
+            <p class="text-gray-500 col-span-full text-center">Produkte werden geladen...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- right column (receipt) -->
+      <div id="receipt-column" class="lg:col-span-1 bg-white p-3 rounded-xl shadow-lg h-full sticky top-3 order-3">
+        <h2 class="text-lg font-semibold mb-2 text-gray-700">Aktueller Bon (Brutto)</h2>
+        <div id="receipt-content-interactive" class="bg-gray-50 p-2 rounded-lg text-xs text-gray-700 border border-gray-200 min-h-[150px]">
+          <p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>
+        </div>
+        <div class="mt-3 pt-3 border-t-2 border-red-700">
+          <div id="total-display" class="text-2xl font-extrabold text-right text-red-700">GESAMT: 0.00 €</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================
+       Firebase + App Logic (replaces localStorage-only logic)
+       - Modular Firebase v9
+       - Uses Firestore under: users/{uid}/meta/settings, categories, products, transactions
+       =========================== -->
+
+  <script type="module">
+    // ---------- Firebase SDK (modular) ----------
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // ---------- Firebase config ----------
+    // Ich habe die Werte aus deiner hochgeladenen Datei verwendet. Falls du ein anderes Projekt nutzen willst, ersetze diese Werte.
+    const firebaseConfig = {
+      apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
+      authDomain: "kassensystem-85412.firebaseapp.com",
+      databaseURL: "https://kassensystem-85412-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "kassensystem-85412",
+      storageBucket: "kassensystem-85412.firebasestorage.app",
+      messagingSenderId: "916536785810",
+      appId: "1:916536785810:web:0d0319ef565af65d279f4b",
+      measurementId: "G-W5HWYEXWJ5"
+    }; // Quelle: deine Datei. :contentReference[oaicite:2]{index=2}
+
+    const app = initializeApp(firebaseConfig);
+    try { getAnalytics(app); } catch(e) { /* optional */ }
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ---------- App state ----------
+    let currentUser = null;
+    let products = {};
+    let categories = {};
+    let userSettings = {};
+    let currentBestellung = [];
+    let currentQuantity = '1';
+    let cashReceivedInput = '0';
+    let totalBrutto = 0;
+    let transactionHistory = [];
+    let lastAction = null;
+    let selectedPaymentMethod = null;
+
+    // ---------- UI helpers ----------
+    function showLoading(show){ document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none'; }
+    function showToast(msg, type='info'){
+      const container = document.getElementById('toast-container');
+      const t = document.createElement('div'); t.className = `toast toast-${type}`; t.innerText = msg;
+      if(type==='success') t.classList.add('toast-success');
+      if(type==='error') t.classList.add('toast-error');
+      if(type==='info') t.classList.add('toast-info');
+      container.appendChild(t);
+      setTimeout(()=> t.style.opacity='1',50);
+      setTimeout(()=> { t.style.opacity='0'; setTimeout(()=> container.removeChild(t),300); }, 3000);
+    }
+
+    // ---------- Auth flows ----------
+    window.handleLoginSubmit = async function(){
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      if(!email || !password){ showToast('Bitte E-Mail und Passwort eingeben','error'); return; }
+      showLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        showToast('Erfolgreich angemeldet!', 'success');
+      } catch(err){ console.error(err); showToast('Login fehlgeschlagen: '+(err.message||err.code),'error'); }
+      finally{ showLoading(false); }
+    };
+
+    window.handleRegisterSubmit = async function(){
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      if(!email || !password){ showToast('Bitte E-Mail und Passwort eingeben','error'); return; }
+      showLoading(true);
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await seedUserDataIfNeeded(cred.user.uid);
+        showToast('Registrierung erfolgreich. Bitte einloggen.', 'success');
+        closeModal('registration-modal'); openLoginModal();
+      } catch(err){ console.error(err); showToast('Registrierung fehlgeschlagen: '+(err.message||err.code),'error'); }
+      finally{ showLoading(false); }
+    };
+
+    window.handlePasswordReset = async function(){
+      const email = document.getElementById('reset-email').value;
+      if(!email) return;
+      showLoading(true);
+      try { await sendPasswordResetEmail(auth, email); showToast('Passwort-Reset Link gesendet.','success'); closeModal('forgot-password-modal'); openLoginModal(); }
+      catch(err){ console.error(err); showToast('Fehler beim Senden: '+err.message,'error'); }
+      finally{ showLoading(false); }
+    };
+
+    window.handleLogout = async function(){
+      await signOut(auth);
+      currentUser = null;
+      updateAppView('login');
+      showToast('Erfolgreich abgemeldet.','info');
+    };
+
+    // ---------- Auth observer ----------
+    onAuthStateChanged(auth, async user => {
+      if(user){
+        currentUser = user;
+        await initUserData();
+        updateAppView('kasse');
+      } else {
+        currentUser = null;
+        updateAppView('login');
+      }
+    });
+
+    // ---------- Firestore helpers ----------
+    function settingsDocRef(uid){ return doc(db, 'users', uid, 'meta', 'settings'); }
+    function categoriesCollectionRef(uid){ return collection(db, 'users', uid, 'categories'); }
+    function productsCollectionRef(uid){ return collection(db, 'users', uid, 'products'); }
+    function transactionsCollectionRef(uid){ return collection(db, 'users', uid, 'transactions'); }
+
+    async function seedUserDataIfNeeded(uid){
+      const sRef = settingsDocRef(uid);
+      const sSnap = await getDoc(sRef);
+      if(!sSnap.exists()){
+        await setDoc(sRef, { companyName: "Kassensystem", address: "Hauptstraße 1, 12345 Glühheim", taxId: "DE123456789", taxRate: 19.0, createdAt: serverTimestamp() });
+      }
+      const catSnap = await getDocs(categoriesCollectionRef(uid));
+      if(catSnap.empty){
+        const drinkRef = doc(categoriesCollectionRef(uid));
+        await setDoc(drinkRef, { id: drinkRef.id, name: 'Getränke', createdAt: serverTimestamp() });
+        const foodRef = doc(categoriesCollectionRef(uid));
+        await setDoc(foodRef, { id: foodRef.id, name: 'Essen', createdAt: serverTimestamp() });
+        const p1 = doc(productsCollectionRef(uid)); await setDoc(p1, { id: p1.id, name: 'Glühwein', price: 4.00, categoryId: drinkRef.id, createdAt: serverTimestamp() });
+        const p2 = doc(productsCollectionRef(uid)); await setDoc(p2, { id: p2.id, name: 'Kinderpunsch', price: 3.00, categoryId: drinkRef.id, createdAt: serverTimestamp() });
+      }
+    }
+
+    // ---------- Initialization for signed-in user ----------
+    async function initUserData(){
+      if(!currentUser) return;
+      showLoading(true);
+      try {
+        await loadSettings();
+        await loadProductsAndCategories();
+        await loadTransactionHistory();
+        renderReceipt();
+      } catch(err){ console.error('initUserData error',err); showToast('Fehler beim Laden der Daten.','error'); }
+      finally{ showLoading(false); }
+    }
+
+    // ---------- Settings ----------
+    async function loadSettings(){
+      if(!currentUser) return;
+      const sRef = settingsDocRef(currentUser.uid);
+      const sSnap = await getDoc(sRef);
+      if(sSnap.exists()){ userSettings = sSnap.data(); }
+      else { userSettings = { companyName:'Kassensystem', address:'', taxId:'', taxRate:19.0 }; await setDoc(sRef, userSettings); }
+    }
+
+    window.openSettingsModal = function(){
+      document.getElementById('company-name').value = userSettings.companyName || '';
+      document.getElementById('address').value = userSettings.address || '';
+      document.getElementById('tax-id').value = userSettings.taxId || '';
+      document.getElementById('tax-rate').value = userSettings.taxRate || 19.0;
+      document.getElementById('settings-modal').style.display = 'flex';
+      toggleReceiptColumn(false);
+    };
+
+    window.saveSettings = async function(){
+      if(!currentUser){ showToast('Nicht angemeldet','error'); return; }
+      userSettings.companyName = document.getElementById('company-name').value;
+      userSettings.address = document.getElementById('address').value;
+      userSettings.taxId = document.getElementById('tax-id').value;
+      userSettings.taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+      await setDoc(settingsDocRef(currentUser.uid), userSettings, { merge: true });
+      showToast('Einstellungen gespeichert.', 'success');
+      closeModal('settings-modal');
+    };
+
+    // ---------- Products & Categories ----------
+    async function loadProductsAndCategories(){
+      if(!currentUser) return;
+      categories = {}; products = {};
+      const catSnap = await getDocs(categoriesCollectionRef(currentUser.uid));
+      catSnap.forEach(d => categories[d.id] = { id:d.id, ...d.data() });
+      const prodSnap = await getDocs(productsCollectionRef(currentUser.uid));
+      prodSnap.forEach(d => products[d.id] = { id:d.id, ...d.data() });
+      if(Object.keys(categories).length === 0 || Object.keys(products).length === 0){ await seedUserDataIfNeeded(currentUser.uid); return await loadProductsAndCategories(); }
+      renderCategoryTabs();
+      renderProductGrid(Object.values(categories)[0]?.id || null);
+      renderProductModalContent();
+    }
+
+    async function saveProductsAndCategories(){
+      if(!currentUser) { showToast('Nicht angemeldet','error'); return; }
+      const uid = currentUser.uid;
+      showLoading(true);
+      try {
+        for(const c of Object.values(categories)){
+          const cref = doc(db, `users/${uid}/categories/${c.id}`);
+          await setDoc(cref, c, { merge:true });
         }
-
-        // --- UI FUNKTIONEN ---
-
-        // NEUE HILFSFUNKTION: Bon-Spalte ein/ausblenden
-        function toggleReceiptColumn(show) {
-            const column = document.getElementById('receipt-column');
-         if (column) {
-                // KORREKTUR: Verwende classList.add/remove('hidden') für robustes Ausblenden
-                if (show) {
-                    column.classList.remove('hidden');
-         } else {
-                    column.classList.add('hidden');
-         }
-            }
+        for(const p of Object.values(products)){
+          const pref = doc(db, `users/${uid}/products/${p.id}`);
+          await setDoc(pref, p, { merge:true });
         }
+        renderCategoryTabs();
+        renderProductGrid(document.querySelector('#category-tabs button.bg-red-600')?.dataset.category || Object.values(categories)[0]?.id);
+        renderProductModalContent();
+      } catch(err){ console.error(err); showToast('Fehler beim Speichern','error'); }
+      finally{ showLoading(false); }
+    }
 
-        window.updateAppView = function(view) {
-            // Verstecke alle Haupt-Container
-            document.getElementById('login-modal').style.display = 'none';
-         document.getElementById('registration-modal').style.display = 'none';
-            // V5.7 NEU: Auch das Passwort-Reset-Modal verstecken
-            document.getElementById('forgot-password-modal').style.display = 'none';
-            document.getElementById('kasse-content').style.display = 'none';
-            // Verstecke auch Modals, falls offen
-            closeModal('finalize-modal');
-            closeModal('product-modal');
-            closeModal('settings-modal');
-            closeModal('transaction-reversal-modal');
+    window.addCategory = async function(){
+      const name = document.getElementById('new-category-name').value.trim();
+      if(!name){ showToast('Bitte einen Kategorienamen eingeben.','error'); return; }
+      const newId = 'cat'+Date.now();
+      categories[newId] = { id:newId, name:name };
+      document.getElementById('new-category-name').value = '';
+      await saveProductsAndCategories();
+      showToast('Kategorie hinzugefügt.','success');
+    };
 
+    window.addProduct = async function(){
+      const name = document.getElementById('new-product-name').value.trim();
+      const price = parseFloat(document.getElementById('new-product-price').value);
+      const categoryId = document.getElementById('new-product-category').value;
+      if(!name || isNaN(price) || price<=0 || !categoryId){ showToast('Bitte alle Felder korrekt ausfüllen.','error'); return; }
+      const newId = 'prod'+Date.now();
+      products[newId] = { id:newId, name:name, price:price, categoryId:categoryId };
+      document.getElementById('new-product-name').value=''; document.getElementById('new-product-price').value=''; document.getElementById('new-product-category').value='';
+      await saveProductsAndCategories();
+      showToast('Produkt hinzugefügt.','success');
+    };
 
-            if (view === 'login') {
-                document.getElementById('login-modal').style.display = 'flex';
-         toggleReceiptColumn(false); // Bon ausblenden, wenn im Login
-            } else if (view === 'kasse') {
-                document.getElementById('kasse-content').style.display = 'block';
-         toggleReceiptColumn(true); // Bon einblenden, wenn in der Kasse
-            } else if (view === 'loading') {
-                // Das Login-Modal wird nun sofort sichtbar gemacht (siehe DOMContentLoaded unten)
-                // Dieses Loading-View ist fast nicht mehr nötig, bleibt aber als Fallback
-                showLoading(true);
-            }
+    window.deleteCategory = async function(id){
+      if(!confirm(`Soll die Kategorie "${categories[id]?.name}" und alle zugehörigen Produkte gelöscht werden?`)) return;
+      Object.keys(products).forEach(pid => { if(products[pid].categoryId===id) delete products[pid]; });
+      delete categories[id];
+      if(currentUser){
+        await deleteDoc(doc(db, `users/${currentUser.uid}/categories/${id}`)).catch(()=>{});
+        // delete products in that category
+        for(const pId in products){ if(products[pId].categoryId===id) await deleteDoc(doc(db, `users/${currentUser.uid}/products/${pId}`)).catch(()=>{}); }
+      }
+      await saveProductsAndCategories();
+      showToast('Kategorie und zugehörige Produkte gelöscht.','info');
+    };
+
+    window.deleteProduct = async function(id){
+      if(!confirm(`Soll das Produkt "${products[id]?.name}" gelöscht werden?`)) return;
+      delete products[id];
+      if(currentUser) await deleteDoc(doc(db, `users/${currentUser.uid}/products/${id}`)).catch(()=>{});
+      await saveProductsAndCategories();
+      showToast('Produkt gelöscht.','info');
+    };
+
+    window.updateProductPrice = async function(id){
+      const input = document.getElementById(`price-input-${id}`);
+      const newPrice = parseFloat(input.value);
+      if(isNaN(newPrice) || newPrice <= 0){ showToast('Ungültiger Preis.','error'); input.value = products[id].price.toFixed(2); return; }
+      if(products[id].price === newPrice){ showToast('Keine Änderung vorgenommen.','info'); return; }
+      products[id].price = newPrice;
+      await saveProductsAndCategories();
+      showToast(`Preis für "${products[id].name}" aktualisiert.`, 'success');
+    };
+
+    // ---------- Rendering ----------
+    function renderCategoryTabs(){
+      const container = document.getElementById('category-tabs'); container.innerHTML='';
+      Object.values(categories).forEach(category => {
+        const btn = document.createElement('button');
+        btn.className = 'flex-shrink-0 px-3 py-1 rounded-lg text-sm font-semibold transition-colors bg-red-100 text-red-700 hover:bg-red-200';
+        btn.dataset.category = category.id; btn.innerText = category.name;
+        btn.onclick = () => renderProductGrid(category.id);
+        container.appendChild(btn);
+      });
+    }
+
+    function renderProductGrid(categoryId){
+      const container = document.getElementById('product-grid'); const tabs = document.querySelectorAll('#category-tabs button'); container.innerHTML='';
+      tabs.forEach(tab => { tab.classList.remove('bg-red-600','text-white'); tab.classList.add('bg-red-100','text-red-700'); if(tab.dataset.category===categoryId){ tab.classList.add('bg-red-600','text-white'); tab.classList.remove('bg-red-100','text-red-700'); } });
+      const filtered = Object.values(products).filter(p => p.categoryId === categoryId);
+      if(filtered.length===0){ container.innerHTML = '<p class="text-gray-500 col-span-full text-center p-4">Keine Produkte in dieser Kategorie.</p>'; return; }
+      filtered.forEach(product => {
+        const b = document.createElement('button');
+        b.className = 'product-btn p-4 rounded-xl font-extrabold text-white bg-red-500 hover:bg-red-600 shadow-lg flex flex-col justify-center items-center text-center h-24';
+        b.innerHTML = `<span class="text-base">${product.name}</span><span class="text-2xl font-extrabold mt-1">${product.price.toFixed(2).replace('.', ',')} €</span>`;
+        b.onclick = () => addToBestellung(product.id);
+        container.appendChild(b);
+      });
+    }
+
+    function renderProductModalContent(){
+      const categorySelect = document.getElementById('new-product-category'); categorySelect.innerHTML = '<option value="">Kategorie wählen</option>';
+      const categoryList = document.getElementById('category-list'); categoryList.innerHTML = '';
+      const productList = document.getElementById('product-list'); productList.innerHTML = '';
+      Object.values(categories).forEach(category=>{
+        const option = document.createElement('option'); option.value = category.id; option.innerText = category.name; categorySelect.appendChild(option);
+        categoryList.innerHTML += `<div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg border"><span class="font-semibold">${category.name}</span><button onclick="deleteCategory('${category.id}')" class="text-red-500 hover:text-red-700 text-sm">Löschen</button></div>`;
+      });
+      Object.values(products).forEach(product=>{
+        productList.innerHTML += `<div class="flex items-center p-2 bg-gray-50 rounded-lg border"><span class="font-semibold w-1/3">${product.name}</span><div class="flex-grow flex items-center space-x-2"><input type="number" id="price-input-${product.id}" value="${product.price.toFixed(2)}" step="0.01" class="p-1 border rounded-lg text-sm w-24 text-right"><span class="text-sm text-gray-600">€</span></div><span class="text-sm text-gray-600 w-1/4 text-right">(${(categories[product.categoryId]?.name)||'N/A'})</span><button onclick="updateProductPrice('${product.id}')" class="ml-3 p-1 px-2 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 text-sm">Speichern</button><button onclick="deleteProduct('${product.id}')" class="ml-2 text-red-500 hover:text-red-700 text-sm">Löschen</button></div>`;
+      });
+    }
+
+    // ---------- Bestellung / Receipt ----------
+    window.handleQuantityInput = function(value){
+      lastAction = { type:'quantity', oldValue: currentQuantity };
+      if(value==='clear' || value==='set1') currentQuantity='1';
+      else if(currentQuantity==='1' && value!=='0') currentQuantity = value;
+      else if(currentQuantity.length < 5) currentQuantity += value;
+      document.getElementById('quantity-display').innerText = currentQuantity;
+    };
+
+    window.addToBestellung = function(productId){
+      const product = products[productId]; const quantity = parseInt(currentQuantity);
+      if(!product || isNaN(quantity) || quantity<=0) return;
+      const taxRate = userSettings.taxRate || 19.0;
+      const itemPriceBrutto = product.price;
+      const itemPriceNetto = itemPriceBrutto / (1 + (taxRate/100));
+      const taxAmount = itemPriceBrutto - itemPriceNetto;
+      for(let i=0;i<quantity;i++){
+        const item = { id: Date.now()+i, name: product.name, brutto: itemPriceBrutto, netto: itemPriceNetto, tax: taxAmount, taxRate: taxRate, productId: productId };
+        currentBestellung.push(item);
+      }
+      lastAction = { type:'add', items: currentBestellung.slice(-quantity) };
+      renderReceipt();
+      currentQuantity='1'; document.getElementById('quantity-display').innerText = currentQuantity;
+    };
+
+    window.deleteOneUnitOfProduct = function(productId){
+      const idx = currentBestellung.findIndex(it => it.productId === productId);
+      if(idx !== -1){ currentBestellung.splice(idx,1); showToast('Einheit storniert','info'); lastAction=null; renderReceipt(); }
+      else showToast('Produkt nicht gefunden','error');
+    };
+
+    window.undoLastAction = function(){
+      if(!lastAction){ showToast('Keine letzte Aktion','info'); return; }
+      if(lastAction.type === 'add'){
+        const toRemove = lastAction.items.map(i=>i.id);
+        currentBestellung = currentBestellung.filter(i => !toRemove.includes(i.id));
+        showToast('Letzte Aktion rückgängig gemacht','success');
+        lastAction = null; renderReceipt();
+      } else if(lastAction.type === 'quantity'){
+        currentQuantity = lastAction.oldValue; document.getElementById('quantity-display').innerText = currentQuantity; showToast('Menge zurückgesetzt','success'); lastAction=null;
+      }
+    };
+
+    function calculateTotalBrutto(){ return currentBestellung.reduce((s,i)=>s+i.brutto,0); }
+
+    function renderReceipt(forPrint=false, receiptType='standard'){
+      const container = document.getElementById(forPrint ? 'receipt-print-content' : 'receipt-content-interactive');
+      let content=''; totalBrutto = calculateTotalBrutto();
+      const itemCounts = currentBestellung.reduce((c,item)=>{ if(!c[item.productId]) c[item.productId] = {...item, count:0}; c[item.productId].count++; return c; },{});
+      if(currentBestellung.length===0){ content = '<p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>'; }
+      else {
+        if(forPrint){
+          const lineBreak = "<div>----------------------------------------</div>";
+          const doubleLine = "<div>========================================</div>";
+          content += `<div class="center font-bold">${(userSettings.companyName||'Kassensystem').toUpperCase()}</div>`;
+          content += `<div class="center">${userSettings.address||''}</div>`;
+          content += `<div class="center">Ust-IdNr.: ${userSettings.taxId||''}</div>`;
+          content += lineBreak;
+          if(receiptType==='bewirtung'){
+            content += "<div class='center font-bold text-lg'>*** BEWIRTUNGSBELEG ***</div>"+lineBreak;
+            content += "<div>Anlass: _________________________________</div>";
+            content += "<div>Ort: ___________________________________</div>";
+            content += "<div>Teilnehmer: ______________________________</div>";
+            content += "<div>Datum der Bewirtung: ____________________</div>";
+            content += "<div>Unterschrift Gastgeber: ___________________</div>"+lineBreak;
+          }
+          content += `<div class="line"><strong>POS. Bezeichnung</strong><strong class="item-price">Preis €</strong></div>`+lineBreak;
+          Object.values(itemCounts).forEach(item=>{
+            const priceTotal = (item.brutto * item.count).toFixed(2).replace('.', ',');
+            const nameDisplay = `${item.count}x ${item.name}`;
+            content += `<div class="line"><span class="item-name">${nameDisplay}</span><span class="item-price">${priceTotal}</span></div>`;
+          });
+          content += lineBreak;
+          content += `<div class="line"><strong>SUMME BRUTTO</strong><strong>${totalBrutto.toFixed(2).replace('.', ',')} €</strong></div>`;
+          content += doubleLine;
+          // tax details
+          const taxDetails = {};
+          currentBestellung.forEach(item => { const rate = item.taxRate.toFixed(2)+'%'; if(!taxDetails[rate]) taxDetails[rate]={netto:0,tax:0}; taxDetails[rate].netto += item.netto; taxDetails[rate].tax += item.tax; });
+          content += `<div class="center font-bold">UMSATZSTEUER</div>`+lineBreak;
+          Object.entries(taxDetails).forEach(([rate, details])=>{
+            content += `<div class="line">Netto (${rate}) <span class="item-price">${details.netto.toFixed(2).replace('.', ',')} €</span></div>`;
+            content += `<div class="line">MwSt. (${rate}) <span class="item-price">${details.tax.toFixed(2).replace('.', ',')} €</span></div>`;
+            content += lineBreak;
+          });
+          content += `<div class="center">Beleg erstellt am:</div><div class="center">${new Date().toLocaleString('de-DE')}</div>`;
+          content += `<div class="center">Transaktion ID: ${new Date().getTime().toString().slice(-6)}</div>`;
+        } else {
+          Object.values(itemCounts).forEach(item=>{
+            const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
+            content += `<div class="flex justify-between items-center py-1 border-b border-gray-100"><span class="font-semibold">${item.count}x ${item.name}</span><div class="flex items-center space-x-2"><span class="font-bold">${price} €</span><button onclick="deleteOneUnitOfProduct('${item.productId}')" class="text-red-500 hover:text-red-700 font-bold p-1 rounded-full text-xs">Storno</button></div></div>`;
+          });
         }
-
-        function updateDBStatus(connected) {
-            const statusEl = document.getElementById('db-status');
-         if (connected) {
-                statusEl.className = "text-xs font-bold p-1.5 rounded-lg bg-green-500 shadow-sm transition-colors text-white";
-         statusEl.innerText = "Datenbank verbunden";
-            } else {
-                statusEl.className = "text-xs font-bold p-1.5 rounded-lg bg-red-500 shadow-sm transition-colors text-white";
-         statusEl.innerText = "Datenbank getrennt";
-            }
-        }
-
-        function showLoading(show) {
-            document.getElementById('async-loading-overlay').style.display = show ?
-         'flex' : 'none';
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-         const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.innerText = message;
-            container.appendChild(toast);
-         // Zeige den Toast an
-            setTimeout(() => {
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateY(0)';
-            }, 100);
-         // Verstecke und entferne den Toast nach 3 Sekunden
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => {
-                    container.removeChild(toast);
-                }, 300); 
-    
-             }, 3000);
-         }
-
-        function closeModal(id) {
-            document.getElementById(id).style.display = 'none';
-         toggleReceiptColumn(true); // <-- Bon wieder einblenden
-        }
-        
-        function openLoginModal() {
-            document.getElementById('login-modal').style.display = 'flex';
-         toggleReceiptColumn(false); // Bon ausblenden
-        }
-
-        function openRegistrationModal() {
-            closeModal('login-modal');
-         toggleReceiptColumn(false); // Bon ausblenden
-            document.getElementById('registration-modal').style.display = 'flex';
-         }
-        
-        // V5.7 NEU: Funktion zum Öffnen des Passwort-Reset-Modals
-        function openForgotPasswordModal() {
-            closeModal('login-modal');
-            toggleReceiptColumn(false); // Bon ausblenden
-            document.getElementById('forgot-password-modal').style.display = 'flex';
-        }
-
-        // --- AUTH & SETTINGS ---
-
-        async function handleLoginSubmit() {
-            showLoading(true);
-         // Simuliere Login-Logik
-            await new Promise(resolve => setTimeout(resolve, 500));
-         window.updateAppView('kasse');
-            showToast('Erfolgreich angemeldet!', 'success');
-            showLoading(false);
-        }
-
-        async function handleRegisterSubmit() {
-            showLoading(true);
-         // Simuliere Registrierungs-Logik
-            await new Promise(resolve => setTimeout(resolve, 500));
-         showToast('Registrierung erfolgreich! Bitte melden Sie sich an.', 'success');
-            // Die `closeModal` in der nächsten Zeile kümmert sich um das Einblenden
-            closeModal('registration-modal');
-         openLoginModal();
-            showLoading(false);
-        }
-        
-        // V5.7 NEU: Funktion zum Simulieren des Passwort-Resets
-        async function handlePasswordReset() {
-            const email = document.getElementById('reset-email').value;
-            if (!email) return;
-
-            showLoading(true);
-            // Simuliere Logik zum Senden des Reset-Links
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            showToast(`Passwort-Reset-Link wurde an ${email} gesendet (simuliert).`, 'success');
-            document.getElementById('reset-email').value = '';
-            closeModal('forgot-password-modal');
-            openLoginModal();
-            showLoading(false);
-        }
-
-
-        // NEU: Logout Funktion
-        function handleLogout() {
-            resetBestellung(); // Bestellung zurücksetzen
-            window.updateAppView('login');
-            showToast('Erfolgreich abgemeldet.', 'info');
-        }
-
-        async function loadSettings() {
-            // Simuliere Laden der Einstellungen
-            userSettings = {
-                // GEÄNDERT: Default Firmenname
-                companyName: localStorage.getItem('companyName') || "Kassensystem", 
-                address: localStorage.getItem('address') ||
-         "Hauptstraße 1, 12345 Glühheim",
-                taxId: localStorage.getItem('taxId') ||
-         "DE123456789",
-                taxRate: parseFloat(localStorage.getItem('taxRate')) ||
-         19.0
-            };
-         }
-
-        function openSettingsModal() {
-            document.getElementById('company-name').value = userSettings.companyName;
-         document.getElementById('address').value = userSettings.address;
-            document.getElementById('tax-id').value = userSettings.taxId;
-            document.getElementById('tax-rate').value = userSettings.taxRate;
-            toggleReceiptColumn(false);
-         // <-- Bon ausblenden
-            document.getElementById('settings-modal').style.display = 'flex';
-         }
-
-        function saveSettings() {
-            userSettings.companyName = document.getElementById('company-name').value;
-         userSettings.address = document.getElementById('address').value;
-            userSettings.taxId = document.getElementById('tax-id').value;
-            userSettings.taxRate = parseFloat(document.getElementById('tax-rate').value);
-            
-            // Speichern in Local Storage
-            localStorage.setItem('companyName', userSettings.companyName);
-         localStorage.setItem('address', userSettings.address);
-            localStorage.setItem('taxId', userSettings.taxId);
-            localStorage.setItem('taxRate', userSettings.taxRate);
-
-            showToast('Einstellungen gespeichert.', 'success');
-            closeModal('settings-modal');
-         }
-
-        // --- PRODUKT LOGIK ---
-
-        async function loadProductsAndCategories() {
-            // Simuliere Laden von Produkten und Kategorien (Dummy-Daten)
-            products = JSON.parse(localStorage.getItem('products')) ||
-         {
-                'prod1': { id: 'prod1', name: 'Glühwein', price: 4.00, categoryId: 'cat1' },
-                'prod2': { id: 'prod2', name: 'Kinderpunsch', price: 3.00, categoryId: 'cat1' },
-                'prod3': { id: 'prod3', name: 'Bratwurst', price: 3.50, categoryId: 'cat2' },
-                'prod4': { id: 'prod4', name: 'Pommes', 
-                 price: 3.00, categoryId: 'cat2' },
-                'prod5': { id: 'prod5', name: 'Pfand', price: 2.00, categoryId: 'cat3' }
-            };
-         categories = JSON.parse(localStorage.getItem('categories')) || {
-                'cat1': { id: 'cat1', name: 'Getränke' },
-                'cat2': { id: 'cat2', name: 'Essen' },
-                'cat3': { id: 'cat3', name: 'Pfand' }
-            };
-         renderCategoryTabs();
-            renderProductGrid('cat1'); 
-            renderProductModalContent();
-        }
-
-        function saveProductsAndCategories() {
-            localStorage.setItem('products', JSON.stringify(products));
-         localStorage.setItem('categories', JSON.stringify(categories));
-            renderCategoryTabs();
-            renderProductGrid(document.querySelector('#category-tabs .bg-red-600')?.dataset.category || 'cat1');
-            renderProductModalContent();
-        }
-
-        function renderCategoryTabs() {
-            const container = document.getElementById('category-tabs');
-         container.innerHTML = '';
-
-            Object.values(categories).forEach(category => {
-                const button = document.createElement('button');
-                button.className = 'flex-shrink-0 px-3 py-1 rounded-lg text-sm font-semibold transition-colors bg-red-100 text-red-700 hover:bg-red-200';
-                button.dataset.category = category.id;
-                button.innerText = category.name;
-             
-             button.onclick = () => renderProductGrid(category.id);
-                container.appendChild(button);
-            });
-         }
-
-        function renderProductGrid(categoryId) {
-            const container = document.getElementById('product-grid');
-         const tabs = document.querySelectorAll('#category-tabs button');
-            container.innerHTML = '';
-            
-            tabs.forEach(tab => {
-                tab.classList.remove('bg-red-600', 'text-white');
-                tab.classList.add('bg-red-100', 'text-red-700');
-                if (tab.dataset.category === categoryId) {
-                    tab.classList.add('bg-red-600', 'text-white');
-               
-             tab.classList.remove('bg-red-100', 'text-red-700');
-                }
-            });
-         const filteredProducts = Object.values(products).filter(p => p.categoryId === categoryId);
-
-            if (filteredProducts.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 col-span-full text-center p-4">Keine Produkte in dieser Kategorie.</p>';
-                return;
-            }
-            filteredProducts.forEach(product => {
-                const button = document.createElement('button');
-                // NEU: Größere Buttons durch p-4, text-2xl
-                button.className = 'product-btn p-4 rounded-xl font-extrabold text-white bg-red-500 hover:bg-red-600 shadow-lg flex flex-col justify-center items-center text-center h-24';
-                button.innerHTML = `
-                    <span class="text-base">${product.name}</span>
-                    <span class="text-2xl font-extrabold mt-1">${product.price.toFixed(2).replace('.', ',')} €</span>
-                `;
-                button.onclick = () => addToBestellung(product.id);
-                container.appendChild(button);
-            });
-        }
-
-        function renderProductModalContent() {
-            const categorySelect = document.getElementById('new-product-category');
-            categorySelect.innerHTML = '<option value="">Kategorie wählen</option>';
-            const categoryList = document.getElementById('category-list');
-            categoryList.innerHTML = '';
-         
-            const productList = document.getElementById('product-list');
-            productList.innerHTML = ''; 
-
-            // Kategorien für Select und Liste
-            Object.values(categories).forEach(category => {
-                // Select
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.innerText = category.name;
-                categorySelect.appendChild(option);
-                
-                // Liste
-                categoryList.innerHTML += `
-                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg border">
-                        <span class="font-semibold">${category.name}</span>
-                        <button onclick="deleteCategory('${category.id}')" class="text-red-500 hover:text-red-700 text-sm">Löschen</button>
-                    </div>
-                `;
-            });
-
-            // Produkte Liste (MIT PREISANPASSUNG)
-            Object.values(products).forEach(product => {
-                productList.innerHTML += `
-                    <div class="flex items-center p-2 bg-gray-50 rounded-lg border">
-                        <span class="font-semibold w-1/3">${product.name}</span>
-                        
-                        <div class="flex-grow flex items-center space-x-2">
-                            <input type="number" 
-                                id="price-input-${product.id}"
-                                value="${product.price.toFixed(2)}"
-                                step="0.01" 
-                                class="p-1 border rounded-lg text-sm w-24 text-right">
-                            <span class="text-sm text-gray-600">€</span>
-                        </div>
-                        
-                        <span class="text-sm text-gray-600 w-1/4 text-right">(${categories[product.categoryId]?.name || 'N/A'})</span>
-                        
-                        <button onclick="updateProductPrice('${product.id}')" 
-                            class="ml-3 p-1 px-2 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 text-sm flex-shrink-0">
-                            Speichern
-                        </button>
-
-                        <button onclick="deleteProduct('${product.id}')" class="ml-2 text-red-500 hover:text-red-700 text-sm flex-shrink-0">Löschen</button>
-                    </div>
-                `;
-            });
-        }
-
-        function openProductModal() {
-            renderProductModalContent();
-            toggleReceiptColumn(false); // <-- Bon ausblenden
-            document.getElementById('product-modal').style.display = 'flex';
-         }
-
-        function addCategory() {
-            const name = document.getElementById('new-category-name').value.trim();
-            if (!name) {
-                showToast('Bitte einen Kategorienamen eingeben.', 'error');
-                return;
-            }
-            // ... (restliche addCategory Logik)
-
-            // Simuliere ID Erstellung
-            const newId = 'cat' + Date.now(); 
-            categories[newId] = { id: newId, name: name };
-            document.getElementById('new-category-name').value = '';
-            saveProductsAndCategories();
-            showToast('Kategorie hinzugefügt.', 'success');
-        }
-
-        function addProduct() {
-            const name = document.getElementById('new-product-name').value.trim();
-            const price = parseFloat(document.getElementById('new-product-price').value);
-            const categoryId = document.getElementById('new-product-category').value;
-            
-            if (!name || isNaN(price) || price <= 0 || !categoryId) {
-                showToast('Bitte alle Felder korrekt ausfüllen (Name, positiver Preis, Kategorie).', 'error');
-                return;
-            }
-
-            // Simuliere ID Erstellung
-            const newId = 'prod' + Date.now();
-            products[newId] = { id: newId, name: name, price: price, categoryId: categoryId };
-
-            document.getElementById('new-product-name').value = '';
-            document.getElementById('new-product-price').value = '';
-            document.getElementById('new-product-category').value = '';
-
-            saveProductsAndCategories();
-            showToast('Produkt hinzugefügt.', 'success');
-        }
-
-        function deleteCategory(id) {
-            if (!confirm(`Soll die Kategorie "${categories[id]?.name}" und alle zugehörigen Produkte gelöscht werden?`)) return;
-            
-            // Lösche zugehörige Produkte
-            Object.keys(products).forEach(prodId => {
-                if (products[prodId].categoryId === id) {
-                    delete products[prodId];
-                }
-            });
-
-            delete categories[id];
-            saveProductsAndCategories();
-            showToast('Kategorie und zugehörige Produkte gelöscht.', 'info');
-        }
-
-        function deleteProduct(id) {
-            if (!confirm(`Soll das Produkt "${products[id]?.name}" gelöscht werden?`)) return;
-            delete products[id];
-            saveProductsAndCategories();
-            showToast('Produkt gelöscht.', 'info');
-        }
-        
-        // Funktion zum Aktualisieren des Produktpreises
-        function updateProductPrice(id) {
-            const input = document.getElementById(`price-input-${id}`);
-            const newPrice = parseFloat(input.value);
-            
-            if (isNaN(newPrice) || newPrice <= 0) {
-                showToast('Ungültiger Preis. Bitte eine positive Zahl eingeben.', 'error');
-                input.value = products[id].price.toFixed(2); // Setze auf alten Wert zurück
-                return;
-            }
-            
-            // Wenn der Preis gleich ist, abbrechen
-            if (products[id].price === newPrice) {
-                showToast('Keine Änderung vorgenommen.', 'info');
-                return;
-            }
-
-            products[id].price = newPrice;
-            saveProductsAndCategories(); // Speichert und aktualisiert alle Ansichten
-            showToast(`Preis für "${products[id].name}" auf ${newPrice.toFixed(2).replace('.', ',')} € aktualisiert.`, 'success');
-        }
-
-        // --- BESTELLUNG LOGIK --- 
-        function handleQuantityInput(value) {
-            lastAction = { type: 'quantity', oldValue: currentQuantity };
-         if (value === 'clear') {
-                currentQuantity = '1';
-         } else if (value === 'set1') {
-                currentQuantity = '1';
-         } else if (currentQuantity === '1' && value !== '0') {
-                currentQuantity = value;
-         } else if (currentQuantity.length < 5) {
-                currentQuantity += value;
-            }
-            document.getElementById('quantity-display').innerText = currentQuantity;
-         }
-
-        // Logik für den Cash Numpad
-        function handleCashInput(value) {
-            let current = cashReceivedInput;
-            const decimalIndex = current.indexOf('.');
-
-            if (value === 'clear') {
-                current = '0';
-            } else if (value === 'dot') {
-                // Das '.' wird intern verwendet, aber ',' wird angezeigt.
-                if (decimalIndex === -1) {
-                    current += '.';
-                }
-            } else if (value.match(/[0-9]/)) {
-                if (current === '0' && value !== '0' && decimalIndex === -1) {
-                    current = value;
-                } else if (current === '0' && value === '0' && decimalIndex === -1) {
-                    // Bleibt bei '0'
-                } else {
-                    current += value;
-                }
-
-                // Begrenzung auf 2 Nachkommastellen
-                if (decimalIndex !== -1 && current.substring(decimalIndex + 1).length > 2) {
-                    current = cashReceivedInput; // Nicht aktualisieren
-                } else if (current.replace('.', '').length > 7) { 
-                    current = cashReceivedInput; // Max 7 Ziffern insgesamt
-                }
-            }
-            cashReceivedInput = current;
-
-            // Anzeige aktualisieren: Formatierung mit Komma und evtl. führender 0 vor dem Komma
-            let displayValue = cashReceivedInput;
-            if (displayValue.startsWith('.')) displayValue = '0' + displayValue;
-            if (displayValue === '') displayValue = '0';
-            
-            document.getElementById('cash-received-display').innerText = displayValue.replace('.', ',');
-
-            calculateChangeDisplay();
-        }
-        
-        // NEUE FUNKTION: Betrag auf Exakt setzen
-        function setCashExact() {
-            // totalBrutto ist eine Zahl, muss in String mit Punkt umgewandelt werden
-            cashReceivedInput = totalBrutto.toFixed(2).replace(',', '.');
-            document.getElementById('cash-received-display').innerText = totalBrutto.toFixed(2).replace('.', ',');
-            calculateChangeDisplay();
-        }
-        
-        // NEUE FUNKTION: Betrag addieren
-        function addCashShortcut(amount) {
-            // Aktuellen Wert holen, in float umwandeln
-            let current = parseFloat(cashReceivedInput) || 0;
-            // Betrag addieren
-            let newTotal = current + amount;
-            // In String mit 2 Nachkommastellen umwandeln
-            cashReceivedInput = newTotal.toFixed(2).replace(',', '.'); 
-            document.getElementById('cash-received-display').innerText = newTotal.toFixed(2).replace('.', ',');
-            calculateChangeDisplay();
-        }
-
-
-        function addToBestellung(productId) {
-            const product = products[productId];
-            const quantity = parseInt(currentQuantity);
-         if (!product || isNaN(quantity) || quantity <= 0) return;
-            const taxRate = userSettings.taxRate;
-            const itemPriceBrutto = product.price;
-         const itemPriceNetto = itemPriceBrutto / (1 + (taxRate / 100));
-            const taxAmount = itemPriceBrutto - itemPriceNetto;
-         for (let i = 0; i < quantity; i++) {
-                const item = { id: Date.now() + i, name: product.name, brutto: itemPriceBrutto, netto: itemPriceNetto, tax: taxAmount, taxRate: taxRate, productId: productId };
-         currentBestellung.push(item);
-            }
-            // Speichere die aktuelle Aktion für Storno
-            lastAction = { type: 'add', items: currentBestellung.slice(-quantity) };
-            renderReceipt();
-         // Menge auf 1 zurücksetzen
-            currentQuantity = '1';
-            document.getElementById('quantity-display').innerText = currentQuantity;
-         }
-
-        // NEU V5.5: Funktion zum Löschen einer einzelne Einheit eines Produkts über die Bon-Anzeige
-        function deleteOneUnitOfProduct(productId) {
-            const initialLength = currentBestellung.length;
-            // Finde den Index des ersten Artikels mit dieser Produkt-ID (letzter zuerst wäre auch denkbar, aber erster ist einfacher)
-            const indexToRemove = currentBestellung.findIndex(item => item.productId === productId);
-            
-            if (indexToRemove !== -1) {
-                // Entferne genau dieses eine Element
-                currentBestellung.splice(indexToRemove, 1);
-                showToast('Einheit erfolgreich storniert.', 'info');
-                // lastAction zurücksetzen, da das einfache "Storno (Letzte)" nun nicht mehr direkt zutrifft
-                lastAction = null; 
-            } else {
-                showToast('Fehler: Produkt nicht gefunden.', 'error');
-            }
-            renderReceipt();
-        }
-
-
-        function undoLastAction() {
-            if (!lastAction) {
-                showToast('Keine letzte Aktion zum Stornieren gefunden.', 'info');
-                return;
-         }
-            if (lastAction.type === 'add') {
-                const itemIdsToUndo = lastAction.items.map(item => item.id);
-                const originalLength = currentBestellung.length;
-         // Entferne die Artikel, die in der letzten 'add'-Aktion hinzugefügt wurden
-                currentBestellung = currentBestellung.filter(item => !itemIdsToUndo.includes(item.id));
-         if (currentBestellung.length < originalLength) {
-                    showToast(`${originalLength - currentBestellung.length} Artikel storniert.`, 'success');
-                    lastAction = null;
-         // Storno selbst ist nicht stornierbar
-                } else {
-                    showToast('Fehler beim Stornieren der letzten Buchung.', 'error');
-         }
-            } else if (lastAction.type === 'quantity') {
-                currentQuantity = lastAction.oldValue;
-                document.getElementById('quantity-display').innerText = currentQuantity;
-                showToast('Menge zurückgesetzt.', 'success');
-                lastAction = null;
-         }
-            renderReceipt();
-        }
-
-        function calculateTotalBrutto() {
-            return currentBestellung.reduce((total, item) => total + item.brutto, 0);
-        }
-
-        // NEU: renderReceipt akzeptiert nun den Belegtyp als String
-        function renderReceipt(forPrint = false, receiptType = 'standard') { 
-            const container = document.getElementById(forPrint ? 'receipt-print-content' : 'receipt-content-interactive');
-            let content = '';
-            totalBrutto = calculateTotalBrutto(); // Wichtig: totalBrutto global aktualisieren
-
-            // Aggregiere gleiche Artikel
-            const itemCounts = currentBestellung.reduce((counts, item) => {
-                if (!counts[item.productId]) {
-                    counts[item.productId] = { ...item, count: 0 };
-                }
-                counts[item.productId].count++;
-                return counts;
-            }, {});
-
-
-            if (currentBestellung.length === 0) {
-                content = '<p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>';
-            } else {
-                if (forPrint) {
-                    // Druckansicht (Verbesserte Formatierung)
-                    
-                    // Hilfsfunktion für Abstandshalter
-                    const lineBreak = "<div>----------------------------------------</div>";
-                    const doubleLineBreak = "<div>========================================</div>";
-                    
-                    content += `<div class="center font-bold">${userSettings.companyName.toUpperCase()}</div>`;
-                    content += `<div class="center">${userSettings.address}</div>`;
-                    content += `<div class="center">Ust-IdNr.: ${userSettings.taxId}</div>`;
-                    content += lineBreak;
-                    
-                    if (receiptType === 'bewirtung') {
-                        content += "<div class='center font-bold text-lg'>*** BEWIRTUNGSBELEG ***</div>";
-                        content += lineBreak;
-                        // Schönerer Platzhalter für Bewirtungsdaten
-                        content += "<div>Anlass: _________________________________</div>";
-                        content += "<div>Ort: ___________________________________</div>";
-                        content += "<div>Teilnehmer: ______________________________</div>";
-                        content += "<div>Datum der Bewirtung: ____________________</div>";
-                        content += "<div>Unterschrift Gastgeber: ___________________</div>";
-                        content += lineBreak;
-                    }
-
-                    // Kopfzeile Bon
-                    content += `<div class="line"><strong>POS. Bezeichnung</strong><strong class="item-price">Preis €</strong></div>`;
-                    content += lineBreak;
-                    
-                    // Artikel
-                    Object.values(itemCounts).forEach(item => {
-                        const priceTotal = (item.brutto * item.count).toFixed(2).replace('.', ',');
-                        // Bessere Ausrichtung für Name und Menge
-                        const nameDisplay = `${item.count}x ${item.name}`;
-                        content += `<div class="line"><span class="item-name">${nameDisplay}</span><span class="item-price">${priceTotal}</span></div>`;
-                    });
-                    
-                    content += lineBreak;
-                    
-                    // Gesamt
-                    content += `<div class="line"><strong>SUMME BRUTTO</strong><strong>${totalBrutto.toFixed(2).replace('.', ',')} €</strong></div>`;
-                    content += doubleLineBreak;
-
-                    // Steueraufschlüsselung
-                    const taxDetails = {};
-                    currentBestellung.forEach(item => {
-                        const rate = item.taxRate.toFixed(2) + '%';
-                        if (!taxDetails[rate]) {
-                            taxDetails[rate] = { netto: 0, tax: 0 };
-                        }
-                        taxDetails[rate].netto += item.netto;
-                        taxDetails[rate].tax += item.tax;
-                    });
-                    
-                    content += `<div class="center font-bold">UMSATZSTEUER</div>`;
-                    content += lineBreak.replace(/--/g, '-');
-                    
-                    Object.entries(taxDetails).sort(([, a], [, b]) => a.tax - b.tax).forEach(([rate, details]) => {
-                        content += `<div class="line">Netto (${rate}) <span class="item-price">${details.netto.toFixed(2).replace('.', ',')} €</span></div>`;
-                        content += `<div class="line">MwSt. (${rate}) <span class="item-price">${details.tax.toFixed(2).replace('.', ',')} €</span></div>`;
-                        content += lineBreak.replace(/--/g, '-');
-                    });
-                    
-                    content += `<div class="center">----------------------------------------</div>`;
-                    content += `<div class="center">Beleg erstellt am:</div>`;
-                    content += `<div class="center">${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}</div>`;
-                    content += `<div class="center">Transaktion ID: ${new Date().getTime().toString().slice(-6)}</div>`; // Simuliert eine kurze ID
-                    content += `<div class="center font-bold mt-2">Vielen Dank für Ihren Besuch!</div>`;
-                    content += lineBreak;
-
-                } else {
-                    // Interaktive Ansicht (V5.5: Mit Lösch-Button)
-                    Object.values(itemCounts).forEach(item => {
-                        const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
-                        // item.productId wird für die Löschfunktion verwendet
-                        content += `
-                            <div class="flex justify-between items-center py-1 border-b border-gray-100">
-                                <span class="font-semibold">${item.count}x ${item.name}</span>
-                                <div class="flex items-center space-x-2">
-                                    <span class="font-bold">${price} €</span>
-                                    <button onclick="deleteOneUnitOfProduct('${item.productId}')" class="text-red-500 hover:text-red-700 font-bold p-1 rounded-full text-xs transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-            }
-            document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
-            container.innerHTML = content;
-        }
-
-
-        function resetBestellung() {
-            currentBestellung = [];
-            lastAction = null;
-            currentQuantity = '1';
-            document.getElementById('quantity-display').innerText = currentQuantity;
-            renderReceipt();
-            showToast('Bestellung zurückgesetzt.', 'info');
-         }
-
-        // --- TRANSAKTIONEN & NEUE RÜCKGELD-LOGIK --- 
-
-        async function loadTransactionHistory() {
-            // Simuliere Laden der Transaktionen
-            transactionHistory = JSON.parse(localStorage.getItem('transactionHistory')) || [];
-         }
-
-        async function saveTransaction(transaction) {
-            transactionHistory.push(transaction);
-            // Begrenze den Verlauf auf die letzten 50 Transaktionen
-            if (transactionHistory.length > 50) {
-                transactionHistory = transactionHistory.slice(transactionHistory.length - 50);
-         }
-            localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
-        }
-
-        // Setzt die Zahlungsmethode und initialisiert das Modal
-        function setPaymentMethod(method) {
-            selectedPaymentMethod = method;
-            const btnKarte = document.getElementById('btn-karte');
-            const cashArea = document.getElementById('cash-payment-area');
-            const btnBarIndicator = document.getElementById('btn-bar-indicator');
-            // NEUE ELEMENTE
-            const cashFinalizeBtns = document.getElementById('cash-finalize-buttons');
-            const cardFinalizeBtns = document.getElementById('card-finalize-buttons');
-
-            // UI Updates
-            if (method === 'BAR') {
-                cashArea.style.display = 'block';
-                btnBarIndicator.style.display = 'inline-block';
-                
-                cashFinalizeBtns.style.display = 'block'; // Zeige Bar-Buttons
-                cardFinalizeBtns.style.display = 'none';   // Verstecke Karte-Buttons
-
-                btnKarte.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-                btnKarte.classList.remove('bg-indigo-700', 'hover:bg-indigo-800', 'border-green-500');
-            } else if (method === 'KARTE') {
-                cashArea.style.display = 'none'; // Verstecke Cash Area
-                btnBarIndicator.style.display = 'none';
-                
-                cashFinalizeBtns.style.display = 'none';    // Verstecke Bar-Buttons
-                cardFinalizeBtns.style.display = 'block';   // Zeige Karte-Buttons
-
-                btnKarte.classList.add('border-green-500', 'bg-indigo-700', 'hover:bg-indigo-800');
-                btnKarte.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-                document.getElementById('change-display').innerText = '0,00 €'; 
-            }
-            
-            calculateChangeDisplay(); 
-        }
-
-        // Berechnet und zeigt das Rückgeld an, und steuert die Cash Finalize Buttons
-        function calculateChangeDisplay() {
-            // Holen des Werts aus der Numpad-Variable (mit Punkt)
-            const received = parseFloat(cashReceivedInput) || 0;
-            
-            const changeDisplay = document.getElementById('change-display');
-            
-            // NEUE BUTTONS (IDs aktualisiert)
-            const btnNone = document.getElementById('btn-cash-none');
-            const btnStandard = document.getElementById('btn-cash-standard');
-            const btnBewirtung = document.getElementById('btn-cash-bewirtung');
-            
-            const change = received - totalBrutto;
-            
-            changeDisplay.innerText = change >= 0 
-                ? change.toFixed(2).replace('.', ',') + ' €' 
-                : 'FEHLT';
-
-            // Button Aktivierung nur für BAR
-            const canFinalizeCash = (selectedPaymentMethod === 'BAR' && change >= 0);
-            
-            if (btnNone && btnStandard && btnBewirtung) { // Prüfen, ob die Elemente existieren
-                btnNone.disabled = !canFinalizeCash;
-                btnStandard.disabled = !canFinalizeCash;
-                btnBewirtung.disabled = !canFinalizeCash;
-                
-                if (canFinalizeCash) {
-                    // Aktiviere Buttons
-                    btnNone.classList.add('bg-red-600', 'hover:bg-red-700');
-                    btnNone.classList.remove('bg-red-400');
-                    
-                    btnStandard.classList.add('bg-green-600', 'hover:bg-green-700');
-                    btnStandard.classList.remove('bg-green-400');
-                    
-                    btnBewirtung.classList.add('bg-red-700', 'hover:bg-red-800');
-                    btnBewirtung.classList.remove('bg-red-600/70');
-                } else {
-                    // Deaktiviere Buttons
-                    btnNone.classList.add('bg-red-400');
-                    btnNone.classList.remove('bg-red-600', 'hover:bg-red-700');
-                    
-                    btnStandard.classList.add('bg-green-400');
-                    btnStandard.classList.remove('bg-green-600', 'hover:bg-green-700');
-                    
-                    btnBewirtung.classList.add('bg-red-600/70');
-                    btnBewirtung.classList.remove('bg-red-700', 'hover:bg-red-800');
-                }
-            }
-        }
-        
-        // NEU: Kombinierte Funktion zum Abschließen und optionalen Drucken
-        function handleFinalizeAction(method, receiptType) {
-            if (method === 'BAR') {
-                const received = parseFloat(cashReceivedInput) || 0;
-                const change = received - totalBrutto;
-                if (change < 0) {
-                    showToast('Der erhaltene Betrag ist zu gering.', 'error');
-                    return;
-                }
-                showToast(`Transaktion (BAR) abgeschlossen! Rückgeld: ${change.toFixed(2).replace('.', ',')} €`, 'success');
-                
-                // Drucklogik
-                if (receiptType === 'standard') {
-                    printReceipt('standard'); 
-                } else if (receiptType === 'bewirtung') {
-                    printReceipt('bewirtung');
-                }
-                
-                finalizeTransaction('BAR'); 
-            } else if (method === 'KARTE') {
-                showToast('Transaktion (KARTE) abgeschlossen!', 'success');
-                
-                // Drucklogik
-                if (receiptType === 'standard') {
-                    printReceipt('standard'); 
-                } else if (receiptType === 'bewirtung') {
-                    printReceipt('bewirtung');
-                }
-                
-                finalizeTransaction('KARTE');
-            }
-        }
-
-        function openFinalizeModal() {
-            if (currentBestellung.length === 0) {
-                showToast('Bitte erst Artikel buchen.', 'error');
-                return;
-            }
-
-            totalBrutto = calculateTotalBrutto(); // Gesamtbetrag global speichern
-            document.getElementById('finalize-total').innerText = totalBrutto.toFixed(2).replace('.', ',') + ' €';
-            
-            // WICHTIG: Setze den erhaltenen Betrag auf '0' beim Öffnen
-            cashReceivedInput = '0'; 
-            document.getElementById('cash-received-display').innerText = '0,00'; 
-            
-            setPaymentMethod('BAR'); 
-
-            document.getElementById('finalize-modal').style.display = 'flex';
-        }
-
-        // Die ursprüngliche finalizeTransaction Funktion, nun nur noch zum Speichern und Zurücksetzen
-        async function finalizeTransaction(paymentMethod) {
-            showLoading(true);
-
-            if (currentBestellung.length === 0) {
-                // Sollte durch handleFinalizeAction abgefangen werden, aber zur Sicherheit
-                showToast('Keine Artikel für die Transaktion.', 'error');
-                showLoading(false);
-                return;
-            }
-
-            const transaction = {
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                totalBrutto: calculateTotalBrutto(),
-                items: currentBestellung,
-                paymentMethod: paymentMethod 
-            };
-            
-            await saveTransaction(transaction);
-            
-            resetBestellung();
-            closeModal('finalize-modal');
-            showLoading(false);
-         }
-
-        // NEU V5.5: printReceipt mit Timeout für iOS/iPadOS Kompatibilität
-        function printReceipt(receiptType = 'standard') { 
-            if (currentBestellung.length === 0) {
-                showToast('Keine Artikel für den Beleg.', 'error');
-                return;
-            }
-            // Erzeuge ein temporäres Element für den Druck
-            const printArea = document.createElement('div');
-            printArea.className = 'receipt-print';
-            printArea.id = 'receipt-print-area';
-            const contentContainer = document.createElement('div');
-            contentContainer.id = 'receipt-print-content';
-            printArea.appendChild(contentContainer);
-            document.body.appendChild(printArea);
-            renderReceipt(true, receiptType); // Rendert den Inhalt in den printArea
-            
-            // V5.5: Timeout für eine bessere Kompatibilität mit iPadOS/iOS Print Dialogen
-            setTimeout(() => {
-                window.print();
-                document.body.removeChild(printArea);
-            }, 300);
-         }
-
-        // --- STORNO / RÜCKABWICKLUNG ---
-        function openTransactionReversalModal() {
-            const listContainer = document.getElementById('transaction-list');
-            listContainer.innerHTML = '';
-         if (transactionHistory.length === 0) {
-                listContainer.innerHTML = '<p class="text-gray-500">Keine abgeschlossenen Transaktionen gefunden.</p>';
-                document.getElementById('transaction-reversal-modal').style.display = 'flex';
-                toggleReceiptColumn(false);
-         // <-- Bon ausblenden
-                return;
-            }
-            // Zeige die letzten 10 Transaktionen (neueste zuerst)
-            const recentTransactions = transactionHistory.slice().reverse().slice(0, 10);
-         recentTransactions.forEach(tx => {
-                const item = document.createElement('div');
-                item.className = 'flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200';
-                item.innerHTML = `
-                    <div>
-                        <span class="font-bold text-lg">${tx.totalBrutto.toFixed(2).replace('.', ',')} €</span>
-                        <span class="text-sm text-gray-600 ml-2">(${tx.paymentMethod})</span>
-                        <div class="text-xs text-gray-500">${new Date(tx.timestamp).toLocaleString('de-DE')}</div>
-                    </div>
-                    <button onclick="reverseTransaction('${tx.id}')" class="p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 shadow-md">
-                        Stornieren
-                    </button>
-                `;
-                listContainer.appendChild(item);
-            });
-         toggleReceiptColumn(false); // <-- Bon ausblenden
-            document.getElementById('transaction-reversal-modal').style.display = 'flex';
-        }
-
-        async function reverseTransaction(id) {
-            if (!confirm("Soll diese Transaktion wirklich storniert werden? Dies ist NICHT rückgängig zu machen.")) return;
-         showLoading(true);
-            const txIndex = transactionHistory.findIndex(tx => tx.id === id);
-            if (txIndex === -1) {
-                showToast('Transaktion nicht gefunden.', 'error');
-                showLoading(false);
-                return;
-         }
-            // Transaktion als storniert markieren (oder entfernen, hier entfernen wir sie, um es einfach zu halten)
-            const [reversedTx] = transactionHistory.splice(txIndex, 1);
-         // Speichere den neuen Verlauf
-            localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
-
-            showToast(`Transaktion von ${reversedTx.totalBrutto.toFixed(2).replace('.', ',')} € storniert.`, 'success');
-            
-            // Modal neu laden
-            openTransactionReversalModal();
-            showLoading(false);
-        }
-        
-        // --- BERICHTE ---
-
-        function setReportDateToday() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('report-date').value = today;
-        }
-
-        async function runDailyReport(type) {
-            showLoading(true);
-            const selectedDate = document.getElementById('report-date').value;
-
-            if (!selectedDate) {
-                showToast('Bitte ein Datum für den Bericht wählen.', 'error');
-                showLoading(false);
-                return;
-            }
-
-            // Filtere Transaktionen für den ausgewählten Tag (Vereinfachung: Nur Datum)
-            const transactionsToday = transactionHistory.filter(tx => 
-                tx.timestamp.startsWith(selectedDate)
-            );
-
-            if (transactionsToday.length === 0) {
-                showToast(`Keine Transaktionen für den ${selectedDate} gefunden.`, 'info');
-                showLoading(false);
-                return;
-            }
-
-            // Berichtslogik (aus altem Code rekonstruiert)
-            let totalRevenue = 0;
-            let revenueByMethod = { 'BAR': 0, 'KARTE': 0 };
-            let revenueByTax = {};
-            let productStats = {};
-
-            transactionsToday.forEach(tx => {
-                totalRevenue += tx.totalBrutto;
-                revenueByMethod[tx.paymentMethod] = (revenueByMethod[tx.paymentMethod] || 0) + tx.totalBrutto;
-                
-                tx.items.forEach(item => {
-                    const rate = item.taxRate.toFixed(2) + '%';
-                    if (!revenueByTax[rate]) {
-                        revenueByTax[rate] = { netto: 0, tax: 0 };
-                    }
-                    revenueByTax[rate].netto += item.netto;
-                    revenueByTax[rate].tax += item.tax;
-
-                    const productName = item.name;
-                    if (!productStats[productName]) {
-                        productStats[productName] = { count: 0, revenue: 0 };
-                    }
-                    productStats[productName].count++;
-                    productStats[productName].revenue += item.brutto;
-                });
-            });
-
-            if (type === 'csv') {
-                // Generiere CSV (vereinfacht)
-                let csvContent = "Artikel;Anzahl;Umsatz Brutto (€)\n";
-                Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB)).forEach(([name, stats]) => {
-                    csvContent += `${name};${stats.count};${stats.revenue.toFixed(2).replace('.', ',')}\n`;
-                });
-
-                csvContent += `\nGESAMTUMSATZ BRUTTO;${totalRevenue.toFixed(2).replace('.', ',')} €\n`;
-                csvContent += `Umsatz BAR;${revenueByMethod['BAR'].toFixed(2).replace('.', ',')} €\n`;
-                csvContent += `Umsatz KARTE;${revenueByMethod['KARTE'].toFixed(2).replace('.', ',')} €\n`;
-
-                // Erstelle einen Download-Link
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.setAttribute('href', url);
-                a.setAttribute('download', `Tagesabschluss_${selectedDate}.csv`);
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('CSV-Export gestartet.', 'success');
-            } else {
-                // Generiere visuellen Bericht
-                let report = `Tagesabschluss für den ${selectedDate}\n\n`;
-                report += `GESAMTUMSATZ BRUTTO: ${totalRevenue.toFixed(2).replace('.', ',')} €\n\n`;
-                
-                report += "Umsatz nach Zahlungsart:\n";
-                report += `  - BAR: ${revenueByMethod['BAR'].toFixed(2).replace('.', ',')} €\n`;
-                report += `  - KARTE: ${revenueByMethod['KARTE'].toFixed(2).replace('.', ',')} €\n\n`;
-
-                report += "Umsatz nach Steuersatz (MwSt. bereits enthalten):\n";
-                Object.entries(revenueByTax).sort(([rateA], [rateB]) => parseFloat(rateB.replace('%', '')) - parseFloat(rateA.replace('%', ''
-                ))).forEach(([rate, details]) => {
-                    report += `  - ${rate} Netto: ${details.netto.toFixed(2).replace('.', ',')} €\n`;
-                    report += `  - ${rate} Steuer: ${details.tax.toFixed(2).replace('.', ',')} €\n`;
-                });
-                report += "\n";
-                
-                report += "Verkaufte Artikel:\n";
-                
-                const sortedProducts = Object.entries(productStats).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
-                for(const [name, stats] of sortedProducts) {
-                    report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} € Brutto)\n`;
-                }
-
-                document.getElementById('info-title').innerText = "Tagesabschluss";
-                document.getElementById('info-text').innerText = report;
-                toggleReceiptColumn(false); // <-- Bon ausblenden
-                document.getElementById('info-modal').style.display = 'flex';
-            }
-
-            showLoading(false);
-        }
-
-        // --- STARTE DIE DB INITIALISIERUNG ---
-        // Sicherstellen, dass das Skript erst läuft, wenn alle Elemente im DOM verfügbar sind
-        document.addEventListener('DOMContentLoaded', () => {
-            setReportDateToday();
-            // WICHTIGSTE KORREKTUR: Zeige das Login-Modal SOFORT an.
-            window.updateAppView('login'); 
-            initDB();
+      }
+      document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
+      container.innerHTML = content;
+    }
+
+    // ---------- Transactions ----------
+    async function loadTransactionHistory(){
+      if(!currentUser) return;
+      const q = query(transactionsCollectionRef(currentUser.uid), orderBy('timestamp','desc'));
+      const snap = await getDocs(q);
+      transactionHistory = [];
+      snap.forEach(d => transactionHistory.push({ id: d.id, ...d.data() }));
+    }
+
+    async function saveTransaction(transaction){
+      if(!currentUser) { showToast('Nicht angemeldet','error'); return; }
+      try { await addDoc(transactionsCollectionRef(currentUser.uid), { ...transaction, timestamp: serverTimestamp() }); transactionHistory.unshift(transaction); if(transactionHistory.length>50) transactionHistory = transactionHistory.slice(0,50); }
+      catch(err){ console.error('saveTransaction',err); }
+    }
+
+    // finalize & print
+    window.openFinalizeModal = function(){
+      if(currentBestellung.length === 0){ showToast('Bitte erst Artikel buchen.','error'); return; }
+      totalBrutto = calculateTotalBrutto();
+      document.getElementById('finalize-total').innerText = totalBrutto.toFixed(2).replace('.', ',') + ' €';
+      cashReceivedInput = '0'; document.getElementById('cash-received-display').innerText = '0,00';
+      setPaymentMethod('BAR');
+      document.getElementById('finalize-modal').style.display = 'flex';
+    };
+
+    function setPaymentMethod(method){
+      selectedPaymentMethod = method;
+      const btnKarte = document.getElementById('btn-karte');
+      const cashArea = document.getElementById('cash-payment-area');
+      const btnBarIndicator = document.getElementById('btn-bar-indicator');
+      const cashFinalizeBtns = document.getElementById('cash-finalize-buttons');
+      const cardFinalizeBtns = document.getElementById('card-finalize-buttons');
+      if(method==='BAR'){ cashArea.style.display='block'; btnBarIndicator.style.display='inline-block'; cashFinalizeBtns.style.display='block'; cardFinalizeBtns.style.display='none'; }
+      else { cashArea.style.display='none'; btnBarIndicator.style.display='none'; cashFinalizeBtns.style.display='none'; cardFinalizeBtns.style.display='block'; document.getElementById('change-display').innerText='0,00 €'; }
+      calculateChangeDisplay();
+    }
+
+    function calculateChangeDisplay(){
+      const received = parseFloat(cashReceivedInput) || 0;
+      const change = received - totalBrutto;
+      document.getElementById('change-display').innerText = change >= 0 ? change.toFixed(2).replace('.', ',') + ' €' : 'FEHLT';
+      const canFinalizeCash = (selectedPaymentMethod === 'BAR' && change >= 0);
+      const btnNone = document.getElementById('btn-cash-none'), btnStandard = document.getElementById('btn-cash-standard'), btnBewirtung = document.getElementById('btn-cash-bewirtung');
+      if(btnNone && btnStandard && btnBewirtung){ btnNone.disabled = !canFinalizeCash; btnStandard.disabled = !canFinalizeCash; btnBewirtung.disabled = !canFinalizeCash; }
+    }
+
+    window.handleCashInput = function(value){
+      let current = cashReceivedInput;
+      if(value==='clear') current = '0';
+      else if(value==='dot'){ if(!current.includes('.')) current += '.'; }
+      else if(value.match(/[0-9]/)){
+        if(current==='0' && value!=='0' && !current.includes('.')) current = value;
+        else current += value;
+        if(current.includes('.') && current.split('.')[1].length > 2) current = cashReceivedInput;
+        if(current.replace('.','').length > 7) current = cashReceivedInput;
+      }
+      cashReceivedInput = current;
+      let display = cashReceivedInput; if(display.startsWith('.')) display = '0'+display; if(display==='') display='0';
+      document.getElementById('cash-received-display').innerText = display.replace('.', ',');
+      calculateChangeDisplay();
+    };
+
+    window.setCashExact = function(){ cashReceivedInput = totalBrutto.toFixed(2).replace(',', '.'); document.getElementById('cash-received-display').innerText = totalBrutto.toFixed(2).replace('.', ','); calculateChangeDisplay(); };
+    window.addCashShortcut = function(amount){ let current = parseFloat(cashReceivedInput) || 0; let newTotal = current + amount; cashReceivedInput = newTotal.toFixed(2).replace(',', '.'); document.getElementById('cash-received-display').innerText = newTotal.toFixed(2).replace('.', ','); calculateChangeDisplay(); };
+
+    window.handleFinalizeAction = async function(method, receiptType){
+      if(method === 'BAR'){
+        const received = parseFloat(cashReceivedInput) || 0; const change = received - totalBrutto; if(change < 0){ showToast('Der erhaltene Betrag ist zu gering.','error'); return; }
+        showToast(`Transaktion (BAR) abgeschlossen! Rückgeld: ${change.toFixed(2).replace('.', ',')} €`, 'success');
+        if(receiptType === 'standard') printReceipt('standard'); else if(receiptType === 'bewirtung') printReceipt('bewirtung');
+        await finalizeTransaction('BAR');
+      } else if(method === 'KARTE'){
+        showToast('Transaktion (KARTE) abgeschlossen!','success');
+        if(receiptType === 'standard') printReceipt('standard'); else if(receiptType === 'bewirtung') printReceipt('bewirtung');
+        await finalizeTransaction('KARTE');
+      }
+    };
+
+    async function finalizeTransaction(paymentMethod){
+      showLoading(true);
+      if(currentBestellung.length === 0){ showToast('Keine Artikel für die Transaktion.','error'); showLoading(false); return; }
+      const transaction = { id: Date.now().toString(), timestamp: new Date().toISOString(), totalBrutto: calculateTotalBrutto(), items: currentBestellung, paymentMethod };
+      await saveTransaction(transaction);
+      resetBestellung();
+      closeModal('finalize-modal');
+      showLoading(false);
+    }
+
+    function printReceipt(receiptType='standard'){
+      if(currentBestellung.length === 0){ showToast('Keine Artikel für den Beleg.','error'); return; }
+      const printArea = document.createElement('div'); printArea.className='receipt-print'; printArea.id='receipt-print-area';
+      const content = document.createElement('div'); content.id='receipt-print-content'; printArea.appendChild(content);
+      document.body.appendChild(printArea);
+      renderReceipt(true, receiptType);
+      setTimeout(()=>{ window.print(); document.body.removeChild(printArea); }, 300);
+    }
+
+    window.resetBestellung = function(){ currentBestellung=[]; lastAction=null; currentQuantity='1'; document.getElementById('quantity-display').innerText=currentQuantity; renderReceipt(); showToast('Bestellung zurückgesetzt','info'); };
+
+    // ---------- Modals & UI helpers ----------
+    function toggleReceiptColumn(show){ const column = document.getElementById('receipt-column'); if(!column) return; if(show) column.classList.remove('hidden'); else column.classList.add('hidden'); }
+    window.updateAppView = function(view){
+      document.getElementById('login-modal').style.display='none';
+      document.getElementById('registration-modal').style.display='none';
+      document.getElementById('forgot-password-modal').style.display='none';
+      document.getElementById('kasse-content').style.display='none';
+      closeModal('finalize-modal'); closeModal('product-modal'); closeModal('settings-modal'); closeModal('transaction-reversal-modal');
+      if(view==='login'){ document.getElementById('login-modal').style.display='flex'; toggleReceiptColumn(false); }
+      else if(view==='kasse'){ document.getElementById('kasse-content').style.display='block'; toggleReceiptColumn(true); }
+      else if(view==='loading'){ showLoading(true); }
+    };
+    window.closeModal = function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; toggleReceiptColumn(true); };
+    window.openLoginModal = function(){ document.getElementById('login-modal').style.display='flex'; toggleReceiptColumn(false); };
+    window.openRegistrationModal = function(){ closeModal('login-modal'); toggleReceiptColumn(false); document.getElementById('registration-modal').style.display='flex'; };
+    window.openForgotPasswordModal = function(){ closeModal('login-modal'); toggleReceiptColumn(false); document.getElementById('forgot-password-modal').style.display='flex'; };
+    window.openProductModal = function(){ renderProductModalContent(); toggleReceiptColumn(false); document.getElementById('product-modal').style.display='flex'; };
+
+    window.openTransactionReversalModal = function(){
+      const listContainer = document.getElementById('transaction-list'); listContainer.innerHTML='';
+      transactionHistory.forEach(t => { listContainer.innerHTML += `<div class="p-2 border rounded mb-1"><div class="flex justify-between"><div>${new Date(t.timestamp||Date.now()).toLocaleString('de-DE')} - ${t.totalBrutto?.toFixed(2)||'0.00'} €</div><div><button onclick="revertTransaction('${t.id}')" class="text-red-500">Storno</button></div></div></div>`; });
+      document.getElementById('transaction-reversal-modal').style.display='flex'; toggleReceiptColumn(false);
+    };
+    window.revertTransaction = function(id){ if(!confirm('Transaktion wirklich stornieren?')) return; showToast('Transaktion storniert (simuliert).','info'); };
+
+    // ---------- Reports ----------
+    function setReportDateToday(){ const today = new Date().toISOString().split('T')[0]; document.getElementById('report-date').value = today; }
+
+    async function runDailyReport(type){
+      showLoading(true);
+      const selectedDate = document.getElementById('report-date').value;
+      if(!selectedDate){ showToast('Bitte ein Datum für den Bericht wählen.','error'); showLoading(false); return; }
+      // Filter transactions by date string (ISO)
+      const transactionsToday = transactionHistory.filter(tx => tx.timestamp && tx.timestamp.startsWith(selectedDate));
+      if(transactionsToday.length === 0){ showToast(`Keine Transaktionen für den ${selectedDate} gefunden.`, 'info'); showLoading(false); return; }
+      let totalRevenue = 0; let revenueByMethod = {'BAR':0,'KARTE':0}; let revenueByTax = {}; let productStats = {};
+      transactionsToday.forEach(tx => {
+        totalRevenue += tx.totalBrutto;
+        revenueByMethod[tx.paymentMethod] = (revenueByMethod[tx.paymentMethod] || 0) + tx.totalBrutto;
+        tx.items.forEach(item => {
+          const rate = item.taxRate.toFixed(2)+'%';
+          if(!revenueByTax[rate]) revenueByTax[rate] = { netto:0, tax:0 };
+          revenueByTax[rate].netto += item.netto; revenueByTax[rate].tax += item.tax;
+          const productName = item.name; if(!productStats[productName]) productStats[productName] = { count:0, revenue:0 };
+          productStats[productName].count++; productStats[productName].revenue += item.brutto;
         });
+      });
 
-    </script>
+      if(type==='csv'){
+        let csvContent = "Artikel;Anzahl;Umsatz Brutto (€)\n";
+        Object.entries(productStats).sort().forEach(([name, stats]) => { csvContent += `${name};${stats.count};${stats.revenue.toFixed(2).replace('.', ',')}\n`; });
+        csvContent += `\nGESAMTUMSATZ BRUTTO;${totalRevenue.toFixed(2).replace('.', ',')} €\n`;
+        csvContent += `Umsatz BAR;${(revenueByMethod['BAR']||0).toFixed(2).replace('.', ',')} €\n`;
+        csvContent += `Umsatz KARTE;${(revenueByMethod['KARTE']||0).toFixed(2).replace('.', ',')} €\n`;
+        const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `Tagesabschluss_${selectedDate}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        showToast('CSV-Export gestartet.','success');
+      } else {
+        let report = `Tagesabschluss für den ${selectedDate}\n\nGESAMTUMSATZ BRUTTO: ${totalRevenue.toFixed(2).replace('.', ',')} €\n\nUmsatz nach Zahlungsart:\n  - BAR: ${(revenueByMethod['BAR']||0).toFixed(2).replace('.', ',')} €\n  - KARTE: ${(revenueByMethod['KARTE']||0).toFixed(2).replace('.', ',')} €\n\nUmsatz nach Steuersatz:\n`;
+        Object.entries(revenueByTax).forEach(([rate, details]) => { report += `  - ${rate} Netto: ${details.netto.toFixed(2).replace('.', ',')} € Steuer: ${details.tax.toFixed(2).replace('.', ',')} €\n`; });
+        report += `\nVerkaufte Artikel:\n`;
+        Object.entries(productStats).sort().forEach(([name, stats]) => { report += `- ${name}: ${stats.count}x (${stats.revenue.toFixed(2).replace('.', ',')} € Brutto)\n`; });
+        document.getElementById('info-title').innerText = "Tagesabschluss"; document.getElementById('info-text').innerText = report; toggleReceiptColumn(false); document.getElementById('info-modal').style.display='flex';
+      }
+      showLoading(false);
+    }
+
+    // ---------- Transaction reversal ----------
+    async function reverseTransaction(id){
+      if(!confirm("Soll diese Transaktion wirklich storniert werden?")) return;
+      showLoading(true);
+      const txIndex = transactionHistory.findIndex(tx => tx.id === id);
+      if(txIndex === -1){ showToast('Transaktion nicht gefunden.','error'); showLoading(false); return; }
+      const reversed = transactionHistory.splice(txIndex,1)[0];
+      // remove from firestore as well if exists
+      try { await deleteDoc(doc(db, `users/${currentUser.uid}/transactions/${id}`)); } catch(e){ /* ignore */ }
+      localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
+      showToast(`Transaktion von ${reversed.totalBrutto.toFixed(2).replace('.', ',')} € storniert.`, 'success');
+      openTransactionReversalModal();
+      showLoading(false);
+    }
+
+    // ---------- Start up ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      setReportDateToday(); window.updateAppView('login'); // show login by default
+    });
+
+    // initDB is redundant because we rely on onAuthStateChanged to load data after login
+
+  </script>
+
 </body>
 </html>
