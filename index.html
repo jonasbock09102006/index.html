@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kassensystem (Bewirtungsbeleg)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -237,7 +237,7 @@
     </div>
 
     <div id="finalize-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
             <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
             
             <div class="mb-4 p-3 border-2 border-green-500 
@@ -396,7 +396,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.3 (Ultra Kleine Displays)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.5 (Finalize Kompakt & Storno Bon)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
@@ -1041,6 +1041,25 @@
             document.getElementById('quantity-display').innerText = currentQuantity;
          }
 
+        // NEU V5.5: Funktion zum Löschen einer einzelnen Einheit eines Produkts über die Bon-Anzeige
+        function deleteOneUnitOfProduct(productId) {
+            const initialLength = currentBestellung.length;
+            // Finde den Index des ersten Artikels mit dieser Produkt-ID (letzter zuerst wäre auch denkbar, aber erster ist einfacher)
+            const indexToRemove = currentBestellung.findIndex(item => item.productId === productId);
+            
+            if (indexToRemove !== -1) {
+                // Entferne genau dieses eine Element
+                currentBestellung.splice(indexToRemove, 1);
+                showToast('Einheit erfolgreich storniert.', 'info');
+                // lastAction zurücksetzen, da das einfache "Storno (Letzte)" nun nicht mehr direkt zutrifft
+                lastAction = null; 
+            } else {
+                showToast('Fehler: Produkt nicht gefunden.', 'error');
+            }
+            renderReceipt();
+        }
+
+
         function undoLastAction() {
             if (!lastAction) {
                 showToast('Keine letzte Aktion zum Stornieren gefunden.', 'info');
@@ -1075,7 +1094,7 @@
         function renderReceipt(forPrint = false, receiptType = 'standard') { 
             const container = document.getElementById(forPrint ? 'receipt-print-content' : 'receipt-content-interactive');
             let content = '';
-            let totalBrutto = calculateTotalBrutto();
+            totalBrutto = calculateTotalBrutto(); // Wichtig: totalBrutto global aktualisieren
 
             // Aggregiere gleiche Artikel
             const itemCounts = currentBestellung.reduce((counts, item) => {
@@ -1160,13 +1179,21 @@
                     content += lineBreak;
 
                 } else {
-                    // Interaktive Ansicht
+                    // Interaktive Ansicht (V5.5: Mit Lösch-Button)
                     Object.values(itemCounts).forEach(item => {
                         const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
+                        // item.productId wird für die Löschfunktion verwendet
                         content += `
-                            <div class="flex justify-between">
+                            <div class="flex justify-between items-center py-1 border-b border-gray-100">
                                 <span class="font-semibold">${item.count}x ${item.name}</span>
-                                <span class="font-bold">${price} €</span>
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-bold">${price} €</span>
+                                    <button onclick="deleteOneUnitOfProduct('${item.productId}')" class="text-red-500 hover:text-red-700 font-bold p-1 rounded-full text-xs transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         `;
                     });
@@ -1364,7 +1391,7 @@
             showLoading(false);
          }
 
-        // NEU: printReceipt nimmt den Belegtyp entgegen
+        // NEU V5.5: printReceipt mit Timeout für iOS/iPadOS Kompatibilität
         function printReceipt(receiptType = 'standard') { 
             if (currentBestellung.length === 0) {
                 showToast('Keine Artikel für den Beleg.', 'error');
@@ -1379,8 +1406,12 @@
             printArea.appendChild(contentContainer);
             document.body.appendChild(printArea);
             renderReceipt(true, receiptType); // Rendert den Inhalt in den printArea
-            window.print();
-            document.body.removeChild(printArea);
+            
+            // V5.5: Timeout für eine bessere Kompatibilität mit iPadOS/iOS Print Dialogen
+            setTimeout(() => {
+                window.print();
+                document.body.removeChild(printArea);
+            }, 300);
          }
 
         // --- STORNO / RÜCKABWICKLUNG ---
