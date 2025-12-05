@@ -19,9 +19,9 @@
 
         /* Numpad Button Style (Moderierte Höhe und Schrift) */
         .numpad-btn {
-            /* KORREKTUR V5.1: Höhe halbiert (ca. 90px) und Schriftgröße reduziert. */
-            height: 90px; /* Moderierte feste Höhe */
-            @apply w-full rounded-xl font-extrabold text-3xl shadow-lg transition-colors; 
+            /* KORREKTUR V5.3: Höhe weiter reduziert (90px -> 60px) und Schrift (3xl -> 2xl) */
+            height: 60px; /* Moderat reduzierte feste Höhe */
+            @apply w-full rounded-xl font-extrabold text-2xl shadow-lg transition-colors; 
             line-height: 1; 
             display: flex;
             justify-content: center;
@@ -260,7 +260,7 @@
                 </h3>
                 
                 <label class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag</label>
-                <div id="cash-received-display" class="w-full h-16 flex items-center justify-end px-3 py-2 border border-gray-300 rounded-xl text-3xl font-extrabold text-gray-800 focus:ring-green-500 focus:border-green-500 bg-white shadow-inner transition-all">0,00</div>
+                <div id="cash-received-display" class="w-full h-10 flex items-center justify-end px-3 py-2 border border-gray-300 rounded-xl text-xl font-extrabold text-gray-800 focus:ring-green-500 focus:border-green-500 bg-white shadow-inner transition-all">0,00</div>
                 
                 <div class="mt-3 pt-2 border-t flex justify-between items-center">
                     <span class="text-lg font-bold text-gray-700">Rückgeld:</span>
@@ -285,9 +285,9 @@
                     <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-4xl">,</button> 
                 </div>
                 <div class="mt-3 grid grid-cols-3 gap-2">
-                    <button onclick="setCashExact()" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">Exakt</button>
-                    <button onclick="addCashShortcut(5)" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">+5 €</button>
-                    <button onclick="addCashShortcut(10)" class="product-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl rounded-xl font-bold">+10 €</button>
+                    <button onclick="setCashExact()" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">Exakt</button>
+                    <button onclick="addCashShortcut(5)" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">+5 €</button>
+                    <button onclick="addCashShortcut(10)" class="product-btn h-10 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-xl font-bold">+10 €</button>
                 </div>
                 </div>
             <div id="finalize-button-container" class="mt-4">
@@ -396,7 +396,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.2 (Kleine Displays)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.3 (Ultra Kleine Displays)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
@@ -413,7 +413,7 @@
                     
                     <div id="quantity-display-wrapper" class="w-full mb-3">
                         <span class="text-sm font-bold text-gray-600 block mb-1">Aktuelle Menge:</span>
-                        <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-3xl font-extrabold text-red-600 bg-red-100 rounded-xl shadow-inner transition-all">1</div>
+                        <div id="quantity-display" class="w-full h-10 flex items-center justify-center text-xl font-extrabold text-red-600 bg-red-100 rounded-xl shadow-inner transition-all">1</div>
                     </div>
                     
                     <div id="main-numpad-container" class="grid grid-cols-3 gap-2"> 
