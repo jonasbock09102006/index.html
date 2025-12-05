@@ -498,598 +498,222 @@
                     'cat2': { id:'cat2', name:'Essen' },
                     'cat3': { id:'cat3', name:'Pfand' }
                 };
-                await set(child(rootRef, categoriesRefPath), categories);
-            }
-            if (!products || Object.keys(products).length===0) {
-                products = {
-                    'prod1': { id:'prod1', name:'Glühwein', price:4.00, categoryId:'cat1' },
-                    'prod2': { id:'prod2', name:'Kinderpunsch', price:3.00, categoryId:'cat1' },
-                    'prod3': { id:'prod3', name:'Bratwurst', price:3.50, categoryId:'cat2' },
-                    'prod4': { id:'prod4', name:'Pommes', price:3.00, categoryId:'cat2' },
-                    'prod5': { id:'prod5', name:'Pfand', price:2.00, categoryId:'cat3' }
-                };
-                await set(child(rootRef, productsRefPath), products);
-            }
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kassensystem Pro</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
 
-            renderCategoryTabs();
-            renderProductGrid(Object.keys(categories)[0] || 'cat1');
-            renderProductModalContent();
-        } catch(e) {
-            console.error(e);
-            showToast('Fehler beim Laden von Produkten/Kategorien: ' + e.message, 'error');
-        }
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-analytics.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+import { getDatabase, ref, child, get, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
+  authDomain: "kassensystem-85412.firebaseapp.com",
+  databaseURL: "https://kassensystem-85412-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "kassensystem-85412",
+  storageBucket: "kassensystem-85412.appspot.com",
+  messagingSenderId: "916536785810",
+  appId: "1:916536785810:web:0d0319ef565af65d279f4b",
+  measurementId: "G-W5HWYEXWJ5"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let products = {};
+let categories = {};
+let currentOrder = [];
+let transactionHistory = [];
+let selectedPaymentMethod = 'BAR';
+let discount = 0;
+
+// Toast helper
+function showToast(msg,type='info'){
+    const toast = document.createElement('div');
+    toast.innerText = msg;
+    toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded shadow text-white ${type==='error'?'bg-red-600':type==='success'?'bg-green-600':'bg-gray-600'} animate-fade`;
+    document.body.appendChild(toast);
+    setTimeout(()=>document.body.removeChild(toast),3000);
+}
+
+// Auth functions
+async function handleLogin(email,password){
+    try{
+        await signInWithEmailAndPassword(auth,email,password);
+        showToast('Login erfolgreich','success');
+    } catch(e){ showToast(e.message,'error'); }
+}
+
+async function handleLogout(){
+    await signOut(auth);
+    showToast('Abgemeldet','info');
+}
+
+// Load data
+async function loadData(){
+    const catSnap = await get(child(ref(db), 'categories'));
+    const prodSnap = await get(child(ref(db), 'products'));
+    categories = catSnap.exists()?catSnap.val():{};
+    products = prodSnap.exists()?prodSnap.val():{};
+    renderCategories();
+    renderProducts();
+}
+
+// Render categories
+function renderCategories(){
+    const container = document.getElementById('category-tabs');
+    container.innerHTML = '';
+    for(const catId in categories){
+        const btn = document.createElement('button');
+        btn.innerText = categories[catId].name;
+        btn.className = 'px-4 py-2 bg-blue-500 text-white rounded';
+        btn.onclick = () => renderProducts(catId);
+        container.appendChild(btn);
     }
+}
 
-    async function loadTransactionHistory() {
-        try {
-            const txSnap = await get(child(rootRef, transactionsRefPath));
-            const txs = txSnap.exists() ? txSnap.val() : {};
-            // convert object to sorted array by timestamp desc
-            transactionHistory = Object.values(txs || {}).sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
-        } catch(e) {
-            console.error(e);
-            transactionHistory = JSON.parse(localStorage.getItem('transactionHistory')) || [];
-        }
+// Render products
+function renderProducts(filterCatId=null){
+    const grid = document.getElementById('product-grid');
+    grid.innerHTML = '';
+    for(const prodId in products){
+        const prod = products[prodId];
+        if(filterCatId && prod.categoryId!==filterCatId) continue;
+        const btn = document.createElement('button');
+        btn.innerText = `${prod.name}\n${prod.price}€`;
+        btn.className = 'p-2 bg-green-500 text-white rounded';
+        btn.onclick = () => addToOrder(prodId);
+        grid.appendChild(btn);
     }
+}
 
-    async function saveProductsAndCategories() {
-        // write both
-        await set(child(rootRef, productsRefPath), products);
-        await set(child(rootRef, categoriesRefPath), categories);
-        renderCategoryTabs();
-        renderProductGrid(Object.keys(categories)[0] || 'cat1');
-        renderProductModalContent();
-    }
+// Order management
+function addToOrder(prodId){
+    const item = {...products[prodId], quantity: 1};
+    currentOrder.push(item);
+    renderOrder();
+}
 
-    async function saveTransaction(transaction) {
-        // write under transactions/{id}
-        await set(child(rootRef, transactionsRefPath + '/' + transaction.id), transaction);
-        // keep local cache as well for speed
-        transactionHistory.unshift(transaction);
-        if (transactionHistory.length > 200) transactionHistory = transactionHistory.slice(0,200);
-        // optional: keep transactionHistory in localStorage for offline fallback
-        localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory.slice(0,200)));
-    }
+function renderOrder(){
+    const container = document.getElementById('receipt-content-interactive');
+    container.innerHTML = '';
 
-    // ---------- UI rendering functions (adapted from your code) ----------
-    function renderCategoryTabs() {
-        const container = document.getElementById('category-tabs');
-        container.innerHTML = '';
-        Object.values(categories || {}).forEach(category => {
-            const btn = document.createElement('button');
-            btn.className = 'flex-shrink-0 px-3 py-1 rounded-lg text-sm font-semibold transition-colors bg-red-100 text-red-700 hover:bg-red-200';
-            btn.dataset.category = category.id;
-            btn.innerText = category.name;
-            btn.onclick = () => renderProductGrid(category.id);
-            container.appendChild(btn);
-        });
-    }
-
-    function renderProductGrid(categoryId) {
-        const container = document.getElementById('product-grid');
-        const tabs = document.querySelectorAll('#category-tabs button');
-        container.innerHTML = '';
-        tabs.forEach(tab => {
-            tab.classList.remove('bg-red-600','text-white');
-            tab.classList.add('bg-red-100','text-red-700');
-            if (tab.dataset.category === categoryId) {
-                tab.classList.add('bg-red-600','text-white');
-                tab.classList.remove('bg-red-100','text-red-700');
-            }
-        });
-
-        const filtered = Object.values(products || {}).filter(p => p.categoryId === categoryId);
-        if (filtered.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 col-span-full text-center p-4">Keine Produkte in dieser Kategorie.</p>';
-            return;
-        }
-        filtered.forEach(product => {
-            const button = document.createElement('button');
-            button.className = 'product-btn p-4 rounded-xl font-extrabold text-white bg-red-500 hover:bg-red-600 shadow-lg flex flex-col justify-center items-center text-center h-24';
-            button.innerHTML = `<span class="text-base">${product.name}</span><span class="text-2xl font-extrabold mt-1">${product.price.toFixed(2).replace('.', ',')} €</span>`;
-            button.onclick = () => addToBestellung(product.id);
-            container.appendChild(button);
-        });
-    }
-
-    function renderProductModalContent() {
-        const categorySelect = document.getElementById('new-product-category');
-        categorySelect.innerHTML = '<option value="">Kategorie wählen</option>';
-        const categoryList = document.getElementById('category-list'); categoryList.innerHTML='';
-        const productList = document.getElementById('product-list'); productList.innerHTML='';
-
-        Object.values(categories || {}).forEach(cat => {
-            const opt = document.createElement('option'); opt.value = cat.id; opt.innerText = cat.name; categorySelect.appendChild(opt);
-            categoryList.innerHTML += `<div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg border"><span class="font-semibold">${cat.name}</span><button onclick="deleteCategory('${cat.id}')" class="text-red-500">Löschen</button></div>`;
-        });
-
-        Object.values(products || {}).forEach(product => {
-            productList.innerHTML += `
-                <div class="flex items-center p-2 bg-gray-50 rounded-lg border">
-                    <span class="font-semibold w-1/3">${product.name}</span>
-                    <div class="flex-grow flex items-center space-x-2">
-                        <input type="number" id="price-input-${product.id}" value="${product.price.toFixed(2)}" step="0.01" class="p-1 border rounded-lg text-sm w-24 text-right">
-                        <span class="text-sm text-gray-600">€</span>
-                    </div>
-                    <span class="text-sm text-gray-600 w-1/4 text-right">(${categories[product.categoryId]?.name || 'N/A'})</span>
-                    <button onclick="updateProductPrice('${product.id}')" class="ml-3 p-1 px-2 rounded-lg text-white bg-green-500">Speichern</button>
-                    <button onclick="deleteProduct('${product.id}')" class="ml-2 text-red-500">Löschen</button>
-                </div>`;
-        });
-    }
-
-    function openProductModal(){ renderProductModalContent(); toggleReceiptColumn(false); document.getElementById('product-modal').style.display='flex'; }
-
-    function addCategory() {
-        const name = document.getElementById('new-category-name').value.trim();
-        if (!name) { showToast('Bitte einen Kategorienamen eingeben.', 'error'); return; }
-        const newId = 'cat' + Date.now();
-        categories[newId] = { id: newId, name: name };
-        document.getElementById('new-category-name').value='';
-        saveProductsAndCategories();
-        showToast('Kategorie hinzugefügt.', 'success');
-    }
-
-    function addProduct() {
-        const name = document.getElementById('new-product-name').value.trim();
-        const price = parseFloat(document.getElementById('new-product-price').value);
-        const categoryId = document.getElementById('new-product-category').value;
-        if (!name || isNaN(price) || price<=0 || !categoryId) { showToast('Bitte alle Felder korrekt ausfüllen.', 'error'); return; }
-        const newId = 'prod' + Date.now();
-        products[newId] = { id:newId, name:name, price:price, categoryId:categoryId };
-        document.getElementById('new-product-name').value=''; document.getElementById('new-product-price').value=''; document.getElementById('new-product-category').value='';
-        saveProductsAndCategories();
-        showToast('Produkt hinzugefügt.', 'success');
-    }
-
-    async function deleteCategory(id) {
-        if (!confirm(`Soll die Kategorie "${categories[id]?.name}" und alle zugehörigen Produkte gelöscht werden?`)) return;
-        Object.keys(products).forEach(prodId => { if (products[prodId].categoryId===id) delete products[prodId]; });
-        delete categories[id];
-        await saveProductsAndCategories();
-        showToast('Kategorie und zugehörige Produkte gelöscht.', 'info');
-    }
-
-    async function deleteProduct(id) {
-        if (!confirm(`Soll das Produkt "${products[id]?.name}" gelöscht werden?`)) return;
-        delete products[id];
-        await saveProductsAndCategories();
-        showToast('Produkt gelöscht.', 'info');
-    }
-
-    function updateProductPrice(id) {
-        const input = document.getElementById(`price-input-${id}`); const newPrice = parseFloat(input.value);
-        if (isNaN(newPrice) || newPrice <= 0) { showToast('Ungültiger Preis.', 'error'); input.value = products[id].price.toFixed(2); return; }
-        if (products[id].price === newPrice) { showToast('Keine Änderung vorgenommen.', 'info'); return; }
-        products[id].price = newPrice;
-        saveProductsAndCategories();
-        showToast(`Preis für "${products[id].name}" aktualisiert.`, 'success');
-    }
-
-    // ---------- Bestellung & receipt ----------
-    function handleQuantityInput(value) {
-        lastAction = { type:'quantity', oldValue: currentQuantity };
-        if (value==='clear') currentQuantity='1';
-        else if (value==='set1') currentQuantity='1';
-        else if (currentQuantity==='1' && value!=='0') currentQuantity = value;
-        else if (currentQuantity.length < 5) currentQuantity += value;
-        document.getElementById('quantity-display').innerText = currentQuantity;
-    }
-
-    function handleCashInput(value) {
-        let current = cashReceivedInput;
-        const decimalIndex = current.indexOf('.');
-        if (value==='clear') current = '0';
-        else if (value==='dot') { if (decimalIndex===-1) current += '.'; }
-        else if (value.match(/[0-9]/)) {
-            if (current==='0' && value!=='0' && decimalIndex===-1) current = value;
-            else if (current==='0' && value==='0' && decimalIndex===-1) {}
-            else current += value;
-            if (decimalIndex !== -1 && current.substring(decimalIndex+1).length>2) current = cashReceivedInput;
-            else if (current.replace('.','').length>7) current = cashReceivedInput;
-        }
-        cashReceivedInput = current;
-        let displayValue = cashReceivedInput;
-        if (displayValue.startsWith('.')) displayValue='0'+displayValue;
-        if (displayValue==='') displayValue='0';
-        document.getElementById('cash-received-display').innerText = displayValue.replace('.', ',');
-        calculateChangeDisplay();
-    }
-
-    function setCashExact() {
-        cashReceivedInput = totalBrutto.toFixed(2);
-        document.getElementById('cash-received-display').innerText = totalBrutto.toFixed(2).replace('.', ',');
-        calculateChangeDisplay();
-    }
-    function addCashShortcut(amount) {
-        let current = parseFloat(cashReceivedInput) || 0;
-        let newTotal = current + amount;
-        cashReceivedInput = newTotal.toFixed(2);
-        document.getElementById('cash-received-display').innerText = newTotal.toFixed(2).replace('.', ',');
-        calculateChangeDisplay();
-    }
-
-    function addToBestellung(productId) {
-        const product = products[productId];
-        const quantity = parseInt(currentQuantity);
-        if (!product || isNaN(quantity) || quantity<=0) return;
-        const taxRate = userSettings.taxRate || 19.0;
-        const itemPriceBrutto = product.price;
-        const itemPriceNetto = itemPriceBrutto / (1 + (taxRate/100));
-        const taxAmount = itemPriceBrutto - itemPriceNetto;
-        for (let i=0;i<quantity;i++){
-            const item = { id: Date.now()+i, name: product.name, brutto: itemPriceBrutto, netto: itemPriceNetto, tax: taxAmount, taxRate: taxRate, productId: productId };
-            currentBestellung.push(item);
-        }
-        lastAction = { type:'add', items: currentBestellung.slice(-quantity) };
-        renderReceipt();
-        currentQuantity='1';
-        document.getElementById('quantity-display').innerText = currentQuantity;
-    }
-
-    function deleteOneUnitOfProduct(productId) {
-        const indexToRemove = currentBestellung.findIndex(item => item.productId === productId);
-        if (indexToRemove !== -1) {
-            currentBestellung.splice(indexToRemove,1);
-            showToast('Einheit erfolgreich storniert.', 'info');
-            lastAction = null;
-        } else showToast('Fehler: Produkt nicht gefunden.', 'error');
-        renderReceipt();
-    }
-
-    function undoLastAction() {
-        if (!lastAction) { showToast('Keine letzte Aktion zum Stornieren gefunden.', 'info'); return; }
-        if (lastAction.type === 'add') {
-            const ids = lastAction.items.map(i=>i.id);
-            const origLen = currentBestellung.length;
-            currentBestellung = currentBestellung.filter(item => !ids.includes(item.id));
-            if (currentBestellung.length < origLen) { showToast(`${origLen-currentBestellung.length} Artikel storniert.`, 'success'); lastAction=null; }
-            else showToast('Fehler beim Stornieren der letzten Buchung.', 'error');
-        } else if (lastAction.type === 'quantity') {
-            currentQuantity = lastAction.oldValue;
-            document.getElementById('quantity-display').innerText = currentQuantity;
-            showToast('Menge zurückgesetzt.', 'success');
-            lastAction = null;
-        }
-        renderReceipt();
-    }
-
-    function calculateTotalBrutto(){ return currentBestellung.reduce((t,i)=> t + i.brutto, 0); }
-
-    function renderReceipt(forPrint=false, receiptType='standard') {
-        const container = document.getElementById(forPrint ? 'receipt-print-content' : 'receipt-content-interactive');
-        let content = '';
-        totalBrutto = calculateTotalBrutto();
-        const itemCounts = currentBestellung.reduce((counts,item)=>{
-            if (!counts[item.productId]) counts[item.productId] = {...item, count:0};
-            counts[item.productId].count++;
-            return counts;
-        }, {});
-        if (currentBestellung.length===0) {
-            content = '<p class="text-center text-sm text-gray-400 p-4">Es wurden noch keine Artikel gebucht.</p>';
-        } else {
-            if (forPrint) {
-                content += `<div class="center font-bold">${(userSettings.companyName||'Kassensystem').toUpperCase()}</div>`;
-                content += `<div class="center">${userSettings.address||''}</div>`;
-                content += `<div class="center">Ust-IdNr.: ${userSettings.taxId||''}</div>`;
-                content += '<div>----------------------------------------</div>';
-                if (receiptType === 'bewirtung') {
-                    content += "<div class='center font-bold text-lg'>*** BEWIRTUNGSBELEG ***</div><div>----------------------------------------</div>";
-                }
-                content += `<div class="line"><strong>POS. Bezeichnung</strong><strong class="item-price">Preis €</strong></div>`;
-                content += '<div>----------------------------------------</div>';
-                Object.values(itemCounts).forEach(item => {
-                    const priceTotal = (item.brutto*item.count).toFixed(2).replace('.', ',');
-                    const nameDisplay = `${item.count}x ${item.name}`;
-                    content += `<div class="line"><span class="item-name">${nameDisplay}</span><span class="item-price">${priceTotal}</span></div>`;
-                });
-                content += '<div>========================================</div>';
-                content += `<div class="line"><strong>SUMME BRUTTO</strong><strong>${totalBrutto.toFixed(2).replace('.', ',')} €</strong></div>`;
-                content += '<div>========================================</div>';
-                content += `<div class="center">Beleg erstellt am:</div><div class="center">${new Date().toLocaleString('de-DE')}</div>`;
-                content += `<div class="center">Transaktion ID: ${new Date().getTime().toString().slice(-6)}</div>`;
-                content += '<div class="center font-bold mt-2">Vielen Dank!</div>';
-            } else {
-                Object.values(itemCounts).forEach(item => {
-                    const price = (item.brutto * item.count).toFixed(2).replace('.', ',');
-                    content += `
-                        <div class="flex justify-between items-center py-1 border-b border-gray-100">
-                            <span class="font-semibold">${item.count}x ${item.name}</span>
-                            <div class="flex items-center space-x-2">
-                                <span class="font-bold">${price} €</span>
-                                <button onclick="deleteOneUnitOfProduct('${item.productId}')" class="text-red-500 hover:text-red-700 font-bold p-1 rounded-full text-xs">
-                                    ✖
-                                </button>
-                            </div>
-                        </div>`;
-                });
-            }
-        }
-        document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
-        container.innerHTML = content;
-    }
-
-    function resetBestellung() {
-        currentBestellung=[]; lastAction=null; currentQuantity='1'; document.getElementById('quantity-display').innerText=currentQuantity; renderReceipt(); showToast('Bestellung zurückgesetzt.', 'info');
-    }
-
-    // ---------- Payments & finalize ----------
-    function setPaymentMethod(method) {
-        selectedPaymentMethod = method;
-        const btnKarte = document.getElementById('btn-karte');
-        const cashArea = document.getElementById('cash-payment-area');
-        const btnBarIndicator = document.getElementById('btn-bar-indicator');
-        const cashFinalizeBtns = document.getElementById('cash-finalize-buttons');
-        const cardFinalizeBtns = document.getElementById('card-finalize-buttons');
-
-        if (method==='BAR') {
-            cashArea.style.display='block';
-            btnBarIndicator.style.display='inline-block';
-            cashFinalizeBtns.style.display='block'; cardFinalizeBtns.style.display='none';
-        } else {
-            cashArea.style.display='none';
-            btnBarIndicator.style.display='none';
-            cashFinalizeBtns.style.display='none'; cardFinalizeBtns.style.display='block';
-            document.getElementById('change-display').innerText='0,00 €';
-        }
-        calculateChangeDisplay();
-    }
-
-    function calculateChangeDisplay() {
-        const received = parseFloat(cashReceivedInput) || 0;
-        const change = received - totalBrutto;
-        const changeDisplay = document.getElementById('change-display');
-        changeDisplay.innerText = change >= 0 ? change.toFixed(2).replace('.', ',') + ' €' : 'FEHLT';
-        const canFinalizeCash = (selectedPaymentMethod === 'BAR' && change >= 0);
-
-        const btnNone = document.getElementById('btn-cash-none');
-        const btnStandard = document.getElementById('btn-cash-standard');
-        const btnBewirtung = document.getElementById('btn-cash-bewirtung');
-        if (btnNone && btnStandard && btnBewirtung) {
-            btnNone.disabled = !canFinalizeCash; btnStandard.disabled = !canFinalizeCash; btnBewirtung.disabled = !canFinalizeCash;
-            if (canFinalizeCash) {
-                btnNone.classList.add('bg-red-600'); btnNone.classList.remove('bg-red-400');
-                btnStandard.classList.add('bg-green-600'); btnStandard.classList.remove('bg-green-400');
-                btnBewirtung.classList.add('bg-red-700'); btnBewirtung.classList.remove('bg-red-600/70');
-            } else {
-                btnNone.classList.add('bg-red-400'); btnStandard.classList.add('bg-green-400'); btnBewirtung.classList.add('bg-red-600/70');
-            }
-        }
-    }
-
-    async function handleFinalizeAction(method, receiptType) {
-        if (method === 'BAR') {
-            const received = parseFloat(cashReceivedInput) || 0;
-            const change = received - totalBrutto;
-            if (change < 0) { showToast('Der erhaltene Betrag ist zu gering.', 'error'); return; }
-            showToast(`Transaktion (BAR) abgeschlossen! Rückgeld: ${change.toFixed(2).replace('.', ',')} €`, 'success');
-            if (receiptType === 'standard') printReceipt('standard'); else if (receiptType === 'bewirtung') printReceipt('bewirtung');
-            await finalizeTransaction('BAR');
-        } else if (method === 'KARTE') {
-            showToast('Transaktion (KARTE) abgeschlossen!', 'success');
-            if (receiptType === 'standard') printReceipt('standard'); else if (receiptType === 'bewirtung') printReceipt('bewirtung');
-            await finalizeTransaction('KARTE');
-        }
-    }
-
-    async function openFinalizeModal() {
-        if (currentBestellung.length===0) { showToast('Bitte erst Artikel buchen.', 'error'); return; }
-        totalBrutto = calculateTotalBrutto();
-        document.getElementById('finalize-total').innerText = totalBrutto.toFixed(2).replace('.', ',') + ' €';
-        cashReceivedInput = '0';
-        document.getElementById('cash-received-display').innerText = '0,00';
-        setPaymentMethod('BAR');
-        document.getElementById('finalize-modal').style.display = 'flex';
-    }
-
-    async function finalizeTransaction(paymentMethod) {
-        showLoading(true);
-        if (currentBestellung.length === 0) { showToast('Keine Artikel für die Transaktion.', 'error'); showLoading(false); return; }
-        const tx = {
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            totalBrutto: calculateTotalBrutto(),
-            items: currentBestellung,
-            paymentMethod
-        };
-        await saveTransaction(tx);
-        resetBestellung();
-        closeModal('finalize-modal');
-        showLoading(false);
-    }
-
-    function printReceipt(receiptType='standard') {
-        if (currentBestellung.length === 0) { showToast('Keine Artikel für den Beleg.', 'error'); return; }
-        const printArea = document.createElement('div'); printArea.className='receipt-print'; printArea.id='receipt-print-area';
-        const contentContainer = document.createElement('div'); contentContainer.id='receipt-print-content';
-        printArea.appendChild(contentContainer); document.body.appendChild(printArea);
-        renderReceipt(true, receiptType);
-        setTimeout(()=>{ window.print(); document.body.removeChild(printArea); }, 300);
-    }
-
-    // ---------- Transaction reversal ----------
-    function openTransactionReversalModal() {
-        const listContainer = document.getElementById('transaction-list');
-        listContainer.innerHTML = '';
-        if (!transactionHistory || transactionHistory.length===0) {
-            listContainer.innerHTML = '<p class="text-gray-500">Keine abgeschlossenen Transaktionen gefunden.</p>';
-            document.getElementById('transaction-reversal-modal').style.display='flex';
-            toggleReceiptColumn(false);
-            return;
-        }
-        const recent = transactionHistory.slice(0,10);
-        recent.forEach(tx => {
-            const item = document.createElement('div');
-            item.className = 'flex justify-between items-center p-3 bg-red-50 rounded-lg border';
-            item.innerHTML = `<div><span class="font-bold text-lg">${tx.totalBrutto.toFixed(2).replace('.', ',')} €</span><div class="text-xs text-gray-500">${new Date(tx.timestamp).toLocaleString('de-DE')}</div></div><div><button class="p-2 rounded-lg text-white bg-red-600" onclick="reverseTransaction('${tx.id}')">Storno</button></div>`;
-            listContainer.appendChild(item);
-        });
-        document.getElementById('transaction-reversal-modal').style.display='flex';
-        toggleReceiptColumn(false);
-    }
-
-    async function reverseTransaction(txId) {
-        if (!confirm('Transaktion wirklich stornieren?')) return;
-        try {
-            await remove(child(rootRef, transactionsRefPath + '/' + txId));
-            // reload history
-            await loadTransactionHistory();
-            openTransactionReversalModal();
-            showToast('Transaktion storniert.', 'success');
-        } catch(e) {
-            console.error(e); showToast('Fehler beim Stornieren: ' + e.message, 'error');
-        }
-    }
-
-    // ---------- Settings ----------
-    function openSettingsModal() {
-        document.getElementById('company-name').value = userSettings.companyName || '';
-        document.getElementById('address').value = userSettings.address || '';
-        document.getElementById('tax-id').value = userSettings.taxId || '';
-        document.getElementById('tax-rate').value = userSettings.taxRate || 19.0;
-        toggleReceiptColumn(false);
-        document.getElementById('settings-modal').style.display='flex';
-    }
-
-    async function saveSettings() {
-        userSettings.companyName = document.getElementById('company-name').value;
-        userSettings.address = document.getElementById('address').value;
-        userSettings.taxId = document.getElementById('tax-id').value;
-        userSettings.taxRate = parseFloat(document.getElementById('tax-rate').value) || 19.0;
-        // save locally and to DB
-        try {
-            await set(child(rootRef, settingsRefPath), userSettings);
-        } catch(e) {
-            console.error(e);
-            // fallback local
-            localStorage.setItem('companyName', userSettings.companyName);
-            localStorage.setItem('address', userSettings.address);
-            localStorage.setItem('taxId', userSettings.taxId);
-            localStorage.setItem('taxRate', userSettings.taxRate);
-        }
-        showToast('Einstellungen gespeichert.', 'success');
-        closeModal('settings-modal');
-    }
-
-    // ---------- Reports ----------
-    function setReportDateToday() { document.getElementById('report-date').value = new Date().toISOString().slice(0,10); }
-    async function runDailyReport(mode='report') {
-        // collects transactions for selected day and either opens a printable report or makes a CSV
-        const dateStr = document.getElementById('report-date').value || new Date().toISOString().slice(0,10);
-        const start = new Date(dateStr + 'T00:00:00.000Z');
-        const end = new Date(dateStr + 'T23:59:59.999Z');
-
-        // Filter local cache first, if empty fetch full transactions
-        if (!transactionHistory || transactionHistory.length===0) await loadTransactionHistory();
-
-        const dayTx = transactionHistory.filter(tx => {
-            const t = new Date(tx.timestamp);
-            return t >= start && t <= end;
-        });
-
-        if (mode==='csv') {
-            // build CSV
-            let csv = 'id;timestamp;totalBrutto;paymentMethod;items\n';
-            dayTx.forEach(tx => {
-                const items = tx.items.map(i => `${i.name} x`).join('|');
-                csv += `${tx.id};${tx.timestamp};${tx.totalBrutto};${tx.paymentMethod};"${items}"\n`;
-            });
-            // download
-            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href=url; a.download = `report_${dateStr}.csv`; a.click();
-            URL.revokeObjectURL(url);
-            showToast('CSV heruntergeladen.', 'success');
-        } else {
-            // show a simple info modal with summary
-            const total = dayTx.reduce((s,tx)=> s + (tx.totalBrutto||0),0);
-            const txt = `Bericht für ${dateStr}\nTransaktionen: ${dayTx.length}\nUmsatz: ${total.toFixed(2).replace('.',',')} €\n\nDetails:\n` + dayTx.map(tx => `${new Date(tx.timestamp).toLocaleString('de-DE')} — ${tx.totalBrutto.toFixed(2).replace('.',',')} € (${tx.paymentMethod})`).join('\n');
-            document.getElementById('info-title').innerText = 'Tagesbericht';
-            document.getElementById('info-text').innerText = txt;
-            document.getElementById('info-modal').style.display='flex';
-            toggleReceiptColumn(false);
-        }
-    }
-
-    // ---------- Initialization ----------
-    async function initApp() {
-        showLoading(true);
-        try {
-            await loadSettings();
-            await loadProductsAndCategories();
-            await loadTransactionHistory();
-            DB_STATUS = 'connected';
-            updateDBStatus(true);
-        } catch(e) {
-            console.error('initApp error', e);
-            updateDBStatus(false);
-            showToast('Datenbankfehler beim Start: ' + (e.message||e), 'error');
-        } finally { showLoading(false); }
-    }
-
-    // Auth state observer -> switch view
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            // user logged in
-            document.getElementById('login-modal').style.display='none';
-            document.getElementById('kasse-content').style.display='block';
-            toggleReceiptColumn(true);
-            // ensure app data loaded
-            await initApp();
-            showToast('Willkommen!', 'success');
-        } else {
-            // not logged in
-            document.getElementById('kasse-content').style.display='none';
-            document.getElementById('login-modal').style.display='flex';
-            toggleReceiptColumn(false);
-        }
+    let total = 0;
+    currentOrder.forEach((item,i)=>{
+        total += item.price*item.quantity;
+        const row = document.createElement('div');
+        row.className = 'flex justify-between mb-1 items-center';
+        row.innerHTML = `<span>${item.name} x<input type="number" value="${item.quantity}" min="1" class="w-12 text-center border rounded mx-1" onchange="updateQuantity(${i},this.value)"> </span><span>${(item.price*item.quantity).toFixed(2)}€</span>
+            <button class="ml-2 px-1 bg-red-500 text-white rounded" onclick="removeItem(${i})">X</button>`;
+        container.appendChild(row);
     });
 
-    // Initial render
-    document.addEventListener('DOMContentLoaded', () => {
-        // set defaults to UI
-        document.getElementById('quantity-display').innerText = currentQuantity;
-        renderReceipt();
-    });
+    if(discount>0){
+        const discDiv = document.createElement('div');
+        discDiv.className = 'flex justify-between font-bold mt-1';
+        discDiv.innerHTML = `<span>Rabatt:</span><span>- ${discount.toFixed(2)}€</span>`;
+        container.appendChild(discDiv);
+        total -= discount;
+    }
 
-    // expose functions on window for inline onclicks (UI uses them)
-    window.handleLoginSubmit = handleLoginSubmit;
-    window.handleRegisterSubmit = handleRegisterSubmit;
-    window.handlePasswordReset = handlePasswordReset;
-    window.handleLogout = handleLogout;
-    window.openRegistrationModal = openRegistrationModal;
-    window.openForgotPasswordModal = openForgotPasswordModal;
-    window.openProductModal = openProductModal;
-    window.addCategory = addCategory;
-    window.addProduct = addProduct;
-    window.deleteCategory = deleteCategory;
-    window.deleteProduct = deleteProduct;
-    window.updateProductPrice = updateProductPrice;
-    window.handleQuantityInput = handleQuantityInput;
-    window.handleCashInput = handleCashInput;
-    window.setCashExact = setCashExact;
-    window.addCashShortcut = addCashShortcut;
-    window.addToBestellung = addToBestellung;
-    window.deleteOneUnitOfProduct = deleteOneUnitOfProduct;
-    window.undoLastAction = undoLastAction;
-    window.renderReceipt = renderReceipt;
-    window.resetBestellung = resetBestellung;
-    window.openFinalizeModal = openFinalizeModal;
-    window.setPaymentMethod = setPaymentMethod;
-    window.calculateChangeDisplay = calculateChangeDisplay;
-    window.handleFinalizeAction = handleFinalizeAction;
-    window.openTransactionReversalModal = openTransactionReversalModal;
-    window.reverseTransaction = reverseTransaction;
-    window.openSettingsModal = openSettingsModal;
-    window.saveSettings = saveSettings;
-    window.setReportDateToday = setReportDateToday;
-    window.runDailyReport = runDailyReport;
-    window.closeModal = closeModal;
-    window.printReceipt = printReceipt;
+    const totalDiv = document.createElement('div');
+    totalDiv.className = 'flex justify-between font-bold mt-2';
+    totalDiv.innerHTML = `<span>Gesamt:</span><span>${total.toFixed(2)}€</span>`;
+    container.appendChild(totalDiv);
 
-    // Kick off initial load of settings/products when offline or before auth change
-    initApp();
+    // Payment selection
+    const payDiv = document.createElement('div');
+    payDiv.className = 'mt-2';
+    payDiv.innerHTML = `
+        <span class="mr-2">Zahlung:</span>
+        <button class="px-2 py-1 rounded bg-gray-300" onclick="setPayment('BAR')">BAR</button>
+        <button class="px-2 py-1 rounded bg-gray-300" onclick="setPayment('KARTE')">KARTE</button>
+        <span class="ml-4 font-bold">${selectedPaymentMethod}</span>
+    `;
+    container.appendChild(payDiv);
+}
 
-    </script>
+function updateQuantity(index,value){
+    currentOrder[index].quantity = parseInt(value) || 1;
+    renderOrder();
+}
+
+function setPayment(method){
+    selectedPaymentMethod = method;
+    renderOrder();
+}
+
+function removeItem(index){
+    currentOrder.splice(index,1);
+    renderOrder();
+}
+
+// Complete order
+async function completeOrder(){
+    if(currentOrder.length===0){ showToast('Keine Produkte im Warenkorb','error'); return; }
+    const total = currentOrder.reduce((sum,item)=>sum+(item.price*item.quantity),0) - discount;
+    const transaction = { 
+        id: Date.now().toString(), 
+        items: currentOrder, 
+        total: total.toFixed(2),
+        payment: selectedPaymentMethod,
+        timestamp: new Date().toISOString() 
+    };
+    await set(child(ref(db), 'transactions/'+transaction.id), transaction);
+    transactionHistory.unshift(transaction);
+    currentOrder=[];
+    discount = 0;
+    renderOrder();
+    showToast('Transaktion gespeichert','success');
+}
+
+// Auth observer
+onAuthStateChanged(auth,user=>{
+    if(user){
+        document.getElementById('login-modal').style.display='none';
+        document.getElementById('kasse-content').style.display='block';
+        loadData();
+    } else{
+        document.getElementById('kasse-content').style.display='none';
+        document.getElementById('login-modal').style.display='flex';
+    }
+});
+</script>
+
+<style>
+@keyframes fade {0%{opacity:0}100%{opacity:1}}
+.animate-fade{animation:fade 0.3s;}
+</style>
+</head>
+<body class="bg-gray-50">
+
+<!-- Login Modal -->
+<div id="login-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white p-6 rounded-lg w-96">
+        <h2 class="text-xl font-bold mb-4">Login</h2>
+        <input id="login-email" type="email" placeholder="Email" class="border p-2 w-full mb-2 rounded">
+        <input id="login-password" type="password" placeholder="Passwort" class="border p-2 w-full mb-4 rounded">
+        <button onclick="handleLogin(document.getElementById('login-email').value,document.getElementById('login-password').value)" class="w-full bg-red-500 text-white p-2 rounded">Login</button>
+    </div>
+</div>
+
+<!-- Kasse Content -->
+<div id="kasse-content" class="hidden p-4">
+    <h1 class="text-2xl font-bold mb-4">Kassensystem Pro</h1>
+    <div id="category-tabs" class="flex space-x-2 overflow-x-auto mb-4"></div>
+    <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4"></div>
+    <div id="receipt-content-interactive" class="mb-4 p-2 bg-white rounded shadow"></div>
+    <button onclick="completeOrder()" class="bg-green-600 text-white px-4 py-2 rounded mb-2">Bestellung abschließen</button>
+    <button onclick="handleLogout()" class="bg-gray-500 text-white px-4 py-2 rounded">Logout</button>
+</div>
+
 </body>
 </html>
