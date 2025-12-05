@@ -17,10 +17,10 @@
         .product-btn:active { transform: scale(0.98);
          }
 
-        /* Numpad Button Style (VERGRÖSSERT für bessere Touch-Bedienung) */
+        /* Numpad Button Style (Hochformat / Schmaler und Höher) */
         .numpad-btn {
-            /* NEU: Größere Buttons für bessere Touch-Bedienung (p-4, text-2xl) */
-            @apply w-full p-4 rounded-xl font-extrabold text-2xl shadow-lg transition-colors; 
+            /* Anpassung: h-32 (ca. 128px) macht sie deutlich höher. px-2 reduziert den horizontalen Platz für den "schmaleren" Look. */
+            @apply w-full h-32 px-2 rounded-xl font-extrabold text-2xl shadow-lg transition-colors; 
          line-height: 1; 
             display: flex;
             justify-content: center;
@@ -284,9 +284,9 @@
                     <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 hover:bg-gray-300 text-2xl">.</button> 
                 </div>
                 <div class="mt-3 grid grid-cols-3 gap-2">
-                    <button onclick="setCashExact()" class="numpad-btn bg-blue-500 hover:bg-blue-600 text-white text-xl">Exakt</button>
-                    <button onclick="addCashShortcut(5)" class="numpad-btn bg-blue-500 hover:bg-blue-600 text-white text-xl">+5 €</button>
-                    <button onclick="addCashShortcut(10)" class="numpad-btn bg-blue-500 hover:bg-blue-600 text-white text-xl">+10 €</button>
+                    <button onclick="setCashExact()" class="numpad-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl">Exakt</button>
+                    <button onclick="addCashShortcut(5)" class="numpad-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl">+5 €</button>
+                    <button onclick="addCashShortcut(10)" class="numpad-btn h-16 bg-blue-500 hover:bg-blue-600 text-white text-xl">+10 €</button>
                 </div>
                 </div>
             <div id="finalize-button-container" class="mt-4">
@@ -395,7 +395,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.7 (Robuster Start)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v2.8 (Hochformat-Tasten)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
