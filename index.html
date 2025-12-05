@@ -159,8 +159,10 @@
             </form>
             <div class="mt-4 text-center">
                 <button onclick="openRegistrationModal()" class="text-sm text-indigo-600 hover:text-indigo-800">
-                    Noch kein Konto?
-                 Hier registrieren.
+                    Noch kein Konto? Hier registrieren.
+                </button>
+                <button onclick="openForgotPasswordModal()" class="block w-full mt-2 text-sm text-red-600 hover:text-red-800">
+                    Passwort vergessen?
                 </button>
             </div>
         </div>
@@ -188,6 +190,25 @@
            </form>
             <button onclick="closeModal('registration-modal');
          openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
+        </div>
+    </div>
+
+    <div id="forgot-password-modal" style="display: none;"
+         class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-red-700 mb-4">Passwort zurücksetzen</h2>
+            <p class="text-sm text-center text-gray-500 mb-6">Bitte geben Sie Ihre E-Mail Adresse ein. Sie erhalten eine Anleitung zum Zurücksetzen.</p>
+
+            <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
+                <div class="mb-6">
+                    <label for="reset-email" class="block text-sm font-medium text-gray-700">E-Mail Adresse</label>
+                    <input type="email" id="reset-email" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-red-500 focus:border-red-500">
+                </div>
+                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 transition-colors">
+                    Link senden
+                </button>
+            </form>
+            <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Login</button>
         </div>
     </div>
 
@@ -240,14 +261,13 @@
         <div class="bg-white p-3 rounded-xl shadow-2xl w-full max-w-md"> 
             <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
             
-            <div class="mb-4 p-3 border-2 border-green-500 
-                 rounded-lg bg-green-50">
-                <p class="text-sm font-bold text-gray-700">Gesamtbetrag:</p>
-                <div id="finalize-total" class="text-4xl font-extrabold text-right text-green-700">0.00 €</div>
+            <div class="mb-3 p-2 border-2 border-green-500 rounded-lg bg-green-50">
+                <p class="text-xs font-bold text-gray-700">Gesamtbetrag:</p>
+                <div id="finalize-total" class="text-3xl font-extrabold text-right text-green-700">0.00 €</div>
             </div>
 
             <div id="payment-buttons" class="grid grid-cols-1 gap-3 mb-4">
-                <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg border-4 border-transparent transition-all duration-300">
+                <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg border-4 border-transparent transition-all duration-300">
                     KARTE ZAHLUNG
                 </button>
             </div>
@@ -396,7 +416,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.6 (Finalize Breiter & Niedriger)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.7 (Kompakteres Zahlfeld & Reset)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
@@ -581,6 +601,8 @@
             // Verstecke alle Haupt-Container
             document.getElementById('login-modal').style.display = 'none';
          document.getElementById('registration-modal').style.display = 'none';
+            // V5.7 NEU: Auch das Passwort-Reset-Modal verstecken
+            document.getElementById('forgot-password-modal').style.display = 'none';
             document.getElementById('kasse-content').style.display = 'none';
             // Verstecke auch Modals, falls offen
             closeModal('finalize-modal');
@@ -655,6 +677,13 @@
             document.getElementById('registration-modal').style.display = 'flex';
          }
         
+        // V5.7 NEU: Funktion zum Öffnen des Passwort-Reset-Modals
+        function openForgotPasswordModal() {
+            closeModal('login-modal');
+            toggleReceiptColumn(false); // Bon ausblenden
+            document.getElementById('forgot-password-modal').style.display = 'flex';
+        }
+
         // --- AUTH & SETTINGS ---
 
         async function handleLoginSubmit() {
@@ -676,6 +705,23 @@
          openLoginModal();
             showLoading(false);
         }
+        
+        // V5.7 NEU: Funktion zum Simulieren des Passwort-Resets
+        async function handlePasswordReset() {
+            const email = document.getElementById('reset-email').value;
+            if (!email) return;
+
+            showLoading(true);
+            // Simuliere Logik zum Senden des Reset-Links
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            showToast(`Passwort-Reset-Link wurde an ${email} gesendet (simuliert).`, 'success');
+            document.getElementById('reset-email').value = '';
+            closeModal('forgot-password-modal');
+            openLoginModal();
+            showLoading(false);
+        }
+
 
         // NEU: Logout Funktion
         function handleLogout() {
@@ -1041,7 +1087,7 @@
             document.getElementById('quantity-display').innerText = currentQuantity;
          }
 
-        // NEU V5.5: Funktion zum Löschen einer einzelnen Einheit eines Produkts über die Bon-Anzeige
+        // NEU V5.5: Funktion zum Löschen einer einzelne Einheit eines Produkts über die Bon-Anzeige
         function deleteOneUnitOfProduct(productId) {
             const initialLength = currentBestellung.length;
             // Finde den Index des ersten Artikels mit dieser Produkt-ID (letzter zuerst wäre auch denkbar, aber erster ist einfacher)
