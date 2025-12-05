@@ -19,8 +19,8 @@
 
         /* Numpad Button Style (Moderierte Höhe und Schrift) */
         .numpad-btn {
-            /* KORREKTUR V5.3: Höhe weiter reduziert (90px -> 60px) und Schrift (3xl -> 2xl) */
-            height: 60px; /* Moderat reduzierte feste Höhe */
+            /* V5.6 NEU: Höhe weiter reduziert (60px -> 50px) für kompaktere Ansicht */
+            height: 50px; 
             @apply w-full rounded-xl font-extrabold text-2xl shadow-lg transition-colors; 
             line-height: 1; 
             display: flex;
@@ -237,7 +237,7 @@
     </div>
 
     <div id="finalize-modal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
-        <div class="bg-white p-4 rounded-xl shadow-2xl w-full max-w-xs"> 
+        <div class="bg-white p-3 rounded-xl shadow-2xl w-full max-w-md"> 
             <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
             
             <div class="mb-4 p-3 border-2 border-green-500 
@@ -396,7 +396,7 @@
             </div>
           <h1 class="text-2xl font-bold text-center text-red-700">Kassensystem</h1>
           <div class="flex flex-col items-end">
-                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.5 (Finalize Kompakt & Storno Bon)</div>
+                <div id="auth-info" class="text-xs text-gray-500 text-right">Kasse v5.6 (Finalize Breiter & Niedriger)</div>
                 <button onclick="handleLogout()" class="mt-1 px-3 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm">
                     Logout
                 </button>
