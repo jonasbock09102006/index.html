@@ -21,7 +21,7 @@
     #print-receipt-container { display: none; visibility: hidden; } 
     .receipt-print { font-family: 'Consolas', 'Courier New', monospace; }
 
-    /* **KORRIGIERTE DRUCK-STILE FÜR BESSERE LESBARKEIT** */
+    /* **KORRIGIERTE DRUCK-STILE FÜR BONDDRUCKER (80mm)** */
     @media print {
       body * { visibility: hidden !important; }
       
@@ -34,11 +34,11 @@
         top: 0 !important; 
         width: 80mm !important; 
         font-family: 'Consolas', 'Courier New', monospace !important; 
-        font-size: 10pt !important; 
+        font-size: 12px !important; /* Angepasst auf 12px für bessere Lesbarkeit und Zeilenbreite auf Bondruckern */
         color: #000 !important; 
-        padding: 5px !important; 
+        padding: 2px !important; /* Reduziertes Padding für maximale Druckfläche */
         margin: 0 !important;
-        line-height: 1.3 !important; 
+        line-height: 1.2 !important; /* Reduzierter Zeilenabstand */
       }
       #print-receipt-container * { 
         visibility: visible !important; 
@@ -49,7 +49,7 @@
       .receipt-print .item-name { width:70%; overflow:hidden; white-space:normal; } 
       .receipt-print .item-price { width:30%; text-align:right; font-weight:bold; }
       .receipt-print .separator { border-top: 1px dashed #000; margin: 4px 0; }
-      .receipt-print .total-line { font-size: 12pt; font-weight: bold; }
+      .receipt-print .total-line { font-size: 14px !important; font-weight: bold; } /* Angepasst proportional zur neuen Basis von 12px */
       
       /* Stil für die Ausfüll-Linien (Bewirtungsbeleg) */
       .fill-line { border-bottom: 1px solid #000; height: 1.5em; margin-top: 0.5em; }
