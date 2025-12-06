@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Kassensystem (Bewirtungsbeleg) - Firestore (Bericht + Storno + Bon-Nr.)</title>
+  <title>Kassensystem (Bewirtungsbeleg) - Firestore (Bericht + Storno)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
@@ -549,13 +549,7 @@
         showToast('Erste Anmeldung erkannt. Erzeuge Standarddaten...', 'info');
         
         // ACHTUNG: Globaler Steuersatz ist jetzt nur noch Fallback
-        const defaultSettings = { 
-            companyName:'Ihre Firma', 
-            address:'Musterstr. 1, 12345 Musterstadt', 
-            taxId:'123/456/7890', 
-            taxRate:19.0,
-            lastReceiptNumber: 0 // NEU: Bon-Nummer initialisieren
-        };
+        const defaultSettings = { companyName:'Ihre Firma', address:'Musterstr. 1, 12345 Musterstadt', taxId:'123/456/7890', taxRate:19.0 };
         await setDoc(sRef, defaultSettings);
         
         const catRef = categoriesCollectionRef(uid);
@@ -594,64 +588,27 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Settings (GEÄNDERT für Bon-Nummer Initialisierung) ----------
+    // ---------- Settings (unchanged, ausser Text) ----------
     async function loadSettings(){
         if(!currentUser) return;
         const sRef = settingsDocRef(currentUser.uid);
         const sSnap = await getDoc(sRef);
-        
-        if(sSnap.exists()){ 
-            userSettings = sSnap.data(); 
-        }
-        else { 
-            // Fallback default
-            userSettings = { companyName:'Kassensystem', address:'', taxId:'', taxRate:19.0 }; 
-        }
-
-        // NEU: Sicherstellen, dass die Bon-Nummer existiert und auf 0 initialisiert ist, wenn sie fehlt
-        if (typeof userSettings.lastReceiptNumber !== 'number' || userSettings.lastReceiptNumber < 0) {
-            userSettings.lastReceiptNumber = 0;
-            // setDoc mit merge, um nur den fehlenden Wert zu schreiben
-            await setDoc(sRef, { lastReceiptNumber: 0 }, { merge: true });
-        }
+        if(sSnap.exists()){ userSettings = sSnap.data(); }
+        else { userSettings = { companyName:'Kassensystem', address:'', taxId:'', taxRate:19.0 }; await setDoc(sRef, userSettings); }
     }
-    
-    // NEU: Atomar (im Kontext dieser Anwendung) die Bon-Nummer erhöhen
-    async function getAndIncrementReceiptNumber(){
-        if(!currentUser) return 1;
-        const sRef = settingsDocRef(currentUser.uid);
-        
-        // 1. Lesen der aktuellen Nummer
-        const sSnap = await getDoc(sRef);
-        let currentNumber = sSnap.exists() && typeof sSnap.data().lastReceiptNumber === 'number' 
-            ? sSnap.data().lastReceiptNumber 
-            : 0;
-
-        const newNumber = currentNumber + 1;
-        
-        // 2. Speichern der neuen Nummer
-        await updateDoc(sRef, { lastReceiptNumber: newNumber });
-        
-        // 3. Globale Variable aktualisieren (optional, aber gut für den nächsten check)
-        userSettings.lastReceiptNumber = newNumber;
-
-        return newNumber;
-    }
-
 
     window.saveSettings = async function(){
         if(!currentUser) { window.showToast('Nicht angemeldet','error'); return; }
         window.showLoading(true);
         try{
             const sRef = settingsDocRef(currentUser.uid);
-            // ACHTUNG: lastReceiptNumber wird hier nicht überschrieben, nur die Formularfelder
-            const settingsToSave = {
+            userSettings = {
                 companyName: document.getElementById('company-name').value || 'Kassensystem',
                 address: document.getElementById('address').value || '',
                 taxId: document.getElementById('tax-id').value || '',
                 taxRate: parseFloat(document.getElementById('tax-rate').value) || 19.0,
             };
-            await updateDoc(sRef, settingsToSave);
+            await setDoc(sRef, userSettings);
             loadSettings(); // update global variable
             window.showToast('Einstellungen gespeichert.', 'success');
         } catch(err){
@@ -997,8 +954,8 @@
         window.showToast('Bon gelöscht.', 'info');
     }
 
-    // renderReceipt Funktion (WESENTLICH GEÄNDERT für Tax Rate Summary und Storno Bon und BON-NUMMER)
-    window.renderReceipt = function(forPrint = false, receiptType = 'standard', receiptNumber = null, receiptRefId = null, timestamp = null){
+    // renderReceipt Funktion (WESENTLICH GEÄNDERT für Tax Rate Summary und Storno Bon)
+    window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
         const container = forPrint 
             ? document.getElementById('print-receipt-container') // Dedizierter Container für Print
             : document.getElementById('receipt-content-interactive');
@@ -1085,9 +1042,7 @@
                 }
                 
                 const dateObj = timestamp ? new Date(timestamp.seconds * 1000) : new Date();
-                // NEU: Anzeige der Bon-Nummer und der Transaktions-ID
-                content += `<div class="line"><span>Bon-Nr.:</span><span>${receiptNumber || '***'}</span></div>`;
-                content += `<div class="line text-xs"><span>Transaktions-ID:</span><span>${(receiptRefId||'').substring(0, 15)}...</span></div>`;
+                content += `<div class="line"><span>Bon-ID:</span><span>${transactionId || '***'}</span></div>`;
                 content += `<div class="line"><span>Datum/Zeit:</span><span>${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString()}</span></div>`;
                 content += separator;
                 content += `<div class="line font-bold"><span>Artikel</span><span class="text-right">Total Brutto</span></div>`;
@@ -1185,8 +1140,7 @@
         // 2. Render content into the hidden container as 'storno' type
         // Use the cancellationTimestamp if available, otherwise current time
         const cancellationTime = transaction.cancellationTimestamp || { seconds: Math.floor(Date.now() / 1000) }; 
-        // NEU: Übergabe von Bon-Nummer und Firebase-ID
-        window.renderReceipt(true, 'storno', transaction.receiptNumber, transaction.id, cancellationTime);
+        window.renderReceipt(true, 'storno', transaction.id, cancellationTime);
 
         // Force visibility and display temporarily to aid rendering
         printContainer.style.display = 'block'; 
@@ -1215,7 +1169,7 @@
     // ----------------------------------------------------------------
 
 
-    // ---------- Finalize Modal (Payment) (GEÄNDERT für Bon-Nummer Save) ----------
+    // ---------- Finalize Modal (Payment) (GEÄNDERT für Tax Rate Save) ----------
     window.openFinalizeModal = function(){
         if(currentBestellung.length === 0){ window.showToast('Bitte Artikel buchen.', 'error'); return; }
         window.renderReceipt(false); 
@@ -1324,7 +1278,7 @@
         document.getElementById('btn-cash-bewirtung').classList.toggle('bg-red-700', isSufficient);
     }
     
-    // WICHTIG: handleFinalizeAction (GEÄNDERT für Tax Rate Save und Bon-Nummer)
+    // WICHTIG: handleFinalizeAction (GEÄNDERT für Tax Rate Save)
     window.handleFinalizeAction = async function(method, receiptType){
         if(!currentUser) return;
         
@@ -1338,9 +1292,6 @@
         
         window.showLoading(true);
         try{
-            // NEU: Bon-Nummer holen und inkrementieren
-            const newReceiptNumber = await getAndIncrementReceiptNumber();
-            
             // Vorbereitung der Tax Summary
             let taxSummaryForSave = {};
             const finalTaxRate = userSettings.taxRate || 19.0;
@@ -1367,9 +1318,6 @@
                 receiptType,
                 timestamp: serverTimestamp(),
                 
-                // NEU: Bon-Nummer speichern
-                receiptNumber: newReceiptNumber,
-                
                 // NEU: Speichern der detaillierten Steuer-Zusammenfassung
                 taxSummary: taxSummaryForSave,
                 
@@ -1389,8 +1337,8 @@
                 const printContainer = document.getElementById('print-receipt-container');
                 
                 // Render content into the hidden container
-                // NEU: Übergabe von Bon-Nummer (newReceiptNumber) und Firebase-ID (transRef.id)
-                window.renderReceipt(true, receiptType, newReceiptNumber, transRef.id, currentTimestamp);
+                // cashPaymentMethod ist hier korrekt gesetzt, da es aus setPaymentMethod oder BAR-Initialisierung kommt
+                window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
 
                 // Force visibility and display temporarily to aid rendering
                 printContainer.style.display = 'block'; 
@@ -1424,7 +1372,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Storno der letzten Transaktion (MODIFIZIERT zum Drucken und für Bon-Nummer) ----------
+    // ---------- Storno der letzten Transaktion (MODIFIZIERT zum Drucken) ----------
     window.cancelLastTransaction = async function(){
         if(!currentUser) return;
         
@@ -1446,11 +1394,8 @@
             
             const docSnapshot = querySnapshot.docs[0];
             const transaction = { id: docSnapshot.id, ...docSnapshot.data() };
-            
-            // NEU: Verwende Bon-Nummer oder Firebase-ID für die Bestätigung
-            const bonNumber = transaction.receiptNumber || transaction.id.substring(0, 8) + '...';
 
-            const confirmationMessage = `Soll Transaktion ${bonNumber} \n(Gesamt: ${transaction.totalBrutto.toFixed(2).replace('.', ',')} €) \nwirklich storniert werden?`;
+            const confirmationMessage = `Soll Transaktion ${transaction.id.substring(0, 8)}... \n(Gesamt: ${transaction.totalBrutto.toFixed(2).replace('.', ',')} €) \nwirklich storniert werden?`;
             
             if(!confirm(confirmationMessage)) {
                 window.showLoading(false);
@@ -1467,7 +1412,7 @@
                 cancellationTimestamp: serverTimestamp()
             });
 
-            window.showToast(`Transaktion ${bonNumber} erfolgreich storniert.`, 'success');
+            window.showToast(`Transaktion ${transaction.id.substring(0, 8)}... erfolgreich storniert.`, 'success');
 
         } catch(err){
             console.error('Cancellation error', err);
@@ -1608,11 +1553,6 @@
                 reportHtml += line(`Firma`, userSettings.companyName || 'N/A');
                 reportHtml += line(`Globaler Fallback MwSt.`, `${userSettings.taxRate || 19.0}%`);
                 reportHtml += lineBreak;
-                
-                // NEU: Letzte Bon-Nummer anzeigen
-                reportHtml += line(`Letzte Bon-Nr.`, `${userSettings.lastReceiptNumber}`);
-                reportHtml += lineBreak;
-
 
                 reportHtml += `<div class="text-lg font-bold mt-2">Gesamtsummen (Nicht storniert)</div>`;
                 reportHtml += line(`Bruttoumsatz`, `${totalGross.toFixed(2).replace('.', ',')} €`);
@@ -1684,15 +1624,11 @@
                 transactionHistory.forEach((t, index) => {
                     const time = new Date(t.timestamp.seconds * 1000).toLocaleTimeString();
                     const date = new Date(t.timestamp.seconds * 1000).toLocaleDateString();
-                    
-                    // NEU: Verwende Bon-Nummer oder Firebase-ID
-                    const bonNumber = t.receiptNumber || t.id.substring(0, 8) + '...';
-
                     html += `
                         <li class="flex justify-between items-center py-2 hover:bg-red-50">
                             <div class="flex flex-col text-sm">
                                 <span class="font-bold">${t.totalBrutto.toFixed(2).replace('.', ',')} € (${t.paymentMethod})</span>
-                                <span class="text-xs text-gray-500">${date} ${time} | Bon-Nr.: ${bonNumber}</span>
+                                <span class="text-xs text-gray-500">${date} ${time} | Bon: ${t.id.substring(0, 8)}...</span>
                             </div>
                             <button onclick="window.handleReversal('${t.id}', ${index})" class="text-sm text-white bg-red-600 p-1 rounded-lg hover:bg-red-700">Storno</button>
                         </li>
@@ -1709,16 +1645,13 @@
         finally{ window.showLoading(false); }
     }
 
-    // MODIFIZIERT: handleReversal (zum Drucken und für Bon-Nummer)
+    // MODIFIZIERT: handleReversal (zum Drucken)
     window.handleReversal = async function(transactionId, index){
         if(!currentUser) return;
         const transaction = transactionHistory[index];
         if(!transaction) return;
 
-        // NEU: Verwende Bon-Nummer oder Firebase-ID für die Bestätigung
-        const bonNumber = transaction.receiptNumber || transaction.id.substring(0, 8) + '...';
-
-        if(!confirm(`Transaktion ${bonNumber} (Gesamt: ${transaction.totalBrutto.toFixed(2).replace('.', ',')} €) wirklich stornieren?`)) return;
+        if(!confirm(`Transaktion ${transaction.id.substring(0, 8)}... (Gesamt: ${transaction.totalBrutto.toFixed(2).replace('.', ',')} €) wirklich stornieren?`)) return;
 
         window.showLoading(true);
         try{
