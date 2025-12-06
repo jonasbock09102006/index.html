@@ -95,13 +95,13 @@
           <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt</h3>
           <div class="flex space-x-2 mb-2">
             <input type="text" id="new-category-name" placeholder="Kategorie" class="flex-grow p-2 border rounded-lg">
-            <button onclick="addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg">Kategorie</button>
+            <button onclick="window.addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg">Kategorie</button>
           </div>
           <div class="grid grid-cols-5 gap-2 items-end">
             <input type="text" id="new-product-name" placeholder="Produkt" class="col-span-2 p-2 border rounded-lg">
             <input type="number" id="new-product-price" placeholder="Preis" step="0.01" class="p-2 border rounded-lg">
             <select id="new-product-category" class="p-2 border rounded-lg"><option value="">Kategorie wählen</option></select>
-            <button onclick="addProduct()" class="p-2 bg-green-500 text-white rounded-lg">Produkt</button>
+            <button onclick="window.addProduct()" class="p-2 bg-green-500 text-white rounded-lg">Produkt</button>
           </div>
         </div>
 
@@ -206,7 +206,7 @@
           <label for="tax-rate" class="block text-sm font-medium text-gray-700">Steuersatz (%)</label>
           <input type="number" id="tax-rate" step="0.1" class="mt-1 w-full p-2 border rounded-lg">
         </div>
-        <button type="button" onclick="saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600">Speichern</button>
+        <button type="button" onclick="window.saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600">Speichern</button>
       </form>
       <button onclick="closeModal('settings-modal')" class="mt-4 w-full p-1 text-sm text-gray-500">Schließen</button>
     </div>
@@ -219,11 +219,11 @@
       <div class="flex items-center space-x-2 mb-4 bg-blue-50 p-3 rounded-lg">
         <label for="report-date" class="text-sm font-bold text-blue-700 whitespace-nowrap">Bericht für Tag:</label>
         <input type="date" id="report-date" class="p-1 border rounded-lg text-sm flex-grow">
-        <button onclick="setReportDateToday()" class="p-1 rounded-lg text-xs font-bold text-white bg-red-500">Heute</button>
+        <button onclick="window.setReportDateToday()" class="p-1 rounded-lg text-xs font-bold text-white bg-red-500">Heute</button>
       </div>
 
-      <button onclick="runDailyReport('report')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600">Tagesabschluss (Bericht)</button>
-      <button onclick="runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300">Tagesabschluss (CSV Export)</button>
+      <button onclick="window.runDailyReport('report')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-white bg-blue-600">Tagesabschluss (Bericht)</button>
+      <button onclick="window.runDailyReport('csv')" class="product-btn w-full p-3 rounded-xl font-bold text-base text-gray-800 bg-gray-300">Tagesabschluss (CSV Export)</button>
       
       <div id="report-content" class="mt-4 p-4 bg-gray-100 rounded-lg overflow-y-auto flex-grow receipt-print">
         <p class="text-gray-500 text-center">Wählen Sie ein Datum und klicken Sie auf 'Tagesabschluss (Bericht)'.</p>
@@ -250,7 +250,7 @@
           <div id="category-tabs" class="flex space-x-1 overflow-x-auto pb-1">
             </div>
         </div>
-        <button onclick="openProductModal()" class="product-btn p-2 bg-indigo-500 text-white rounded-lg whitespace-nowrap">Produkte verwalten</button>
+        <button onclick="window.openProductModal()" class="product-btn p-2 bg-indigo-500 text-white rounded-lg whitespace-nowrap">Produkte verwalten</button>
         <button onclick="window.handleLogout()" class="product-btn p-2 bg-red-500 text-white rounded-lg whitespace-nowrap">Logout</button>
       </div>
 
@@ -264,18 +264,18 @@
           <div id="quantity-display" class="w-full h-10 flex items-center justify-center text-xl font-extrabold text-red-600 bg-red-100 rounded-xl">1</div>
         </div>
         <div id="main-numpad-container" class="grid grid-cols-3 gap-2 col-span-3">
-          <button onclick="handleQuantityInput('7')" class="numpad-btn bg-gray-200">7</button>
-          <button onclick="handleQuantityInput('8')" class="numpad-btn bg-gray-200">8</button>
-          <button onclick="handleQuantityInput('9')" class="numpad-btn bg-gray-200">9</button>
-          <button onclick="handleQuantityInput('4')" class="numpad-btn bg-gray-200">4</button>
-          <button onclick="handleQuantityInput('5')" class="numpad-btn bg-gray-200">5</button>
-          <button onclick="handleQuantityInput('6')" class="numpad-btn bg-gray-200">6</button>
-          <button onclick="handleQuantityInput('1')" class="numpad-btn bg-gray-200">1</button>
-          <button onclick="handleQuantityInput('2')" class="numpad-btn bg-gray-200">2</button>
-          <button onclick="handleQuantityInput('3')" class="numpad-btn bg-gray-200">3</button>
-          <button onclick="handleQuantityInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
-          <button onclick="handleQuantityInput('0')" class="numpad-btn bg-gray-200">0</button>
-          <button onclick="handleQuantityInput('+')" class="numpad-btn bg-green-500 text-white">+</button>
+          <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-gray-200">7</button>
+          <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-gray-200">8</button>
+          <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-gray-200">9</button>
+          <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-gray-200">4</button>
+          <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-gray-200">5</button>
+          <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-gray-200">6</button>
+          <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-gray-200">1</button>
+          <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-gray-200">2</button>
+          <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-gray-200">3</button>
+          <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
+          <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-gray-200">0</button>
+          <button onclick="window.handleQuantityInput('+')" class="numpad-btn bg-green-500 text-white">+</button>
         </div>
       </div>
 
@@ -289,14 +289,14 @@
           <p class="text-gray-500 text-center p-4">Es wurden noch keine Artikel gebucht.</p>
         </div>
         <div class="border-t pt-2 flex justify-between items-center">
-          <button onclick="clearBestellung()" class="text-red-500 text-sm font-semibold">Leeren</button>
+          <button onclick="window.clearBestellung()" class="text-red-500 text-sm font-semibold">Leeren</button>
           <span id="total-display" class="text-2xl font-extrabold text-red-700">GESAMT: 0,00 €</span>
         </div>
       </div>
 
       <div class="bg-white p-4 rounded-xl shadow-lg space-y-3">
-        <button onclick="openFinalizeModal()" class="product-btn w-full p-4 rounded-xl font-extrabold text-white bg-green-600 hover:bg-green-700 shadow-xl" disabled id="btn-finalize">Zahlung abschließen</button>
-        <button onclick="openReportModal(); openTransactionReversalModal();" class="product-btn w-full p-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700">Tagesabschluss & Storno</button>
+        <button onclick="window.openFinalizeModal()" class="product-btn w-full p-4 rounded-xl font-extrabold text-white bg-green-600 hover:bg-green-700 shadow-xl" disabled id="btn-finalize">Zahlung abschließen</button>
+        <button onclick="window.openReportModal(); window.openTransactionReversalModal();" class="product-btn w-full p-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700">Tagesabschluss & Storno</button>
       </div>
 
     </div>
@@ -398,7 +398,7 @@
             cashPaymentMethod = 'BAR';
             document.getElementById('cash-received-display').innerText = '0,00';
             document.getElementById('change-display').innerText = '0,00 €';
-            setPaymentMethod('BAR');
+            window.setPaymentMethod('BAR');
         }
     }
 
@@ -449,7 +449,7 @@
             await sendPasswordResetEmail(auth, email);
             showToast('Passwort-Reset-Link gesendet. Prüfen Sie Ihr Postfach.', 'info');
             closeModal('forgot-password-modal');
-            openLoginModal();
+            window.openLoginModal();
         } catch(err){ 
             console.error(err); 
             showToast('Fehler beim Senden des Links: ' + (err.message||err.code), 'error'); 
@@ -478,7 +478,7 @@
         } 
         else { 
             currentUser = null; 
-            updateAppView('login'); 
+            window.updateAppView('login'); 
             // Clear local data
             categories = {}; products = {}; currentBestellung = []; totalBrutto = 0.00; userSettings = {};
             currentQuantity = 1; cashReceivedInput = '0'; cashPaymentMethod = 'BAR'; transactionHistory = [];
@@ -533,18 +533,18 @@
             await loadProductsAndCategories();
             
             // Optionally: load recent txns for UI
-            renderReceipt();
+            window.renderReceipt();
             
             // ** DER FIX VOM LETZTEN MAL **: Zeigt die Kasse erst, nachdem die Daten geladen sind
-            updateAppView('kasse'); 
+            window.updateAppView('kasse'); 
         } catch(err){ 
             console.error('initUserData error', err); 
-            showToast('Fehler beim Laden der Daten. Bitte erneut versuchen.', 'error'); 
+            window.showToast('Fehler beim Laden der Daten. Bitte erneut versuchen.', 'error'); 
             
             // ** DER NEUE FIX **: Wenn das Laden der Daten fehlschlägt, den Benutzer abmelden.
             await signOut(auth); 
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
 
     // ---------- Settings ----------
@@ -556,9 +556,9 @@
         else { userSettings = { companyName:'Kassensystem', address:'', taxId:'', taxRate:19.0 }; await setDoc(sRef, userSettings); }
     }
 
-    async function saveSettings(){
-        if(!currentUser) { showToast('Nicht angemeldet','error'); return; }
-        showLoading(true);
+    window.saveSettings = async function(){
+        if(!currentUser) { window.showToast('Nicht angemeldet','error'); return; }
+        window.showLoading(true);
         try{
             const sRef = settingsDocRef(currentUser.uid);
             userSettings = {
@@ -569,12 +569,12 @@
             };
             await setDoc(sRef, userSettings);
             loadSettings(); // update global variable
-            showToast('Einstellungen gespeichert.', 'success');
+            window.showToast('Einstellungen gespeichert.', 'success');
         } catch(err){
             console.error(err);
-            showToast('Fehler beim Speichern der Einstellungen.', 'error');
+            window.showToast('Fehler beim Speichern der Einstellungen.', 'error');
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
 
     // Fills the form when opening the modal
@@ -583,7 +583,7 @@
         document.getElementById('address').value = userSettings.address || '';
         document.getElementById('tax-id').value = userSettings.taxId || '';
         document.getElementById('tax-rate').value = userSettings.taxRate || 19.0;
-        closeModal('report-modal'); // Close report modal if open
+        window.closeModal('report-modal'); // Close report modal if open
         document.getElementById('settings-modal').style.display='flex';
         window.toggleReceiptColumn(false);
     }
@@ -603,33 +603,25 @@
         const prodSnap = await getDocs(query(prodRef, orderBy('name', 'asc')));
         prodSnap.forEach(doc => { products[doc.id] = { id: doc.id, ...doc.data() }; });
 
-        // Fallback for first time or empty user
-        if(Object.keys(categories).length === 0 || Object.keys(products).length === 0){ 
-            if(Object.keys(categories).length === 0 || Object.keys(products).length === 0){ 
-                // Dies wird nach der erfolgreichen Seeding-Operation (durch den vorherigen Schritt)
-                // nur noch auftreten, wenn der Index fehlt!
-            }
-        } 
-        
         // Render UI
         renderCategoryTabs(); 
-        renderProductGrid(Object.values(categories)[0]?.id || null); 
-        renderProductModalContent();
+        window.renderProductGrid(Object.values(categories)[0]?.id || null); 
+        window.renderProductModalContent();
     }
 
-    async function saveProductsAndCategories(){
-        if(!currentUser) { showToast('Nicht angemeldet','error'); return; }
-        const uid = currentUser.uid; showLoading(true);
+    window.saveProductsAndCategories = async function(){
+        if(!currentUser) { window.showToast('Nicht angemeldet','error'); return; }
+        const uid = currentUser.uid; window.showLoading(true);
         try{
             
             await loadProductsAndCategories();
-            showToast('Produktliste aktualisiert.', 'success');
+            window.showToast('Produktliste aktualisiert.', 'success');
         }
         catch(err){ 
             console.error(err); 
-            showToast('Fehler beim Aktualisieren der Produkte.', 'error'); 
+            window.showToast('Fehler beim Aktualisieren der Produkte.', 'error'); 
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
 
     function renderCategoryTabs(){
@@ -640,7 +632,7 @@
             btn.id = `cat-tab-${cat.id}`;
             btn.className = 'p-2 text-sm font-semibold rounded-lg bg-gray-200 hover:bg-red-200 transition-colors whitespace-nowrap';
             btn.innerText = cat.name;
-            btn.onclick = () => { renderProductGrid(cat.id); };
+            btn.onclick = () => { window.renderProductGrid(cat.id); };
             container.appendChild(btn);
         });
     }
@@ -680,61 +672,61 @@
     }
 
     // CRUD functions (Modal)
-    async function addCategory(){
+    window.addCategory = async function(){
         if(!currentUser) return;
         const name = document.getElementById('new-category-name').value.trim();
-        if(!name) { showToast('Kategoriename fehlt', 'error'); return; }
-        showLoading(true);
+        if(!name) { window.showToast('Kategoriename fehlt', 'error'); return; }
+        window.showLoading(true);
         try{
             await addDoc(categoriesCollectionRef(currentUser.uid), { name, order: Object.keys(categories).length + 1 });
             document.getElementById('new-category-name').value = '';
             await loadProductsAndCategories(); // Re-load all data
-            showToast('Kategorie hinzugefügt.', 'success');
-        } catch(err){ console.error(err); showToast('Fehler beim Hinzufügen der Kategorie.', 'error'); }
-        finally{ showLoading(false); }
+            window.showToast('Kategorie hinzugefügt.', 'success');
+        } catch(err){ console.error(err); window.showToast('Fehler beim Hinzufügen der Kategorie.', 'error'); }
+        finally{ window.showLoading(false); }
     }
 
-    async function addProduct(){
+    window.addProduct = async function(){
         if(!currentUser) return;
         const name = document.getElementById('new-product-name').value.trim();
         const price = parseFloat(document.getElementById('new-product-price').value);
         const categoryId = document.getElementById('new-product-category').value;
-        if(!name || isNaN(price) || !categoryId) { showToast('Bitte Name, Preis und Kategorie angeben', 'error'); return; }
-        showLoading(true);
+        if(!name || isNaN(price) || !categoryId) { window.showToast('Bitte Name, Preis und Kategorie angeben', 'error'); return; }
+        window.showLoading(true);
         try{
             await addDoc(productsCollectionRef(currentUser.uid), { name, price: price.toFixed(2), categoryId });
             document.getElementById('new-product-name').value = '';
             document.getElementById('new-product-price').value = '';
             document.getElementById('new-product-category').value = '';
             await loadProductsAndCategories(); // Re-load all data
-            showToast('Produkt hinzugefügt.', 'success');
-        } catch(err){ console.error(err); showToast('Fehler beim Hinzufügen des Produkts.', 'error'); }
-        finally{ showLoading(false); }
+            window.showToast('Produkt hinzugefügt.', 'success');
+        } catch(err){ console.error(err); window.showToast('Fehler beim Hinzufügen des Produkts.', 'error'); }
+        finally{ window.showLoading(false); }
     }
 
-    async function deleteCategory(id){
+    window.deleteCategory = async function(id){
         if(!currentUser || !confirm('Sicher? Produkte in dieser Kategorie werden NICHT gelöscht!')) return;
-        showLoading(true);
+        window.showLoading(true);
         try{
             await deleteDoc(doc(categoriesCollectionRef(currentUser.uid), id));
             await loadProductsAndCategories(); // Re-load all data
-            showToast('Kategorie gelöscht.', 'success');
-        } catch(err){ console.error(err); showToast('Fehler beim Löschen der Kategorie.', 'error'); }
-        finally{ showLoading(false); }
+            window.showToast('Kategorie gelöscht.', 'success');
+        } catch(err){ console.error(err); window.showToast('Fehler beim Löschen der Kategorie.', 'error'); }
+        finally{ window.showLoading(false); }
     }
 
-    async function deleteProduct(id){
+    window.deleteProduct = async function(id){
         if(!currentUser || !confirm('Produkt wirklich löschen?')) return;
-        showLoading(true);
+        window.showLoading(true);
         try{
             await deleteDoc(doc(productsCollectionRef(currentUser.uid), id));
             await loadProductsAndCategories(); // Re-load all data
-            showToast('Produkt gelöscht.', 'success');
-        } catch(err){ console.error(err); showToast('Fehler beim Löschen des Produkts.', 'error'); }
-        finally{ showLoading(false); }
+            window.showToast('Produkt gelöscht.', 'success');
+        } catch(err){ console.error(err); window.showToast('Fehler beim Löschen des Produkts.', 'error'); }
+        finally{ window.showLoading(false); }
     }
 
-    function renderProductModalContent(){
+    window.renderProductModalContent = function(){
         const catListContainer = document.getElementById('category-list');
         const prodListContainer = document.getElementById('product-list');
         const newProdCatSelect = document.getElementById('new-product-category');
@@ -747,9 +739,10 @@
             // Category List
             const catDiv = document.createElement('div');
             catDiv.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-lg';
+            // ACHTUNG: Hier muss deleteCategory mit window. aufgerufen werden
             catDiv.innerHTML = `
                 <span class="font-semibold">${cat.name} (${Object.values(products).filter(p => p.categoryId === cat.id).length} Produkte)</span>
-                <button onclick="deleteCategory('${cat.id}')" class="text-sm text-white bg-red-500 p-1 rounded-lg">Löschen</button>
+                <button onclick="window.deleteCategory('${cat.id}')" class="text-sm text-white bg-red-500 p-1 rounded-lg">Löschen</button>
             `;
             catListContainer.appendChild(catDiv);
             
@@ -764,12 +757,13 @@
             // Product List
             const prodDiv = document.createElement('div');
             prodDiv.className = 'flex justify-between items-center bg-white border p-2 rounded-lg';
+            // ACHTUNG: Hier muss deleteProduct mit window. aufgerufen werden
             prodDiv.innerHTML = `
                 <div class="flex flex-col">
                     <span class="font-semibold">${prod.name} (${parseFloat(prod.price).toFixed(2).replace('.', ',')} €)</span>
                     <span class="text-xs text-gray-500">${categories[prod.categoryId]?.name || 'Ohne Kategorie'}</span>
                 </div>
-                <button onclick="deleteProduct('${prod.id}')" class="text-sm text-white bg-red-500 p-1 rounded-lg">Löschen</button>
+                <button onclick="window.deleteProduct('${prod.id}')" class="text-sm text-white bg-red-500 p-1 rounded-lg">Löschen</button>
             `;
             prodListContainer.appendChild(prodDiv);
         });
@@ -819,20 +813,20 @@
         currentQuantity = 1;
         document.getElementById('quantity-display').innerText = currentQuantity;
         
-        renderReceipt();
+        window.renderReceipt();
     }
 
     window.removeItem = function(index){
         currentBestellung.splice(index, 1);
-        renderReceipt();
+        window.renderReceipt();
     }
 
     window.clearBestellung = function(){
         if(currentBestellung.length === 0) return;
         if(!confirm('Sicher? Ganzen Bon löschen?')) return;
         currentBestellung = [];
-        renderReceipt();
-        showToast('Bon gelöscht.', 'info');
+        window.renderReceipt();
+        window.showToast('Bon gelöscht.', 'info');
     }
 
     window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
@@ -861,16 +855,17 @@
             if(forPrint){
                 const lineBreak = "<div>----------------------------------------</div>";
                 
-                content += `<div class="center font-bold">${(userSettings.companyName||'Kassensystem').toUpperCase()}</div>`;
-                content += `<div class="center">${userSettings.address||''}</div>`;
-                content += `<div class="center">Ust-IdNr.: ${userSettings.taxId||''}</div>` + lineBreak;
+                content += `<div class="text-center font-bold">${(userSettings.companyName||'Kassensystem').toUpperCase()}</div>`;
+                content += `<div class="text-center">${userSettings.address||''}</div>`;
+                content += `<div class="text-center">Ust-IdNr.: ${userSettings.taxId||''}</div>` + lineBreak;
                 
                 if(receiptType==='bewirtung'){
-                    content += "<div class='center font-bold text-lg'>*** BEWIRTUNGSBELEG ***</div>"+lineBreak;
-                    content += "<div class='center'>Bewirtungskosten sind nur bis zu 70% abziehbar.</div>"+lineBreak;
+                    content += "<div class='text-center font-bold text-lg'>*** BEWIRTUNGSBELEG ***</div>"+lineBreak;
+                    content += "<div class='text-center'>Bewirtungskosten sind nur bis zu 70% abziehbar.</div>"+lineBreak;
                 }
                 
-                content += `<div class="line"><span>Datum:</span><span>${timestamp ? new Date(timestamp.seconds * 1000).toLocaleString() : new Date().toLocaleString()}</span></div>`;
+                const dateObj = timestamp ? new Date(timestamp.seconds * 1000) : new Date();
+                content += `<div class="line"><span>Datum:</span><span>${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString()}</span></div>`;
                 content += `<div class="line"><span>Bon-ID:</span><span>${transactionId || '***'}</span></div>` + lineBreak;
                 content += `<div class="line font-bold"><span>Artikel</span><span>Gesamt</span></div>` + lineBreak;
             }
@@ -895,7 +890,7 @@
                                 <span class="text-sm text-gray-600 ml-2">(${item.price.toFixed(2).replace('.', ',')} €)</span>
                             </div>
                             <span class="font-extrabold text-red-700">${item.totalBrutto.toFixed(2).replace('.', ',')} €</span>
-                            <button onclick="removeItem(${index})" class="ml-3 text-red-500 hover:text-red-700 text-lg font-bold leading-none">×</button>
+                            <button onclick="window.removeItem(${index})" class="ml-3 text-red-500 hover:text-red-700 text-lg font-bold leading-none">×</button>
                         </div>
                     `;
                 }
@@ -924,7 +919,7 @@
                 }
 
                 content += lineBreak;
-                content += "<div class='center mt-4'>Vielen Dank für Ihren Besuch!</div>";
+                content += "<div class='text-center mt-4'>Vielen Dank für Ihren Besuch!</div>";
 
             } else {
                 document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
@@ -935,13 +930,13 @@
 
     // ---------- Finalize Modal (Payment) ----------
     window.openFinalizeModal = function(){
-        if(currentBestellung.length === 0){ showToast('Bitte Artikel buchen.', 'error'); return; }
-        renderReceipt(false); // Recalculate total
+        if(currentBestellung.length === 0){ window.showToast('Bitte Artikel buchen.', 'error'); return; }
+        window.renderReceipt(false); // Recalculate total
         document.getElementById('finalize-total').innerText = totalBrutto.toFixed(2).replace('.', ',') + ' €';
         cashReceivedInput = '0';
         document.getElementById('cash-received-display').innerText = '0,00';
         document.getElementById('change-display').innerText = '0,00 €';
-        setPaymentMethod('BAR'); // Default to BAR
+        window.setPaymentMethod('BAR'); // Default to BAR
         document.getElementById('finalize-modal').style.display = 'flex';
         window.toggleReceiptColumn(false);
     }
@@ -964,7 +959,7 @@
             document.getElementById('btn-bar-indicator').style.display = 'none';
             btnKarte.classList.add('bg-indigo-700'); // Highlight active card button
         }
-        updateCashFinalizeButtons();
+        window.updateCashFinalizeButtons();
     }
 
     window.handleCashInput = function(input){
@@ -999,25 +994,25 @@
         }
 
         cashReceivedInput = currentStr;
-        updateCashDisplay();
-        updateCashFinalizeButtons();
+        window.updateCashDisplay();
+        window.updateCashFinalizeButtons();
     }
 
     window.setCashExact = function(){
         cashReceivedInput = totalBrutto.toFixed(2);
-        updateCashDisplay();
-        updateCashFinalizeButtons();
+        window.updateCashDisplay();
+        window.updateCashFinalizeButtons();
     }
 
     window.addCashShortcut = function(amount){
         const currentAmount = parseFloat(cashReceivedInput) || 0;
         const newAmount = currentAmount + amount;
         cashReceivedInput = newAmount.toFixed(2);
-        updateCashDisplay();
-        updateCashFinalizeButtons();
+        window.updateCashDisplay();
+        window.updateCashFinalizeButtons();
     }
 
-    function updateCashDisplay(){
+    window.updateCashDisplay = function(){
         const received = parseFloat(cashReceivedInput) || 0;
         const change = Math.max(0, received - totalBrutto);
 
@@ -1025,7 +1020,7 @@
         document.getElementById('change-display').innerText = change.toFixed(2).replace('.', ',') + ' €';
     }
 
-    function updateCashFinalizeButtons(){
+    window.updateCashFinalizeButtons = function(){
         if(cashPaymentMethod !== 'BAR') return;
         const received = parseFloat(cashReceivedInput) || 0;
         const isSufficient = received >= totalBrutto;
@@ -1049,12 +1044,12 @@
         if(method === 'BAR'){
             const received = parseFloat(cashReceivedInput) || 0;
             if(received < totalBrutto){
-                showToast('Erhaltener Betrag ist zu gering.', 'error');
+                window.showToast('Erhaltener Betrag ist zu gering.', 'error');
                 return;
             }
         }
         
-        showLoading(true);
+        window.showLoading(true);
         try{
             // 1. Save Transaction to Firestore
             const transactionData = {
@@ -1076,23 +1071,24 @@
             
             // 2. Print Receipt if requested
             if(receiptType !== 'none'){
-                // Temporary render of receipt for printing (uses the transaction data)
-                renderReceipt(true, receiptType, transRef.id, { seconds: Math.floor(Date.now() / 1000) });
+                // FIX: Bon wird mit der ID und dem momentanen Zeitstempel (ServerTimestamp ist async!) gerendert
+                const currentTimestamp = { seconds: Math.floor(Date.now() / 1000) }; 
+                window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
                 window.print();
             }
 
             // 3. Clear state and close modal
             currentBestellung = [];
             totalBrutto = 0.00;
-            renderReceipt(); // Render empty receipt
-            closeModal('finalize-modal');
+            window.renderReceipt(); // Render empty receipt
+            window.closeModal('finalize-modal');
             
-            showToast('Transaktion abgeschlossen.', 'success');
+            window.showToast('Transaktion abgeschlossen.', 'success');
         } catch(err){
             console.error(err);
-            showToast('Fehler beim Abschließen der Transaktion.', 'error');
+            window.showToast('Fehler beim Abschließen der Transaktion.', 'error');
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
 
     // ---------- Transactions & Reports ----------
@@ -1106,11 +1102,11 @@
 
     // Run Daily Report (Print or CSV)
     window.runDailyReport = async function(outputType = 'report'){
-        if(!currentUser) { showToast('Nicht angemeldet','error'); return; }
+        if(!currentUser) { window.showToast('Nicht angemeldet','error'); return; }
         const selectedDate = document.getElementById('report-date').value;
-        if(!selectedDate) { showToast('Bitte ein Datum wählen.', 'error'); return; }
+        if(!selectedDate) { window.showToast('Bitte ein Datum wählen.', 'error'); return; }
         
-        showLoading(true);
+        window.showLoading(true);
         try{
             const dateObj = new Date(selectedDate);
             const startOfDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
@@ -1176,7 +1172,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `Tagesabschluss_${selectedDate}.csv`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-                showToast('CSV-Export gestartet.', 'success');
+                window.showToast('CSV-Export gestartet.', 'success');
             } else {
                 // Report (Print/Screen)
                 const container = document.getElementById('report-content');
@@ -1219,18 +1215,18 @@
             }
         } catch(err){
             console.error('Report error', err);
-            showToast('Fehler beim Erstellen des Berichts.', 'error');
+            window.showToast('Fehler beim Erstellen des Berichts.', 'error');
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
     
     // Open Storno Modal with recent transactions
-    async function openTransactionReversalModal() {
+    window.openTransactionReversalModal = async function() {
         if(!currentUser) return;
         const listContainer = document.getElementById('transaction-list'); listContainer.innerHTML = '';
         
         // Reload most recent transactions directly from Firestore (exclude cancelled)
-        showLoading(true);
+        window.showLoading(true);
         try {
             const q = query(
                 transactionsCollectionRef(currentUser.uid), 
@@ -1249,13 +1245,14 @@
                 transactionHistory.forEach((t, index) => {
                     const time = new Date(t.timestamp.seconds * 1000).toLocaleTimeString();
                     const date = new Date(t.timestamp.seconds * 1000).toLocaleDateString();
+                    // ACHTUNG: Hier muss handleReversal mit window. aufgerufen werden
                     html += `
                         <li class="flex justify-between items-center py-2 hover:bg-red-50">
                             <div class="flex flex-col text-sm">
                                 <span class="font-bold">${t.totalBrutto.toFixed(2).replace('.', ',')} € (${t.paymentMethod})</span>
                                 <span class="text-xs text-gray-500">${date} ${time} | Bon: ${t.id.substring(0, 8)}...</span>
                             </div>
-                            <button onclick="handleReversal('${t.id}', ${index})" class="text-sm text-white bg-red-600 p-1 rounded-lg hover:bg-red-700">Storno</button>
+                            <button onclick="window.handleReversal('${t.id}', ${index})" class="text-sm text-white bg-red-600 p-1 rounded-lg hover:bg-red-700">Storno</button>
                         </li>
                     `;
                 });
@@ -1267,7 +1264,7 @@
             console.error('Load history error', err);
             listContainer.innerHTML = '<p class="text-red-500 text-center p-2">Fehler beim Laden der Historie.</p>';
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
 
     window.handleReversal = async function(transactionId, index){
@@ -1277,7 +1274,7 @@
 
         if(!confirm(`Transaktion ${transaction.id.substring(0, 8)}... (Gesamt: ${transaction.totalBrutto.toFixed(2).replace('.', ',')} €) wirklich stornieren?`)) return;
 
-        showLoading(true);
+        window.showLoading(true);
         try{
             const tRef = doc(transactionsCollectionRef(currentUser.uid), transactionId);
             await updateDoc(tRef, {
@@ -1286,15 +1283,15 @@
             });
 
             // Update UI/re-render list
-            await openTransactionReversalModal();
+            await window.openTransactionReversalModal();
             
-            showToast('Transaktion erfolgreich storniert.', 'success');
+            window.showToast('Transaktion erfolgreich storniert.', 'success');
 
         } catch(err){
             console.error('Reversal error', err);
-            showToast('Fehler beim Stornieren der Transaktion.', 'error');
+            window.showToast('Fehler beim Stornieren der Transaktion.', 'error');
         }
-        finally{ showLoading(false); }
+        finally{ window.showLoading(false); }
     }
 
     window.openReportModal = function(){
@@ -1304,14 +1301,14 @@
 
     // ---------- Modal Controls (Helpers) ----------
 
-    window.openLoginModal = function(){ document.getElementById('login-modal').style.display='flex'; toggleReceiptColumn(false); };
-    window.openRegistrationModal = function(){ closeModal('login-modal'); toggleReceiptColumn(false); document.getElementById('registration-modal').style.display='flex'; };
-    window.openForgotPasswordModal = function(){ closeModal('login-modal'); toggleReceiptColumn(false); document.getElementById('forgot-password-modal').style.display='flex'; };
-    window.openProductModal = function(){ renderProductModalContent(); toggleReceiptColumn(false); document.getElementById('product-modal').style.display='flex'; };
+    window.openLoginModal = function(){ document.getElementById('login-modal').style.display='flex'; window.toggleReceiptColumn(false); };
+    window.openRegistrationModal = function(){ window.closeModal('login-modal'); window.toggleReceiptColumn(false); document.getElementById('registration-modal').style.display='flex'; };
+    window.openForgotPasswordModal = function(){ window.closeModal('login-modal'); window.toggleReceiptColumn(false); document.getElementById('forgot-password-modal').style.display='flex'; };
+    window.openProductModal = function(){ window.renderProductModalContent(); window.toggleReceiptColumn(false); document.getElementById('product-modal').style.display='flex'; };
 
     // ---------- Startup ----------
     document.addEventListener('DOMContentLoaded', () => {
-        setReportDateToday();
+        window.setReportDateToday();
         window.updateAppView('login'); // default view
     });
 
