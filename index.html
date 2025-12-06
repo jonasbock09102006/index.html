@@ -491,22 +491,12 @@
     function productsCollectionRef(uid){ return collection(db, 'users', uid, 'products'); }
     function transactionsCollectionRef(uid){ return collection(db, 'users', uid, 'transactions'); }
 
-    // ---------- Seed (TEMPORÄRE ÄNDERUNG HIER) ----------
+    // ---------- Seed (SICHERHEITS-FIX IST WIEDER AKTIV) ----------
     async function seedUserDataIfNeeded(uid){
         const sRef = settingsDocRef(uid);
         const sSnap = await getDoc(sRef);
         
-        // *****************************************************************************************
-        // ********************************* TEMPORÄRE KORREKTUR **********************************
-        // * Das Dokument 'meta/settings' existiert bereits, aber 'products' und 'transactions' 
-        // * fehlen. Wir kommentieren die Prüfzeile aus, um das Seeding zu erzwingen und die 
-        // * fehlenden Sammlungen zu erstellen.
-        // *
-        // * NACH ERFOLGREICHEM LOGIN: Bitte die folgende Zeile wieder AKTIVIEREN:
-        // * if(sSnap.exists()){ return; }
-        // *****************************************************************************************
-        
-        // if(sSnap.exists()){ return; } // <-- ORIGINALZEILE: AKTUELLE PRÜFUNG IST TEMPORÄR AUSGESCHALTET
+        if(sSnap.exists()){ return; } // <-- DIESE ZEILE IST WIEDER AKTIVIERT (VERHINDERT ÜBERSCHREIBEN)
         
         showToast('Erste Anmeldung erkannt. Erzeuge Standarddaten...', 'info');
         
@@ -549,7 +539,7 @@
             updateAppView('kasse'); 
         } catch(err){ 
             console.error('initUserData error', err); 
-            showToast('Fehler beim Laden der Daten. Bitte melden Sie sich erneut an.', 'error'); 
+            showToast('Fehler beim Laden der Daten. Bitte erneut versuchen.', 'error'); 
             
             // ** DER NEUE FIX **: Wenn das Laden der Daten fehlschlägt, den Benutzer abmelden.
             await signOut(auth); 
@@ -603,7 +593,7 @@
         if(!currentUser) return;
         categories = {}; products = {};
         
-        // Load Categories
+        // Load Categories - DIESER QUERY BENÖTIGT DEN INDEX!
         const catRef = categoriesCollectionRef(currentUser.uid);
         const catSnap = await getDocs(query(catRef, orderBy('order', 'asc'), orderBy('name', 'asc')));
         catSnap.forEach(doc => { categories[doc.id] = { id: doc.id, ...doc.data() }; });
@@ -615,14 +605,9 @@
 
         // Fallback for first time or empty user
         if(Object.keys(categories).length === 0 || Object.keys(products).length === 0){ 
-            // Wichtig: Jetzt nicht seedUserDataIfNeeded aufrufen, da es in initUserData läuft
-            // Wenn hier noch keine Daten da sind, wird initUserData() eh bald abbrechen
-            // wegen der fehlenden Produkte/Kategorien. Der Fehler wird nun aber in 
-            // seedUserDataIfNeeded behoben.
             if(Object.keys(categories).length === 0 || Object.keys(products).length === 0){ 
-                // Dies wird nach der TEMPORÄREN Korrektur nicht mehr passieren.
-                // showToast('Konnte keine Produkt-/Kategoriedaten laden oder erstellen.', 'error');
-                // return;
+                // Dies wird nach der erfolgreichen Seeding-Operation (durch den vorherigen Schritt)
+                // nur noch auftreten, wenn der Index fehlt!
             }
         } 
         
