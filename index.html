@@ -1097,8 +1097,12 @@
             if(receiptType !== 'none'){
                 const currentTimestamp = { seconds: Math.floor(Date.now() / 1000) }; 
                 window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
-                window.print();
-                document.getElementById('print-receipt-container').innerHTML = ''; // Clean up print content
+                
+                // **FIX FÜR DRUCKFENSTER**
+                setTimeout(() => {
+                    window.print();
+                    document.getElementById('print-receipt-container').innerHTML = ''; // Clean up print content
+                }, 100);
             }
 
             // 3. Clear state and close modal
