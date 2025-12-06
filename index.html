@@ -954,7 +954,7 @@
         window.showToast('Bon gelöscht.', 'info');
     }
 
-    // renderReceipt Funktion (WESENTLICH GEÄNDERT für Tax Rate Summary)
+    // renderReceipt Funktion (WESENTLICH GEÄNDERT für Tax Rate Summary und Storno Bon)
     window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
         const container = forPrint 
             ? document.getElementById('print-receipt-container') // Dedizierter Container für Print
@@ -1017,6 +1017,13 @@
                 
                 content += separator;
                 
+                // NEU: Storno Beleg Header
+                if(receiptType==='storno'){
+                    content += "<div class='text-center font-bold text-lg text-red-700'>*** STORNO / CANCELLATION ***</div>";
+                    content += "<div class='text-center text-xs italic'>Dies ist ein Stornobeleg für die Transaktion.</div>";
+                    content += separator;
+                }
+                
                 // Hinzufügen der Bewirtungsfelder
                 if(receiptType==='bewirtung'){
                     content += "<div class='text-center font-bold text-lg text-red-700'>*** BEWIRTUNGSBELEG (Nachweis) ***</div>";
@@ -1052,6 +1059,12 @@
                 // Print Receipt Footer (Summary)
                 content += separator;
                 content += `<div class="line total-line"><span>GESAMT BRUTTO:</span><span>${totalBrutto.toFixed(2).replace('.', ',')} €</span></div>`;
+                
+                // NEU: Kennzeichnung der Stornierung
+                if(receiptType==='storno'){
+                    content += `<div class="line total-line text-red-700"><span>STORNO BETRAG:</span><span>-${totalBrutto.toFixed(2).replace('.', ',')} €</span></div>`;
+                }
+
                 content += separator;
                 
                 // NEU: Detaillierte Steuer-Aufschlüsselung
@@ -1105,6 +1118,56 @@
             container.innerHTML = content;
         }
     }
+    
+    // ---------- Cancellation Receipt Function (NEU) ----------
+    window.printCancellationReceipt = async function(transaction){
+        if(!transaction || transaction.isCancelled) return;
+
+        // 1. Temporarily set state for printing
+        const originalBestellung = [...currentBestellung]; // Copy the array
+        const originalTotalBrutto = totalBrutto;
+        const originalCashReceivedInput = cashReceivedInput;
+        const originalCashPaymentMethod = cashPaymentMethod;
+        
+        currentBestellung = transaction.items;
+        totalBrutto = transaction.totalBrutto; 
+        cashReceivedInput = transaction.cashReceived || transaction.totalBrutto.toFixed(2);
+        cashPaymentMethod = transaction.paymentMethod || 'BAR';
+
+
+        const printContainer = document.getElementById('print-receipt-container');
+        
+        // 2. Render content into the hidden container as 'storno' type
+        // Use the cancellationTimestamp if available, otherwise current time
+        const cancellationTime = transaction.cancellationTimestamp || { seconds: Math.floor(Date.now() / 1000) }; 
+        window.renderReceipt(true, 'storno', transaction.id, cancellationTime);
+
+        // Force visibility and display temporarily to aid rendering
+        printContainer.style.display = 'block'; 
+        printContainer.style.visibility = 'visible'; 
+        
+        // **FIX FÜR SAFARI: EXTREM VERZÖGERN FÜR GARANTIERTES RENDERING**
+        await new Promise(resolve => setTimeout(resolve, 800)); 
+
+        // 3. Trigger print
+        window.print();
+        
+        // 4. Aufräumarbeiten des Druck-Containers leicht verzögern
+        setTimeout(() => {
+            printContainer.innerHTML = ''; // Clean up print content
+            printContainer.style.display = 'none';
+            printContainer.style.visibility = 'hidden';
+        }, 800);
+        
+        // 5. Restore original state
+        currentBestellung = originalBestellung;
+        totalBrutto = originalTotalBrutto;
+        cashReceivedInput = originalCashReceivedInput;
+        cashPaymentMethod = originalCashPaymentMethod;
+        window.renderReceipt(); // Re-render the interactive receipt if needed
+    }
+    // ----------------------------------------------------------------
+
 
     // ---------- Finalize Modal (Payment) (GEÄNDERT für Tax Rate Save) ----------
     window.openFinalizeModal = function(){
@@ -1274,6 +1337,7 @@
                 const printContainer = document.getElementById('print-receipt-container');
                 
                 // Render content into the hidden container
+                // cashPaymentMethod ist hier korrekt gesetzt, da es aus setPaymentMethod oder BAR-Initialisierung kommt
                 window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
 
                 // Force visibility and display temporarily to aid rendering
@@ -1308,7 +1372,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Storno der letzten Transaktion (UNVERÄNDERT) ----------
+    // ---------- Storno der letzten Transaktion (MODIFIZIERT zum Drucken) ----------
     window.cancelLastTransaction = async function(){
         if(!currentUser) return;
         
@@ -1338,7 +1402,10 @@
                 return;
             }
 
-            // Update document to mark as cancelled
+            // NEU: 1. STORNOBON DRUCKEN
+            await window.printCancellationReceipt(transaction); 
+
+            // 2. Update document to mark as cancelled
             const tRef = doc(transactionsCollectionRef(currentUser.uid), transaction.id);
             await updateDoc(tRef, {
                 isCancelled: true,
@@ -1578,6 +1645,7 @@
         finally{ window.showLoading(false); }
     }
 
+    // MODIFIZIERT: handleReversal (zum Drucken)
     window.handleReversal = async function(transactionId, index){
         if(!currentUser) return;
         const transaction = transactionHistory[index];
@@ -1587,6 +1655,10 @@
 
         window.showLoading(true);
         try{
+            // NEU: 1. STORNOBON DRUCKEN
+            await window.printCancellationReceipt(transaction);
+            
+            // 2. Update document to mark as cancelled
             const tRef = doc(transactionsCollectionRef(currentUser.uid), transactionId);
             await updateDoc(tRef, {
                 isCancelled: true,
