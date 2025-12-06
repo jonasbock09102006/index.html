@@ -132,7 +132,7 @@
 
         <h3 class="text-lg font-semibold mb-2">Kategorien</h3>
         <div id="category-list" class="space-y-2 mb-4"></div>
-        <h3 class="text-lg font-semibold mb-2">Produkte</h3>
+        <h3 class="text-lg font-semibold mb-2">Produkte (Preis bearbeiten)</h3>
         <div id="product-list" class="space-y-2"></div>
       </div>
       <div class="mt-6 text-right"><button onclick="closeModal('product-modal')" class="p-2 bg-gray-300 rounded-lg">Schließen</button></div>
@@ -760,6 +760,33 @@
         finally{ window.showLoading(false); }
     }
 
+    // NEU: Funktion zum Speichern des Produktpreises
+    window.saveProductPrice = async function(productId){
+        if(!currentUser) return;
+        const newPrice = parseFloat(document.getElementById(`price-input-${productId}`).value);
+        
+        if(isNaN(newPrice) || newPrice <= 0){
+            window.showToast('Ungültiger Preis', 'error');
+            return;
+        }
+        
+        window.showLoading(true);
+        try{
+            const prodRef = doc(productsCollectionRef(currentUser.uid), productId);
+            await updateDoc(prodRef, { 
+                price: newPrice.toFixed(2) // Save as string with 2 decimal places
+            });
+            
+            await loadProductsAndCategories(); 
+            window.showToast('Preis aktualisiert.', 'success');
+        } catch(err){ 
+            console.error(err); 
+            window.showToast('Fehler beim Speichern des Preises.', 'error'); 
+        }
+        finally{ window.showLoading(false); }
+    }
+
+    // MODIFIZIERT: renderProductModalContent
     window.renderProductModalContent = function(){
         const catListContainer = document.getElementById('category-list');
         const prodListContainer = document.getElementById('product-list');
@@ -787,21 +814,30 @@
         });
 
         Object.values(products).forEach(prod => {
-            // Product List
+            // Product List (MODIFIZIERT für Price Edit)
             const prodDiv = document.createElement('div');
-            prodDiv.className = 'flex justify-between items-center bg-white border p-2 rounded-lg';
+            prodDiv.className = 'flex items-center justify-between bg-white border p-2 rounded-lg';
             prodDiv.innerHTML = `
-                <div class="flex flex-col">
-                    <span class="font-semibold">${prod.name} (${parseFloat(prod.price).toFixed(2).replace('.', ',')} €)</span>
-                    <span class="text-xs text-gray-500">${categories[prod.categoryId]?.name || 'Ohne Kategorie'}</span>
+                <div class="flex-grow flex items-center space-x-4">
+                    <div class="flex flex-col">
+                        <span class="font-semibold">${prod.name}</span>
+                        <span class="text-xs text-gray-500">${categories[prod.categoryId]?.name || 'Ohne Kategorie'}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="number" id="price-input-${prod.id}" value="${parseFloat(prod.price).toFixed(2)}" step="0.01" class="w-20 p-1 border rounded-lg text-right text-sm">
+                        <span class="ml-1 text-sm font-bold">€</span>
+                    </div>
                 </div>
-                <button onclick="window.deleteProduct('${prod.id}')" class="text-sm text-white bg-red-500 p-1 rounded-lg">Löschen</button>
+                <div class="flex space-x-2">
+                    <button onclick="window.saveProductPrice('${prod.id}')" class="text-sm text-white bg-green-600 p-1 rounded-lg hover:bg-green-700 whitespace-nowrap">Speichern</button>
+                    <button onclick="window.deleteProduct('${prod.id}')" class="text-sm text-white bg-red-500 p-1 rounded-lg hover:bg-red-600 whitespace-nowrap">Löschen</button>
+                </div>
             `;
             prodListContainer.appendChild(prodDiv);
         });
     }
 
-    // ---------- Kasse / Bestellung (unchanged) ----------
+    // ---------- Kasse / Bestellung (MODIFIZIERT) ----------
     window.handleQuantityInput = function(input){
         if(input === 'clear'){
             currentQuantity = 1;
@@ -844,9 +880,19 @@
         window.renderReceipt();
     }
 
+    // MODIFIZIERT: Entfernt nur ein Stück, nicht alle
     window.removeItem = function(index){
-        // FIX: Index ist nun der korrekte Index im currentBestellung Array
-        currentBestellung.splice(index, 1);
+        const item = currentBestellung[index];
+        
+        if (item.quantity > 1) {
+            item.quantity -= 1;
+            // Wichtig: totalBrutto neu berechnen
+            item.totalBrutto = parseFloat((item.price * item.quantity).toFixed(2)); 
+        } else {
+            // Wenn nur noch 1 übrig ist, gesamten Eintrag entfernen
+            currentBestellung.splice(index, 1);
+        }
+        
         window.renderReceipt();
     }
 
@@ -858,7 +904,7 @@
         window.showToast('Bon gelöscht.', 'info');
     }
 
-    // **KORRIGIERTE** renderReceipt Funktion für sauberen Beleg
+    // renderReceipt Funktion (unverändert in der Logik, nur Index-Berechnung ist relevant)
     window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
         const container = forPrint 
             ? document.getElementById('print-receipt-container') // Dedizierter Container für Print
@@ -877,6 +923,9 @@
         
         // 1. Calculate Totals (einmal für beide Ansichten)
         currentBestellung.forEach(item => {
+            // Aktualisieren Sie den totalBrutto des Artikels basierend auf der Menge (falls er durch removeItem geändert wurde)
+            item.totalBrutto = parseFloat((item.price * item.quantity).toFixed(2));
+            
             const itemNetto = item.totalBrutto / (1 + taxRate / 100);
             const itemTax = item.totalBrutto - itemNetto;
             
@@ -958,7 +1007,7 @@
                         <div class="flex justify-between items-center bg-red-50 p-2 rounded-lg">
                             <div class="flex-grow">
                                 <span class="font-bold">${item.quantity} x ${item.name}</span>
-                                <span class="text-sm text-gray-600 ml-2">(${item.price.toFixed(2).replace('.', ',')} €)</span>
+                                <span class="text-sm text-gray-600 ml-2">(${item.price.toFixed(2).replace('.', ',')} € / Stk.)</span>
                             </div>
                             <span class="font-extrabold text-red-700">${item.totalBrutto.toFixed(2).replace('.', ',')} €</span>
                             <button onclick="window.removeItem(${i})" class="ml-3 text-red-500 hover:text-red-700 text-lg font-bold leading-none">×</button>
@@ -972,7 +1021,7 @@
         }
     }
 
-    // ---------- Finalize Modal (Payment) (unchanged) ----------
+    // ---------- Finalize Modal (Payment) (MODIFIZIERT Druck-Fix) ----------
     window.openFinalizeModal = function(){
         if(currentBestellung.length === 0){ window.showToast('Bitte Artikel buchen.', 'error'); return; }
         window.renderReceipt(false); 
@@ -1115,9 +1164,8 @@
                 const currentTimestamp = { seconds: Math.floor(Date.now() / 1000) }; 
                 window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
                 
-                // NEU/FIX: Fügt eine minimale, nicht blockierende Verzögerung ein, um dem Browser das Rendern 
-                // des Inhalts im Druck-Container zu ermöglichen (löst das Problem des leeren Druckfensters).
-                await new Promise(resolve => setTimeout(resolve, 50)); 
+                // FIX: Erhöht die Verzögerung, um das Rendering des Druckinhalts zu gewährleisten.
+                await new Promise(resolve => setTimeout(resolve, 100)); 
 
                 window.print();
                 
