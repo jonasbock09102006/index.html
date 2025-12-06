@@ -50,6 +50,9 @@
       .receipt-print .item-price { width:30%; text-align:right; font-weight:bold; }
       .receipt-print .separator { border-top: 1px dashed #000; margin: 4px 0; }
       .receipt-print .total-line { font-size: 12pt; font-weight: bold; }
+      
+      /* Stil für die Ausfüll-Linien (Bewirtungsbeleg) */
+      .fill-line { border-bottom: 1px solid #000; height: 1.5em; margin-top: 0.5em; }
     }
   </style>
 </head>
@@ -955,9 +958,20 @@
                 
                 content += separator;
                 
+                // Hinzufügen der Bewirtungsfelder
                 if(receiptType==='bewirtung'){
-                    content += "<div class='text-center font-bold text-lg text-red-700'>*** BEWIRTUNGSBELEG ***</div>";
-                    content += "<div class='text-center text-xs italic'>Bewirtungskosten sind nur bis zu 70% abziehbar.</div>";
+                    content += "<div class='text-center font-bold text-lg text-red-700'>*** BEWIRTUNGSBELEG (Nachweis) ***</div>";
+                    content += "<div class='text-center text-xs italic'>Bitte die Felder manuell ausfüllen und unterschreiben.</div>";
+                    content += separator;
+
+                    const fillLine = `<div class="fill-line"></div>`;
+
+                    content += `<div class="font-bold mt-3">Anlass der Bewirtung:</div>${fillLine}`;
+                    content += `<div class="font-bold mt-3">Bewirtete Personen (Namen):</div>${fillLine}${fillLine}`;
+                    
+                    content += `<div class="font-bold mt-3">Ort, Datum:</div>${fillLine}`;
+                    content += `<div class="font-bold mt-3">Unterschrift des Bewirtenden:</div>${fillLine}`;
+                    
                     content += separator;
                 }
                 
@@ -1173,8 +1187,8 @@
                 printContainer.style.display = 'block'; 
                 printContainer.style.visibility = 'visible'; 
                 
-                // **FIX: EXTREM VERZÖGERN FÜR GARANTIERTES RENDERING**
-                await new Promise(resolve => setTimeout(resolve, 500)); 
+                // **FIX FÜR SAFARI: EXTREM VERZÖGERN FÜR GARANTIERTES RENDERING**
+                await new Promise(resolve => setTimeout(resolve, 800)); // 800ms für Safari
 
                 // Trigger print
                 window.print();
@@ -1184,7 +1198,7 @@
                     printContainer.innerHTML = ''; // Clean up print content
                     printContainer.style.display = 'none';
                     printContainer.style.visibility = 'hidden';
-                }, 500); 
+                }, 800); 
             }
 
             // 3. Clear state and close modal
