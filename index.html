@@ -316,7 +316,7 @@
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import {
         getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-        query, where, orderBy, serverTimestamp, Timestamp
+        query, where, orderBy, serverTimestamp, Timestamp, limit
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     // ---------- Firebase config (aus deiner Datei) ----------
@@ -535,11 +535,16 @@
             // Optionally: load recent txns for UI
             renderReceipt();
             
-            // ** DER FIX **: Zeigt die Kasse erst, nachdem die Daten geladen sind
+            // ** DER FIX VOM LETZTEN MAL **: Zeigt die Kasse erst, nachdem die Daten geladen sind
             updateAppView('kasse'); 
         } catch(err){ 
             console.error('initUserData error', err); 
-            showToast('Fehler beim Laden der Daten. (Siehe Konsole)', 'error'); 
+            showToast('Fehler beim Laden der Daten. Bitte melden Sie sich erneut an.', 'error'); 
+            
+            // ** DER NEUE FIX **: Wenn das Laden der Daten fehlschlägt, den Benutzer abmelden.
+            // Dies triggert den onAuthStateChanged Listener, der updateAppView('login') aufruft,
+            // was die Login-Ansicht wiederherstellt.
+            await signOut(auth); 
         }
         finally{ showLoading(false); }
     }
@@ -952,7 +957,6 @@
 
     window.setPaymentMethod = function(method){
         cashPaymentMethod = method;
-        const btnBar = document.getElementById('btn-bar'); // Assuming there's a button to switch back to BAR if multiple are shown
         const btnKarte = document.getElementById('btn-karte');
 
         if(method === 'BAR'){
@@ -966,8 +970,6 @@
             document.getElementById('cash-payment-area').style.display = 'none';
             document.getElementById('cash-finalize-buttons').style.display = 'none';
             document.getElementById('card-finalize-buttons').style.display = 'block';
-            // btnBar.classList.remove('bg-blue-700');
-            // btnBar.classList.add('bg-blue-600');
             document.getElementById('btn-bar-indicator').style.display = 'none';
             btnKarte.classList.add('bg-indigo-700'); // Highlight active card button
         }
