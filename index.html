@@ -1249,8 +1249,6 @@
         window.toggleReceiptColumn(false);
     }
 
-    // ... (setPaymentMethod, handleCashInput, setCashExact, addCashShortcut, updateCashDisplay, updateCashFinalizeButtons UNVERÄNDERT) ...
-
     window.setPaymentMethod = function(method){
         cashPaymentMethod = method;
         const btnKarte = document.getElementById('btn-karte');
@@ -1402,7 +1400,8 @@
                 taxRate: finalTaxRate, // Globaler Fallback-Satz (historisch)
             };
             
-            const transRef = await addDoc(transactionsCollectionCollection(currentUser.uid), transactionData);
+            // ✨ KORRIGIERTE ZEILE (von transactionsCollectionCollection zu transactionsCollectionRef)
+            const transRef = await addDoc(transactionsCollectionRef(currentUser.uid), transactionData);
             
             // 2. Print Receipt if requested
             if(receiptType !== 'none'){
