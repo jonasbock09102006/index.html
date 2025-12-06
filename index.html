@@ -1,6 +1,403 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Kassensystem (Bewirtungsbeleg) - Firestore (Bericht + Storno)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        #receipt-content-interactive { overflow-y: auto; max-height: 40vh; }
+        .product-btn:active { transform: scale(0.98); }
+        .numpad-btn { height: 50px; display:flex; justify-content:center; align-items:center; }
+        #async-loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); z-index:100; display:none; justify-content:center; align-items:center; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #b91c1c; border-radius: 50%; width:40px; height:40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+        #toast-container { position: fixed; top:1rem; right:1rem; z-index:1000; pointer-events:none; }
+        .toast { padding: .75rem 1rem; border-radius: .5rem; color: #fff; margin-bottom:.5rem; opacity:0; transition: opacity .25s ease; }
+        .toast-success { background: #16a34a; } .toast-error { background:#dc2626 } .toast-info { background:#2563eb }
+        
+        /* Druck-Container standardmäßig unsichtbar */
+        #print-receipt-container { display: none; visibility: hidden; } 
+        .receipt-print { font-family: 'Consolas', 'Courier New', monospace; }
+
+        /* **KORRIGIERTE DRUCK-STILE FÜR BONDDRUCKER (80mm)** */
+        @media print {
+            body * { visibility: hidden !important; }
+
+            /* NEU: Wichtig, um den Druckbereich zu isolieren */
+            #print-receipt-container {
+                visibility: visible !important;
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 80mm !important;
+                font-family: 'Consolas', 'Courier New', monospace !important;
+                font-size: 12px !important; /* Angepasst auf 12px für bessere Lesbarkeit und Zeilenbreite auf Bondruckern */
+                color: #000 !important;
+                padding: 2px !important; /* Reduziertes Padding für maximale Druckfläche */
+                margin: 0 !important;
+                line-height: 1.2 !important; /* Reduzierter Zeilenabstand */
+            }
+            #print-receipt-container * {
+                visibility: visible !important;
+            }
+
+            /* Print-Layout Regeln */
+            .receipt-print .line { display:flex; justify-content:space-between; margin-bottom: 2px; }
+            .receipt-print .item-name { width:70%; overflow:hidden; white-space:normal; } 
+            .receipt-print .item-price { width:30%; text-align:right; font-weight:bold; }
+            .receipt-print .separator { border-top: 1px dashed #000; margin: 4px 0; }
+            .receipt-print .total-line { font-size: 14px !important; font-weight: bold; } /* Angepasst proportional zur neuen Basis von 12px */
+
+            /* Stil für die Ausfüll-Linien (Bewirtungsbeleg) */
+            .fill-line { border-bottom: 1px solid #000; height: 1.5em; margin-top: 0.5em; }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-4 bg-red-500/10 overflow-x-hidden">
+
+    <div id="toast-container"></div>
+    <div id="async-loading-overlay"><div class="spinner"></div></div>
+
+    <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h1 class="text-3xl font-bold text-center text-red-700 mb-2">Kassensystem</h1>
+            <p class="text-sm text-center text-gray-500 mb-6">Bitte anmelden oder registrieren.</p>
+            <form id="login-form" onsubmit="event.preventDefault(); handleLoginSubmit()">
+                <div class="mb-4">
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+                    <input type="email" id="login-email" required class="mt-1 w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div class="mb-6">
+                    <label for="login-password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                    <input type="password" id="login-password" required class="mt-1 w-full px-3 py-2 border rounded-lg">
+                </div>
+                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600">Anmelden</button>
+            </form>
+            <div class="mt-4 text-center">
+                <button onclick="openRegistrationModal()" class="text-sm text-indigo-600">Registrieren</button>
+                <button onclick="openForgotPasswordModal()" class="ml-2 text-sm text-red-600">Passwort vergessen?</button>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-200 text-center">
+                <a href="#" onclick="window.openAGBModal(); return false;" class="text-xs text-gray-500 hover:text-red-700">Allgemeine Geschäftsbedingungen (AGB)</a>
+            </div>
+            
+        </div>
+    </div>
+
+    <div id="registration-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-indigo-700 mb-4">Konto erstellen</h2>
+            <form id="register-form" onsubmit="event.preventDefault(); handleRegisterSubmit()">
+                <div class="mb-4">
+                    <label for="register-email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+                    <input type="email" id="register-email" required class="mt-1 w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div class="mb-6">
+                    <label for="register-password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                    <input type="password" id="register-password" required minlength="6" class="mt-1 w-full px-3 py-2 border rounded-lg">
+                </div>
+                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600">Registrieren</button>
+            </form>
+            <button onclick="closeModal('registration-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+        </div>
+    </div>
+
+    <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-red-700 mb-4">Passwort zurücksetzen</h2>
+            <p class="text-sm text-center text-gray-500 mb-4">Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen Ihres Passworts zu erhalten.</p>
+            <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
+                <div class="mb-6">
+                    <label for="reset-email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+                    <input type="email" id="reset-email" required class="mt-1 w-full px-3 py-2 border rounded-lg">
+                </div>
+                <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600">Link senden</button>
+            </form>
+            <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+        </div>
+    </div>
+    
+    <div id="agb-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000;">
+        <div style="background: white; padding: 25px; border-radius: 8px; max-width: 900px; width: 90%; max-height: 90%; overflow-y: auto; text-align: left;">
+            
+            <button onclick="window.closeModal('agb-modal')" style="float: right; font-size: 24px; border: none; background: none; cursor: pointer; color: #333;">&times;</button>
+            
+            <h2 style="border-bottom: 2px solid #ccc; padding-bottom: 10px;">Allgemeine Geschäftsbedingungen (AGB) für das [Name des Kassensystems, z.B. "POS-Cloud"]</h2>
+
+            <p>**(Stand: [Datum einfügen])**</p>
+            
+            <p><strong>Wichtiger Hinweis:</strong> Ich bin ein KI-Modell und keine Rechtsberatung. Dieser Entwurf dient nur als Vorlage. Um Rechtskonformität, insbesondere in Bezug auf die Kassensicherungsverordnung (KassenSichV), den Datenschutz (DSGVO) und spezifische Branchenanforderungen, zu gewährleisten, **muss dieser Entwurf zwingend von einem auf IT-Recht spezialisierten Rechtsanwalt geprüft und angepasst werden.**</p>
+            
+            <hr style="margin: 20px 0;">
+
+            <h3>1. Geltungsbereich und Anbieter</h3>
+            <p>1.1. Diese Allgemeinen Geschäftsbedingungen (AGB) regeln die Nutzung der digitalen Kassensystem-Software und der damit verbundenen Dienstleistungen (nachfolgend „Dienstleistung“ oder „Kassensystem“) des Anbieters:</p>
+            <p><strong>[Ihr Firmenname/Name des Anbieters einfügen]</strong><br><strong>[Ihre Rechtsform (z.B. GmbH, Einzelunternehmen) einfügen]</strong><br><strong>[Ihre Anschrift einfügen]</strong><br><strong>[Ihre E-Mail-Adresse einfügen]</strong><br><strong>[Ihre Handelsregisternummer oder Steuernummer/USt-ID, falls vorhanden, einfügen]</strong></p>
+            <p>(Nachfolgend „Anbieter“).</p>
+            <p>1.2. Diese AGB gelten für alle Verträge zwischen dem Anbieter und dem Nutzer (nachfolgend „Nutzer“), der das Kassensystem im Rahmen seiner gewerblichen oder selbständigen Tätigkeit nutzt.</p>
+            <p>1.3. Abweichende, entgegenstehende oder ergänzende AGB des Nutzers werden nur dann und insoweit Vertragsbestandteil, als der Anbieter ihrer Geltung ausdrücklich zugestimmt hat.</p>
+
+            <h3>2. Vertragsgegenstand</h3>
+            <p>2.1. Der Anbieter stellt dem Nutzer das Kassensystem als Software-as-a-Service (SaaS) über das Internet zur Verfügung (Bereitstellung der Software zur Nutzung über eine Weboberfläche, wie in der <strong>index.html</strong> ersichtlich, inklusive Login, Kassenfunktion, Produktverwaltung und Berichtswesen).</p>
+            <p>2.2. Die Dienstleistung umfasst insbesondere die folgenden Funktionen, wie in der Anwendung implementiert:</p>
+            <ul>
+                <li>Registrierung und Verwaltung von Nutzerkonten (Login, Passwort zurücksetzen)</li>
+                <li>Verwaltung von Produkten und Kategorien, einschließlich der Zuweisung von Preisen und Steuersätzen (z.B. 7 % und 19 % Mehrwertsteuer)</li>
+                <li>Erfassung von Verkaufs-Transaktionen und Erstellung von Bons/Belegen (einschließlich Bewirtungsbelegen)</li>
+                <li>Funktion zum Stornieren von Transaktionen</li>
+                <li>Generierung von Berichten (z.B. Tagesabschluss/Reporting-Funktion)</li>
+                <li>Speicherung der Transaktions- und Stammdaten in einer Cloud-Datenbank (Firestore oder vergleichbar)</li>
+            </ul>
+            <p>2.3. Die Einzelheiten der jeweils geschuldeten Leistungen ergeben sich aus der zum Zeitpunkt des Vertragsabschlusses gültigen Leistungsbeschreibung des Anbieters.</p>
+
+            <h3>3. Registrierung und Vertragsschluss</h3>
+            <p>3.1. Die Nutzung der Dienstleistung setzt die Registrierung eines Nutzerkontos voraus. Der Nutzer versichert, dass alle von ihm bei der Registrierung angegebenen Daten (insbesondere E-Mail-Adresse, Passwort, sowie Unternehmensdaten wie Firmenname, Adresse und Steuernummer, falls im Einstellungsbereich hinterlegt) vollständig und wahrheitsgemäß sind.</p>
+            <p>3.2. Der Vertrag über die Nutzung der Dienstleistung kommt mit der Bestätigung der Registrierung durch den Anbieter zustande.</p>
+            <p>3.3. Der Nutzer ist verpflichtet, seine Zugangsdaten (E-Mail und Passwort) geheim zu halten und vor dem Zugriff durch unbefugte Dritte zu schützen. Er haftet für jede Nutzung seines Kontos.</p>
+
+            <h3>4. Preise und Zahlungsbedingungen</h3>
+            <p>4.1. Für die Nutzung der Dienstleistung zahlt der Nutzer die vereinbarte monatliche oder jährliche Gebühr (Nutzungsentgelt) gemäß der zum Zeitpunkt des Vertragsschlusses gültigen Preisliste.</p>
+            <p>4.2. Alle Preise verstehen sich zuzüglich der gesetzlichen Mehrwertsteuer, sofern diese anfällt.</p>
+            <p>4.3. Die Zahlung erfolgt über die vereinbarten Zahlungsmethoden. Das Nutzungsentgelt ist jeweils im Voraus zu entrichten.</p>
+
+            <h3>5. Pflichten des Nutzers</h3>
+            <p>5.1. Der Nutzer ist für die korrekte Einrichtung des Kassensystems und die Einhaltung der geltenden gesetzlichen Bestimmungen, insbesondere der steuer- und handelsrechtlichen Vorschriften (z.B. GoBD, KassenSichV), selbst verantwortlich. Der Anbieter stellt lediglich die technische Software-Plattform bereit.</p>
+            <p>5.2. Der Nutzer hat sicherzustellen, dass die von ihm eingegebenen Produktdaten, Preise und Steuersätze stets korrekt und aktuell sind.</p>
+            <p>5.3. Der Nutzer ist verpflichtet, die Möglichkeit zur Vornahme von Backups oder Datenexporten (z.B. CSV-Export der Berichte) regelmäßig zu nutzen, um die gesetzeskonforme Archivierung der Daten sicherzustellen.</p>
+
+            <h3>6. Verfügbarkeit und Gewährleistung</h3>
+            <p>6.1. Der Anbieter gewährleistet eine Verfügbarkeit der Dienstleistung von **[z.B. 99 %]** im Jahresmittel. Ausgenommen hiervon sind Ausfallzeiten aufgrund von Wartungsarbeiten, höherer Gewalt oder technischen Problemen außerhalb des Einflussbereichs des Anbieters (z.B. Internetstörung, Probleme beim Cloud-Anbieter Firestore).</p>
+            <p>6.2. Der Anbieter schuldet lediglich die Bereitstellung der Software. Eine Haftung für die steuerrechtliche oder finanzrechtliche Korrektheit der vom Nutzer erstellten Belege oder Berichte wird ausgeschlossen, es sei denn, der Fehler beruht auf einem vorsätzlichen oder grob fahrlässigen Mangel der Software selbst.</p>
+
+            <h3>7. Haftung</h3>
+            <p>7.1. Der Anbieter haftet unbeschränkt für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit.</p>
+            <p>7.2. Für sonstige Schäden haftet der Anbieter nur bei Vorsatz oder grober Fahrlässigkeit.</p>
+            <p>7.3. Bei einfacher Fahrlässigkeit haftet der Anbieter nur für die Verletzung einer wesentlichen Vertragspflicht (Kardinalpflicht), deren Erfüllung die ordnungsgemäße Durchführung des Vertrages überhaupt erst ermöglicht und auf deren Einhaltung der Vertragspartner regelmäßig vertraut und vertrauen darf. In diesem Fall ist die Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt.</p>
+            <p>7.4. Der Anbieter haftet nicht für Schäden, die dem Nutzer durch eine fehlerhafte Bedienung, unsachgemäße Verwendung der Software oder Nichtbeachtung gesetzlicher Bestimmungen bei der Nutzung entstehen.</p>
+
+            <h3>8. Laufzeit und Kündigung</h3>
+            <p>8.1. Der Vertrag läuft auf unbestimmte Zeit und kann von beiden Parteien mit einer Frist von **[z.B. 30 Tagen]** zum Ende eines Abrechnungszeitraums gekündigt werden.</p>
+            <p>8.2. Das Recht zur fristlosen Kündigung aus wichtigem Grund bleibt unberührt. Ein wichtiger Grund liegt für den Anbieter insbesondere vor, wenn der Nutzer seinen Zahlungspflichten trotz Mahnung nicht nachkommt oder gegen wesentliche Pflichten dieser AGB verstößt.</p>
+
+            <h3>9. Datenschutz</h3>
+            <p>9.1. Die Parteien verpflichten sich, die jeweils geltenden datenschutzrechtlichen Bestimmungen, insbesondere die DSGVO, einzuhalten.</p>
+            <p>9.2. Das Kassensystem verarbeitet personenbezogene Daten im Auftrag des Nutzers (Kundenbelege, Transaktionsdaten, Nutzerkonten). Der Nutzer ist für die Rechtmäßigkeit der Datenerhebung und -verarbeitung verantwortlich (Verantwortlicher im Sinne der DSGVO).</p>
+            <p>9.3. Für die Verarbeitung von personenbezogenen Daten wird eine separate Vereinbarung zur Auftragsverarbeitung (AV-Vertrag) zwischen den Parteien geschlossen, die dem Nutzer vor der ersten Nutzung der Dienstleistung zur Verfügung gestellt wird.</p>
+
+            <h3>10. Schlussbestimmungen</h3>
+            <p>10.1. Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.</p>
+            <p>10.2. Sollten einzelne Bestimmungen dieser AGB unwirksam sein oder werden, so wird hierdurch die Gültigkeit der übrigen Bestimmungen nicht berührt. Anstelle der unwirksamen Bestimmung gilt die gesetzliche Regelung.</p>
+            <p>10.3. Ausschließlicher Gerichtsstand für alle Streitigkeiten aus oder im Zusammenhang mit diesem Vertrag ist der Sitz des Anbieters, sofern der Nutzer Kaufmann, eine juristische Person des öffentlichen Rechts oder ein öffentlich-rechtliches Sondervermögen ist.</p>
+            
+            <br>
+            <button onclick="window.closeModal('agb-modal')" style="padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Schließen</button>
+        </div>
+    </div>
+    <div id="product-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-bold mb-4 text-indigo-700">Produkt- & Kategorie-Verwaltung</h2>
+            <div id="product-modal-content">
+                <div class="mb-4 border-b pb-3">
+                    <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt</h3>
+                    <div class="flex space-x-2 mb-2">
+                        <input type="text" id="new-category-name" placeholder="Kategorie" class="flex-grow p-2 border rounded-lg">
+                        <button onclick="window.addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg">Kategorie</button>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2 items-end mb-2">
+                        <input type="text" id="new-product-name" placeholder="Produktname" class="col-span-2 p-2 border rounded-lg">
+                        <input type="number" id="new-product-price" placeholder="Preis (€)" step="0.01" class="p-2 border rounded-lg">
+                        <select id="new-product-category" class="p-2 border rounded-lg"><option value="">Kategorie</option></select>
+                        <select id="new-product-tax-rate" class="p-2 border rounded-lg">
+                            <option value="19.0">19% MwSt.</option>
+                            <option value="7.0">7% MwSt.</option>
+                        </select>
+                    </div>
+                    <button onclick="window.addProduct()" class="w-full p-2 bg-green-500 text-white rounded-lg font-bold">Produkt hinzufügen</button>
+
+                </div>
+
+                <h3 class="text-lg font-semibold mb-2">Kategorien</h3>
+                <div id="category-list" class="space-y-2 mb-4"></div>
+                <h3 class="text-lg font-semibold mb-2">Produkte (Preis bearbeiten)</h3>
+                <div id="product-list" class="space-y-2"></div>
+            </div>
+            <div class="mt-6 text-right"><button onclick="closeModal('product-modal')" class="p-2 bg-gray-300 rounded-lg">Schließen</button></div>
+        </div>
+    </div>
+
+    <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-3 rounded-xl shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
+            <div class="mb-3 p-2 border-2 border-green-500 rounded-lg bg-green-50">
+                <p class="text-xs font-bold text-gray-700">Gesamtbetrag:</p>
+                <div id="finalize-total" class="text-3xl font-extrabold text-right text-green-700">0.00 €</div>
+            </div>
+
+            <div class="mb-4">
+                <label for="finalize-paid" class="block text-sm font-medium text-gray-700">Gegebener Betrag (Bargeld)</label>
+                <input type="number" id="finalize-paid" step="0.01" value="0.00" class="mt-1 w-full px-3 py-2 border rounded-lg text-3xl font-bold text-right">
+            </div>
+
+            <div class="mb-4 p-2 border-2 border-gray-300 rounded-lg bg-gray-50">
+                <p class="text-xs font-bold text-gray-700">Rückgeld:</p>
+                <div id="finalize-change" class="text-3xl font-extrabold text-right text-gray-700">0.00 €</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="payment-cash-btn" onclick="setPaymentMethod('BAR')" class="p-3 rounded-lg font-bold text-white bg-red-600">Barzahlung</button>
+                <button id="payment-card-btn" onclick="setPaymentMethod('KARTE')" class="p-3 rounded-lg font-bold text-white bg-indigo-600">Kartenzahlung</button>
+            </div>
+            <div id="payment-method-display" class="text-sm text-center mt-2 font-semibold">Aktuelle Zahlart: BAR</div>
+
+            <div class="mt-6 grid grid-cols-2 gap-3">
+                <button onclick="closeModal('finalize-modal')" class="p-3 rounded-lg font-bold text-gray-700 bg-gray-200">Abbrechen</button>
+                <button onclick="handleTransactionFinalize()" class="p-3 rounded-lg font-bold text-white bg-green-600">Transaktion abschließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="report-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4 text-red-700 text-center">Tagesabschluss & Transaktionshistorie</h2>
+            
+            <div class="flex items-center space-x-3 mb-4">
+                <label for="report-date" class="text-sm font-medium text-gray-700">Datum:</label>
+                <input type="date" id="report-date" onchange="window.loadTransactionsForReport()" class="p-2 border rounded-lg">
+                <button onclick="window.setReportDateToday()" class="p-2 bg-red-500 text-white rounded-lg text-sm">Heute</button>
+                <button onclick="window.generateDayReport(true)" class="p-2 bg-green-500 text-white rounded-lg text-sm font-bold">CSV Export (GoBD)</button>
+            </div>
+
+            <div id="screen-report-content" class="bg-gray-100 p-4 rounded-lg mb-6 border border-gray-300">
+                <p class="text-center text-gray-500">Bitte Datum wählen oder heute klicken, um den Bericht zu laden.</p>
+            </div>
+
+            <h3 class="text-lg font-semibold mb-2">Transaktionen an diesem Tag</h3>
+            <div id="transaction-list" class="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-lg">
+                <p class="text-center text-gray-500">Keine Transaktionen gefunden.</p>
+            </div>
+
+            <div class="mt-6 text-right"><button onclick="closeModal('report-modal')" class="p-2 bg-gray-300 rounded-lg">Schließen</button></div>
+        </div>
+    </div>
+    
+    <div id="settings-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+        <div id="settings-content-container" class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-red-700 mb-6">Einstellungen & Verwaltung</h2>
+
+            <div id="settings-menu" class="space-y-3">
+                <button onclick="window.openProductModal()" class="w-full p-3 bg-indigo-500 text-white rounded-lg font-semibold">Produkte verwalten</button>
+                <button onclick="window.renderSettingsContent('business')" class="w-full p-3 bg-red-500 text-white rounded-lg font-semibold">Firmendetails & Steuersatz</button>
+                <button onclick="window.renderSettingsContent('user')" class="w-full p-3 bg-gray-500 text-white rounded-lg font-semibold">Nutzerdetails</button>
+                <button onclick="window.renderSettingsContent('reset')" class="w-full p-3 bg-yellow-500 text-white rounded-lg font-semibold">Daten zurücksetzen</button>
+                <button onclick="closeModal('settings-modal')" class="w-full p-3 bg-gray-300 text-gray-700 rounded-lg font-semibold">Zurück zur Kasse</button>
+            </div>
+
+            <div id="settings-business" style="display:none;">
+                <h3 class="text-xl font-bold mb-4 text-red-700">Firmendetails</h3>
+                <form onsubmit="event.preventDefault(); window.saveSettings()">
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700">Firmenname</label>
+                        <input type="text" id="company-name" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700">Adresse</label>
+                        <input type="text" id="address" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700">Steuernummer</label>
+                        <input type="text" id="tax-id" required class="w-full p-2 border rounded-lg">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700">Standard MwSt. (%)</label>
+                        <select id="tax-rate" class="w-full p-2 border rounded-lg">
+                            <option value="19.0">19%</option>
+                            <option value="7.0">7%</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full p-2 bg-green-500 text-white rounded-lg font-bold">Speichern</button>
+                </form>
+                <button onclick="window.renderSettingsContent('menu')" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Menü</button>
+            </div>
+
+            <div id="settings-user" style="display:none;">
+                <h3 class="text-xl font-bold mb-4 text-red-700">Nutzerdetails</h3>
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-700">Aktuelle E-Mail:</p>
+                    <p id="current-user-email" class="font-bold text-lg"></p>
+                </div>
+                <button onclick="window.signOutUser()" class="w-full p-2 bg-red-600 text-white rounded-lg font-bold">Abmelden</button>
+                <button onclick="window.renderSettingsContent('menu')" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Menü</button>
+            </div>
+            
+            <div id="settings-reset" style="display:none;">
+                <h3 class="text-xl font-bold mb-4 text-red-700">Daten zurücksetzen</h3>
+                <p class="text-sm mb-4 text-gray-700">Achtung: Dadurch werden alle Produkte, Kategorien und Verkaufstransaktionen unwiderruflich gelöscht. Ihre Firmendetails bleiben erhalten.</p>
+                <button onclick="window.resetUserData()" class="w-full p-3 bg-red-700 text-white rounded-lg font-bold">Alle Daten löschen</button>
+                <button onclick="window.renderSettingsContent('menu')" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück zum Menü</button>
+            </div>
+            
+        </div>
+    </div>
+
+    <div id="kasse-view" style="display:none;" class="h-full">
+        </div>
+
+    <script>
+        // Import der Firebase-Module (MUSS OBEN BLEIBEN)
+        // ... (Firebase Importe hier einfügen) ...
+
+        // Globaler Zustand (MUSS OBEN BLEIBEN)
+        // ... (Globaler Zustand hier einfügen) ...
+        
+        // ---------- Utility functions ----------
+        // ... (Utility-Funktionen wie closeModal, showToast, showLoading)
+        
+        // NEU: Funktion zum Öffnen des AGB-Modals
+        window.openAGBModal = function(){ 
+            // Schließt andere Modals, z.B. das Login-Modal, falls es gerade sichtbar ist.
+            window.closeModal('login-modal'); 
+            
+            // Versteckt die Belegspalte (wie bei den anderen Modals auch)
+            window.toggleReceiptColumn(false); 
+            
+            // Zeigt das AGB-Modal an
+            document.getElementById('agb-modal').style.display='flex'; 
+        };
+
+        window.updateAppView = function(view){
+            // Versteckt alle Haupt-Views
+            document.getElementById('login-modal').style.display='none';
+            document.getElementById('kasse-view').style.display='none';
+            document.getElementById('settings-modal').style.display='none';
+
+            // Zeigt die angeforderte View
+            if(view === 'login'){
+                document.getElementById('login-modal').style.display='flex';
+            } else if(view === 'kasse'){
+                document.getElementById('kasse-view').style.display='flex';
+                // Lade die Kasse beim Öffnen neu
+                loadProductsAndCategories(); 
+            }
+        }
+        
+        window.closeModal = function(id){ 
+            document.getElementById(id).style.display='none'; 
+            // Blendet die Belegspalte (receipt column) nur dann ein, wenn der Nutzer eingeloggt ist UND das Kassen-View aktiv ist
+            if(currentUser && document.getElementById('kasse-view').style.display === 'flex'){
+                window.toggleReceiptColumn(true);
+            }
+        }
+
+        window.openLoginModal = function(){ window.closeModal('registration-modal'); window.closeModal('forgot-password-modal'); window.closeModal('agb-modal'); window.updateAppView('login'); }; 
+        window.openRegistrationModal = function(){ window.closeModal('login-modal'); window.toggleReceiptColumn(false); document.getElementById('registration-modal').style.display='flex'; };
+        window.openForgotPasswordModal = function(){ window.closeModal('login-modal'); window.toggleReceiptColumn(false); document.getElementById('forgot-password-modal').style.display='flex'; };
+        window.openProductModal = function(){ window.renderProductModalContent(); window.toggleReceiptColumn(false); document.getElementById('product-modal').style.display='flex'; };
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Kassensystem (Bewirtungsbeleg) - Firestore (Bericht + Storno)</title>
