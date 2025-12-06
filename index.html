@@ -1115,10 +1115,13 @@
                 const currentTimestamp = { seconds: Math.floor(Date.now() / 1000) }; 
                 window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
                 
-                // **KORRIGIERT: window.print() muss DIREKT aufgerufen werden, um Browser-Blocker zu umgehen.**
+                // NEU/FIX: Fügt eine minimale, nicht blockierende Verzögerung ein, um dem Browser das Rendern 
+                // des Inhalts im Druck-Container zu ermöglichen (löst das Problem des leeren Druckfensters).
+                await new Promise(resolve => setTimeout(resolve, 50)); 
+
                 window.print();
                 
-                // **NEU: Aufräumarbeiten des Druck-Containers leicht verzögern**
+                // Aufräumarbeiten des Druck-Containers leicht verzögern
                 setTimeout(() => {
                     document.getElementById('print-receipt-container').innerHTML = ''; // Clean up print content
                 }, 500); 
