@@ -475,7 +475,10 @@
                 await loadProductsAndCategories();
                 // Optionally: load recent txns for UI
                 renderReceipt();
-            } catch(err){ console.error('initUserData error', err); showToast('Fehler beim Laden der Daten.', 'error'); }
+            } catch(err){ 
+                console.error('initUserData error', err); 
+                showToast('Fehler beim Laden der Daten. (Siehe Konsole)', 'error'); // Verbesserte Meldung
+            }
             finally{ showLoading(false); }
         }
 
@@ -517,11 +520,13 @@
         };
         
         // ---------- Product Management ----------
+        // ********************************************************************
+        // KORREKTUR: showLoading und finally entfernt, throw err hinzugefügt, um Endlosschleife zu verhindern.
         async function seedUserDataIfNeeded(uid) {
             const cSnap = await getDocs(categoriesCollectionRef(uid));
             if (!cSnap.empty) return; // Already seeded
 
-            showLoading(true);
+            // showLoading(true); <--- ENTFERNT (Wird von initUserData gesteuert)
             try {
                 // Categories
                 const cat1 = { id: 'cat1', name: 'Getränke', order: 1 };
@@ -537,15 +542,17 @@
                 showToast('Beispieldaten erstellt.', 'info');
             } catch (err) {
                 console.error('Seeding error', err);
-            } finally {
-                showLoading(false);
-            }
+                showToast('Fehler beim Erstellen der Beispieldaten. (Prüfe Firestore-Regeln)', 'error');
+                throw err; // <--- HINZUGEFÜGT: Stoppt die Rekursion bei Fehlschlag.
+            } 
+            // finally { showLoading(false); } <--- ENTFERNT (Wird von initUserData gesteuert)
         }
+        // ********************************************************************
 
 
         async function loadProductsAndCategories() {
             if (!currentUser) return;
-            showLoading(true);
+            // showLoading(true); <--- ENTFERNT (Wird von initUserData gesteuert)
             try {
                 // Load Categories
                 const cSnap = await getDocs(query(categoriesCollectionRef(currentUser.uid), orderBy('order', 'asc')));
@@ -559,7 +566,9 @@
 
                 // Seed if empty
                 if(Object.keys(categories).length === 0 || Object.keys(products).length === 0){ 
+                    // Wenn Seeding fehlschlägt, wird ein Fehler geworfen, der im catch-Block abgefangen wird.
                     await seedUserDataIfNeeded(currentUser.uid); 
+                    // Wenn Seeding erfolgreich war, laden wir die Daten rekursiv neu.
                     return await loadProductsAndCategories(); 
                 }
 
@@ -569,9 +578,9 @@
             } catch(err) {
                 console.error('loadProductsAndCategories error', err);
                 showToast('Fehler beim Laden von Produkten/Kategorien.', 'error');
-            } finally {
-                showLoading(false);
-            }
+                // Der Fehler wird hier abgefangen und initUserData's finally block wird showLoading(false) ausführen.
+            } 
+            // finally { showLoading(false); } <--- ENTFERNT (Wird von initUserData gesteuert)
         }
 
         async function saveProductsAndCategories(){
