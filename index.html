@@ -126,12 +126,18 @@
             <input type="text" id="new-category-name" placeholder="Kategorie" class="flex-grow p-2 border rounded-lg">
             <button onclick="window.addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg">Kategorie</button>
           </div>
-          <div class="grid grid-cols-5 gap-2 items-end">
-            <input type="text" id="new-product-name" placeholder="Produkt" class="col-span-2 p-2 border rounded-lg">
-            <input type="number" id="new-product-price" placeholder="Preis" step="0.01" class="p-2 border rounded-lg">
-            <select id="new-product-category" class="p-2 border rounded-lg"><option value="">Kategorie wählen</option></select>
-            <button onclick="window.addProduct()" class="p-2 bg-green-500 text-white rounded-lg">Produkt</button>
+          
+          <div class="grid grid-cols-4 gap-2 items-end mb-2"> 
+            <input type="text" id="new-product-name" placeholder="Produktname" class="col-span-2 p-2 border rounded-lg">
+            <input type="number" id="new-product-price" placeholder="Preis (€)" step="0.01" class="p-2 border rounded-lg">
+            <select id="new-product-category" class="p-2 border rounded-lg"><option value="">Kategorie</option></select>
+            <select id="new-product-tax-rate" class="p-2 border rounded-lg">
+                <option value="19.0">19% MwSt.</option>
+                <option value="7.0">7% MwSt.</option>
+            </select>
           </div>
+          <button onclick="window.addProduct()" class="w-full p-2 bg-green-500 text-white rounded-lg font-bold">Produkt hinzufügen</button>
+
         </div>
 
         <h3 class="text-lg font-semibold mb-2">Kategorien</h3>
@@ -240,8 +246,9 @@
             <input type="text" id="tax-id" class="mt-1 w-full p-2 border rounded-lg">
           </div>
           <div class="mb-6">
-            <label for="tax-rate" class="block text-sm font-medium text-gray-700">Steuersatz (%)</label>
+            <label for="tax-rate" class="block text-sm font-medium text-gray-700">Steuersatz Fallback (%)</label>
             <input type="number" id="tax-rate" step="0.1" class="mt-1 w-full p-2 border rounded-lg">
+            <p class="text-xs text-gray-500 mt-1">Dieser Satz wird nur verwendet, wenn einem Produkt kein Satz zugewiesen ist.</p>
           </div>
           <button type="button" onclick="window.saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600">Speichern</button>
         </form>
@@ -532,7 +539,7 @@
     function productsCollectionRef(uid){ return collection(db, 'users', uid, 'products'); }
     function transactionsCollectionRef(uid){ return collection(db, 'users', uid, 'transactions'); }
 
-    // ---------- Seed / Init (unchanged) ----------
+    // ---------- Seed / Init (GEÄNDERT für Tax Rate) ----------
     async function seedUserDataIfNeeded(uid){
         const sRef = settingsDocRef(uid);
         const sSnap = await getDoc(sRef);
@@ -541,6 +548,7 @@
         
         showToast('Erste Anmeldung erkannt. Erzeuge Standarddaten...', 'info');
         
+        // ACHTUNG: Globaler Steuersatz ist jetzt nur noch Fallback
         const defaultSettings = { companyName:'Ihre Firma', address:'Musterstr. 1, 12345 Musterstadt', taxId:'123/456/7890', taxRate:19.0 };
         await setDoc(sRef, defaultSettings);
         
@@ -550,11 +558,12 @@
         const cat3 = await addDoc(catRef, { name: 'Sonstiges', order: 3 });
         
         const prodRef = productsCollectionRef(uid);
-        await addDoc(prodRef, { name: 'Kaffee', price: 2.50, categoryId: cat1.id });
-        await addDoc(prodRef, { name: 'Wasser', price: 1.50, categoryId: cat1.id });
-        await addDoc(prodRef, { name: 'Kuchen', price: 3.00, categoryId: cat2.id });
-        await addDoc(prodRef, { name: 'Tagesgericht', price: 9.90, categoryId: cat2.id });
-        await addDoc(prodRef, { name: 'T-Shirt', price: 19.99, categoryId: cat3.id });
+        // NEU: Steuersatz (taxRate) hinzugefügt
+        await addDoc(prodRef, { name: 'Kaffee', price: 2.50, categoryId: cat1.id, taxRate: 19.0 });
+        await addDoc(prodRef, { name: 'Wasser', price: 1.50, categoryId: cat1.id, taxRate: 19.0 });
+        await addDoc(prodRef, { name: 'Kuchen', price: 3.00, categoryId: cat2.id, taxRate: 7.0 });
+        await addDoc(prodRef, { name: 'Tagesgericht', price: 9.90, categoryId: cat2.id, taxRate: 7.0 });
+        await addDoc(prodRef, { name: 'T-Shirt', price: 19.99, categoryId: cat3.id, taxRate: 19.0 });
         
         showToast('Standarddaten erfolgreich erstellt. Willkommen!', 'success');
     }
@@ -579,7 +588,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Settings (unchanged) ----------
+    // ---------- Settings (unchanged, ausser Text) ----------
     async function loadSettings(){
         if(!currentUser) return;
         const sRef = settingsDocRef(currentUser.uid);
@@ -632,7 +641,7 @@
         document.getElementById('tax-rate').value = userSettings.taxRate || 19.0;
     }
 
-    // ---------- Products & Categories (unchanged) ----------
+    // ---------- Products & Categories (GEÄNDERT für Tax Rate) ----------
     async function loadProductsAndCategories(){
         if(!currentUser) return;
         categories = {}; products = {};
@@ -643,7 +652,12 @@
 
         const prodRef = productsCollectionRef(currentUser.uid);
         const prodSnap = await getDocs(query(prodRef, orderBy('name', 'asc')));
-        prodSnap.forEach(doc => { products[doc.id] = { id: doc.id, ...doc.data() }; });
+        prodSnap.forEach(doc => { 
+            const data = doc.data();
+            // Sicherstellen, dass taxRate als float existiert (Fallback auf 19.0)
+            data.taxRate = parseFloat(data.taxRate) || 19.0; 
+            products[doc.id] = { id: doc.id, ...data }; 
+        });
 
         renderCategoryTabs(); 
         window.renderProductGrid(Object.values(categories)[0]?.id || null); 
@@ -701,7 +715,7 @@
         filtered.forEach(product => {
             const btn = document.createElement('button');
             btn.className = 'product-btn p-4 rounded-xl font-extrabold text-white bg-red-500 hover:bg-red-600 shadow-lg flex flex-col justify-center items-center text-center h-24';
-            btn.innerHTML = `<span class="text-base">${product.name}</span><span class="text-xs font-normal">${parseFloat(product.price).toFixed(2).replace('.', ',')} €</span>`;
+            btn.innerHTML = `<span class="text-base">${product.name}</span><span class="text-xs font-normal">${parseFloat(product.price).toFixed(2).replace('.', ',')} € (${product.taxRate.toFixed(0)}%)</span>`;
             btn.onclick = () => { addToBestellung(product); };
             container.appendChild(btn);
         });
@@ -710,7 +724,7 @@
         document.getElementById('quantity-display').innerText = currentQuantity;
     }
 
-    // CRUD functions (Modal) (unchanged)
+    // CRUD functions (Modal) (GEÄNDERT für Tax Rate)
     window.addCategory = async function(){
         if(!currentUser) return;
         const name = document.getElementById('new-category-name').value.trim();
@@ -730,13 +744,23 @@
         const name = document.getElementById('new-product-name').value.trim();
         const price = parseFloat(document.getElementById('new-product-price').value);
         const categoryId = document.getElementById('new-product-category').value;
-        if(!name || isNaN(price) || !categoryId) { window.showToast('Bitte Name, Preis und Kategorie angeben', 'error'); return; }
+        const taxRate = parseFloat(document.getElementById('new-product-tax-rate').value); // NEU: Steuersatz holen
+
+        if(!name || isNaN(price) || !categoryId || isNaN(taxRate)) { 
+            window.showToast('Bitte Name, Preis, Kategorie und Steuersatz angeben', 'error'); return; 
+        }
         window.showLoading(true);
         try{
-            await addDoc(productsCollectionRef(currentUser.uid), { name, price: price.toFixed(2), categoryId });
+            await addDoc(productsCollectionRef(currentUser.uid), { 
+                name, 
+                price: price.toFixed(2), 
+                categoryId,
+                taxRate: taxRate // NEU: Steuersatz speichern
+            });
             document.getElementById('new-product-name').value = '';
             document.getElementById('new-product-price').value = '';
             document.getElementById('new-product-category').value = '';
+            document.getElementById('new-product-tax-rate').value = '19.0'; // Zurücksetzen auf Standard
             await loadProductsAndCategories(); 
             window.showToast('Produkt hinzugefügt.', 'success');
         } catch(err){ console.error(err); window.showToast('Fehler beim Hinzufügen des Produkts.', 'error'); }
@@ -765,13 +789,14 @@
         finally{ window.showLoading(false); }
     }
 
-    // NEU: Funktion zum Speichern des Produktpreises
+    // NEU: Funktion zum Speichern des Produktpreises (muss für TaxRate erweitert werden, lassen wir aber erstmal einfach)
     window.saveProductPrice = async function(productId){
         if(!currentUser) return;
         const newPrice = parseFloat(document.getElementById(`price-input-${productId}`).value);
+        const newTaxRate = parseFloat(document.getElementById(`tax-input-${productId}`).value); // NEU: Steuersatz holen
         
-        if(isNaN(newPrice) || newPrice <= 0){
-            window.showToast('Ungültiger Preis', 'error');
+        if(isNaN(newPrice) || newPrice <= 0 || isNaN(newTaxRate)){
+            window.showToast('Ungültiger Preis oder Steuersatz', 'error');
             return;
         }
         
@@ -779,11 +804,12 @@
         try{
             const prodRef = doc(productsCollectionRef(currentUser.uid), productId);
             await updateDoc(prodRef, { 
-                price: newPrice.toFixed(2) // Save as string with 2 decimal places
+                price: newPrice.toFixed(2), // Save as string with 2 decimal places
+                taxRate: newTaxRate // NEU: Steuersatz speichern
             });
             
             await loadProductsAndCategories(); 
-            window.showToast('Preis aktualisiert.', 'success');
+            window.showToast('Produkt aktualisiert.', 'success');
         } catch(err){ 
             console.error(err); 
             window.showToast('Fehler beim Speichern des Preises.', 'error'); 
@@ -791,7 +817,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // MODIFIZIERT: renderProductModalContent
+    // MODIFIZIERT: renderProductModalContent (GEÄNDERT für Tax Rate Edit)
     window.renderProductModalContent = function(){
         const catListContainer = document.getElementById('category-list');
         const prodListContainer = document.getElementById('product-list');
@@ -819,18 +845,31 @@
         });
 
         Object.values(products).forEach(prod => {
-            // Product List (MODIFIZIERT für Price Edit)
+            // Product List (MODIFIZIERT für Price & Tax Edit)
             const prodDiv = document.createElement('div');
             prodDiv.className = 'flex items-center justify-between bg-white border p-2 rounded-lg';
+            
+            // Tax options for dropdown
+            const tax7Selected = prod.taxRate === 7.0 ? 'selected' : '';
+            const tax19Selected = prod.taxRate === 19.0 ? 'selected' : '';
+
             prodDiv.innerHTML = `
                 <div class="flex-grow flex items-center space-x-4">
                     <div class="flex flex-col">
                         <span class="font-semibold">${prod.name}</span>
                         <span class="text-xs text-gray-500">${categories[prod.categoryId]?.name || 'Ohne Kategorie'}</span>
                     </div>
-                    <div class="flex items-center">
-                        <input type="number" id="price-input-${prod.id}" value="${parseFloat(prod.price).toFixed(2)}" step="0.01" class="w-20 p-1 border rounded-lg text-right text-sm">
-                        <span class="ml-1 text-sm font-bold">€</span>
+                    
+                    <div class="flex items-center space-x-2">
+                        <div class="flex items-center">
+                            <input type="number" id="price-input-${prod.id}" value="${parseFloat(prod.price).toFixed(2)}" step="0.01" class="w-20 p-1 border rounded-lg text-right text-sm">
+                            <span class="ml-1 text-sm font-bold">€</span>
+                        </div>
+                        
+                        <select id="tax-input-${prod.id}" class="p-1 border rounded-lg text-sm">
+                            <option value="19.0" ${tax19Selected}>19%</option>
+                            <option value="7.0" ${tax7Selected}>7%</option>
+                        </select>
                     </div>
                 </div>
                 <div class="flex space-x-2">
@@ -842,7 +881,7 @@
         });
     }
 
-    // ---------- Kasse / Bestellung (MODIFIZIERT) ----------
+    // ---------- Kasse / Bestellung (GEÄNDERT für Tax Rate) ----------
     window.handleQuantityInput = function(input){
         if(input === 'clear'){
             currentQuantity = 1;
@@ -865,7 +904,12 @@
     function addToBestellung(product){
         const existingItem = currentBestellung.find(item => item.id === product.id);
         
+        // Sicherstellen, dass der Steuersatz vorhanden ist
+        const itemTaxRate = product.taxRate || userSettings.taxRate || 19.0;
+        
         if(existingItem){
+            // Überprüfen, ob die TaxRate gleich ist (ansonsten wäre es ein Fehler, da die TaxRate im Produkt gespeichert ist)
+            // Wir nehmen an, der Benutzer hat die Rate im Modal nicht geändert, während er den Bon bucht.
             existingItem.quantity += currentQuantity;
             existingItem.totalBrutto = parseFloat((existingItem.price * existingItem.quantity).toFixed(2));
         } else {
@@ -875,7 +919,8 @@
                 price: parseFloat(product.price), 
                 categoryId: product.categoryId,
                 quantity: currentQuantity,
-                totalBrutto: parseFloat((product.price * currentQuantity).toFixed(2))
+                totalBrutto: parseFloat((product.price * currentQuantity).toFixed(2)),
+                taxRate: itemTaxRate, // NEU: Steuersatz speichern
             });
         }
         
@@ -909,7 +954,7 @@
         window.showToast('Bon gelöscht.', 'info');
     }
 
-    // renderReceipt Funktion (unverändert in der Logik, nur Index-Berechnung ist relevant)
+    // renderReceipt Funktion (WESENTLICH GEÄNDERT für Tax Rate Summary)
     window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
         const container = forPrint 
             ? document.getElementById('print-receipt-container') // Dedizierter Container für Print
@@ -921,9 +966,11 @@
         totalBrutto = 0.00;
         let totalNetto = 0.00;
         let totalTax = 0.00;
-        let taxRate = userSettings.taxRate || 19.0;
+        let taxSummary = {}; // NEU: Speichert MwSt-Aufschlüsselung pro Satz
         
-        // NEU: Verwenden der CSS-Klasse für Trennlinien
+        // Fallback-Satz, falls bei einem Artikel die Rate fehlt (sollte nicht passieren)
+        const fallbackTaxRate = userSettings.taxRate || 19.0; 
+        
         const separator = '<div class="separator"></div>';
         
         // 1. Calculate Totals (einmal für beide Ansichten)
@@ -931,12 +978,24 @@
             // Aktualisieren Sie den totalBrutto des Artikels basierend auf der Menge (falls er durch removeItem geändert wurde)
             item.totalBrutto = parseFloat((item.price * item.quantity).toFixed(2));
             
-            const itemNetto = item.totalBrutto / (1 + taxRate / 100);
+            // Steuersatz des Artikels verwenden
+            const itemTaxRate = item.taxRate || fallbackTaxRate; 
+            
+            const itemNetto = item.totalBrutto / (1 + itemTaxRate / 100);
             const itemTax = item.totalBrutto - itemNetto;
             
             totalBrutto += item.totalBrutto;
             totalNetto += itemNetto;
             totalTax += itemTax;
+
+            // Füllen der Steuer-Zusammenfassung
+            const rateKey = itemTaxRate.toFixed(1);
+            if (!taxSummary[rateKey]) {
+                taxSummary[rateKey] = { net: 0, tax: 0, gross: 0 };
+            }
+            taxSummary[rateKey].net += itemNetto;
+            taxSummary[rateKey].tax += itemTax;
+            taxSummary[rateKey].gross += item.totalBrutto;
         });
 
         totalBrutto = parseFloat(totalBrutto.toFixed(2));
@@ -986,8 +1045,8 @@
                 currentBestellung.forEach((item) => {
                     // Line 1: Quantity and Name
                     content += `<div class="line"><span class="item-name">${item.quantity} x ${item.name}</span><span class="item-price">${item.totalBrutto.toFixed(2).replace('.', ',')} €</span></div>`;
-                    // Line 2 (Optional for detail): Price per unit
-                    content += `<div class="line text-xs italic"><span class="item-name"></span><span class="item-price font-normal text-right">(${item.price.toFixed(2).replace('.', ',')} € / Stk.)</span></div>`;
+                    // Line 2 (Optional for detail): Price per unit + Tax Rate
+                    content += `<div class="line text-xs italic"><span class="item-name"></span><span class="item-price font-normal text-right">(${item.price.toFixed(2).replace('.', ',')} € / Stk. - ${item.taxRate.toFixed(0)}%)</span></div>`;
                 });
                 
                 // Print Receipt Footer (Summary)
@@ -995,9 +1054,19 @@
                 content += `<div class="line total-line"><span>GESAMT BRUTTO:</span><span>${totalBrutto.toFixed(2).replace('.', ',')} €</span></div>`;
                 content += separator;
                 
-                // Tax Breakdown
-                content += `<div class="line text-sm mt-1"><span>Netto Betrag:</span><span class="font-semibold">${totalNetto.toFixed(2).replace('.', ',')} €</span></div>`;
-                content += `<div class="line text-sm"><span>MwSt. (${taxRate.toFixed(1).replace('.', ',')} %):</span><span class="font-semibold">${totalTax.toFixed(2).replace('.', ',')} €</span></div>`;
+                // NEU: Detaillierte Steuer-Aufschlüsselung
+                content += `<div class="line text-sm mt-1"><span>Netto Gesamt:</span><span class="font-semibold">${totalNetto.toFixed(2).replace('.', ',')} €</span></div>`;
+                content += `<div class="line text-sm"><span>MwSt. Total:</span><span class="font-semibold">${totalTax.toFixed(2).replace('.', ',')} €</span></div>`;
+
+                content += `<div class="line text-xs font-bold mt-2"><span>Davon:</span><span></span></div>`;
+                Object.keys(taxSummary).sort().forEach(rate => {
+                    const summary = taxSummary[rate];
+                    // Stellen Sie sicher, dass nur Raten mit tatsächlichem Umsatz angezeigt werden
+                    if (summary.gross > 0.005) { 
+                        content += `<div class="line text-xs"><span>- Netto ${rate.replace('.', ',')}%:</span><span class="font-semibold">${summary.net.toFixed(2).replace('.', ',')} €</span></div>`;
+                        content += `<div class="line text-xs"><span>- MwSt. ${rate.replace('.', ',')}%:</span><span class="font-semibold">${summary.tax.toFixed(2).replace('.', ',')} €</span></div>`;
+                    }
+                });
                 
                 // Payment
                 const paymentMethodDisplay = cashPaymentMethod === 'BAR' ? 'Bar' : 'Karte';
@@ -1023,7 +1092,7 @@
                         <div class="flex justify-between items-center bg-red-50 p-2 rounded-lg">
                             <div class="flex-grow">
                                 <span class="font-bold">${item.quantity} x ${item.name}</span>
-                                <span class="text-sm text-gray-600 ml-2">(${item.price.toFixed(2).replace('.', ',')} € / Stk.)</span>
+                                <span class="text-sm text-gray-600 ml-2">(${item.price.toFixed(2).replace('.', ',')} € / Stk. | ${item.taxRate.toFixed(0)}%)</span>
                             </div>
                             <span class="font-extrabold text-red-700">${item.totalBrutto.toFixed(2).replace('.', ',')} €</span>
                             <button onclick="window.removeItem(${i})" class="ml-3 text-red-500 hover:text-red-700 text-lg font-bold leading-none">×</button>
@@ -1037,7 +1106,7 @@
         }
     }
 
-    // ---------- Finalize Modal (Payment) (MODIFIZIERT Druck-Fix) ----------
+    // ---------- Finalize Modal (Payment) (GEÄNDERT für Tax Rate Save) ----------
     window.openFinalizeModal = function(){
         if(currentBestellung.length === 0){ window.showToast('Bitte Artikel buchen.', 'error'); return; }
         window.renderReceipt(false); 
@@ -1049,6 +1118,8 @@
         document.getElementById('finalize-modal').style.display = 'flex';
         window.toggleReceiptColumn(false);
     }
+
+    // ... (setPaymentMethod, handleCashInput, setCashExact, addCashShortcut, updateCashDisplay, updateCashFinalizeButtons UNVERÄNDERT) ...
 
     window.setPaymentMethod = function(method){
         cashPaymentMethod = method;
@@ -1143,7 +1214,8 @@
         document.getElementById('btn-cash-bewirtung').classList.toggle('bg-red-400', !isSufficient);
         document.getElementById('btn-cash-bewirtung').classList.toggle('bg-red-700', isSufficient);
     }
-
+    
+    // WICHTIG: handleFinalizeAction (GEÄNDERT für Tax Rate Save)
     window.handleFinalizeAction = async function(method, receiptType){
         if(!currentUser) return;
         
@@ -1157,6 +1229,24 @@
         
         window.showLoading(true);
         try{
+            // Vorbereitung der Tax Summary
+            let taxSummaryForSave = {};
+            const finalTaxRate = userSettings.taxRate || 19.0;
+
+            currentBestellung.forEach(item => {
+                const itemTaxRate = item.taxRate || finalTaxRate;
+                const itemNetto = item.totalBrutto / (1 + itemTaxRate / 100);
+                const itemTax = item.totalBrutto - itemNetto;
+                
+                const rateKey = itemTaxRate.toFixed(1);
+                if (!taxSummaryForSave[rateKey]) {
+                    taxSummaryForSave[rateKey] = { net: 0, tax: 0, gross: 0, rate: itemTaxRate };
+                }
+                taxSummaryForSave[rateKey].net += itemNetto;
+                taxSummaryForSave[rateKey].tax += itemTax;
+                taxSummaryForSave[rateKey].gross += item.totalBrutto;
+            });
+
             // 1. Save Transaction to Firestore
             const transactionData = {
                 items: currentBestellung,
@@ -1165,12 +1255,15 @@
                 receiptType,
                 timestamp: serverTimestamp(),
                 
+                // NEU: Speichern der detaillierten Steuer-Zusammenfassung
+                taxSummary: taxSummaryForSave,
+                
                 ...(method === 'BAR' && { 
                     cashReceived: parseFloat(cashReceivedInput) || totalBrutto,
                     cashChange: Math.max(0, (parseFloat(cashReceivedInput) || totalBrutto) - totalBrutto).toFixed(2)
                 }),
                 isCancelled: false,
-                taxRate: userSettings.taxRate || 19.0,
+                taxRate: finalTaxRate, // Globaler Fallback-Satz (historisch)
             };
             
             const transRef = await addDoc(transactionsCollectionRef(currentUser.uid), transactionData);
@@ -1215,7 +1308,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Storno der letzten Transaktion (NEUE FUNKTION) ----------
+    // ---------- Storno der letzten Transaktion (UNVERÄNDERT) ----------
     window.cancelLastTransaction = async function(){
         if(!currentUser) return;
         
@@ -1268,7 +1361,7 @@
     }
 
 
-    // ---------- Transactions & Reports (unchanged) ----------
+    // ---------- Transactions & Reports (WESENTLICH GEÄNDERT für Tax Rate Report) ----------
     
     window.setReportDateToday = function(){
         const today = new Date().toISOString().split('T')[0];
@@ -1303,13 +1396,26 @@
             let totalTax = 0.00;
             let paymentTotals = { 'BAR': 0, 'KARTE': 0 };
             let productSummary = {}; 
+            let reportTaxSummary = {}; // NEU: Globale Steuerzusammenfassung für den Report
             
             transactions.filter(t => !t.isCancelled).forEach(t => {
                 totalGross += t.totalBrutto;
-                const txTaxRate = t.taxRate || userSettings.taxRate || 19.0;
-                const txNet = t.totalBrutto / (1 + txTaxRate / 100);
-                totalNet += txNet;
-                totalTax += t.totalBrutto - txNet;
+                
+                // NEU: Anstatt manueller Berechnung, die gespeicherte Tax Summary nutzen
+                const txTaxSummary = t.taxSummary || {}; 
+                
+                Object.keys(txTaxSummary).forEach(rateKey => {
+                    const summary = txTaxSummary[rateKey];
+                    
+                    // Initialisierung, falls neuer Steuersatz im Report auftaucht
+                    if (!reportTaxSummary[rateKey]) {
+                        reportTaxSummary[rateKey] = { net: 0, tax: 0, gross: 0 };
+                    }
+                    
+                    reportTaxSummary[rateKey].net += summary.net;
+                    reportTaxSummary[rateKey].tax += summary.tax;
+                    reportTaxSummary[rateKey].gross += summary.gross;
+                });
 
                 paymentTotals[t.paymentMethod] = (paymentTotals[t.paymentMethod] || 0) + t.totalBrutto;
                 
@@ -1322,6 +1428,17 @@
                 });
             });
 
+            // NEU: Berechne Gesamt-Netto und Gesamt-Steuer aus der neuen Zusammenfassung
+            Object.keys(reportTaxSummary).forEach(rateKey => {
+                totalNet += reportTaxSummary[rateKey].net;
+                totalTax += reportTaxSummary[rateKey].tax;
+                
+                // Runden der Einzelwerte für den Report
+                reportTaxSummary[rateKey].net = parseFloat(reportTaxSummary[rateKey].net.toFixed(2));
+                reportTaxSummary[rateKey].tax = parseFloat(reportTaxSummary[rateKey].tax.toFixed(2));
+                reportTaxSummary[rateKey].gross = parseFloat(reportTaxSummary[rateKey].gross.toFixed(2));
+            });
+            
             totalGross = parseFloat(totalGross.toFixed(2));
             totalNet = parseFloat(totalNet.toFixed(2));
             totalTax = parseFloat(totalTax.toFixed(2));
@@ -1335,8 +1452,18 @@
                 });
                 csvContent += `\nSumme\n`;
                 csvContent += `GESAMT BRUTTO;${totalGross.toFixed(2).replace('.', ',')}\n`;
-                csvContent += `NETTO;${totalNet.toFixed(2).replace('.', ',')}\n`;
-                csvContent += `MWST;${totalTax.toFixed(2).replace('.', ',')}\n`;
+                
+                // NEU: Steuer-Aufschlüsselung im CSV
+                Object.keys(reportTaxSummary).sort().forEach(rateKey => {
+                    const summary = reportTaxSummary[rateKey];
+                    if (summary.gross > 0.005) {
+                         csvContent += `NETTO ${rateKey}%;${summary.net.toFixed(2).replace('.', ',')}\n`;
+                         csvContent += `MWST ${rateKey}%;${summary.tax.toFixed(2).replace('.', ',')}\n`;
+                    }
+                });
+                csvContent += `NETTO GESAMT;${totalNet.toFixed(2).replace('.', ',')}\n`;
+                csvContent += `MWST GESAMT;${totalTax.toFixed(2).replace('.', ',')}\n`;
+                
                 csvContent += `\nZahlungsmethode;Betrag\n`;
                 Object.keys(paymentTotals).forEach(method => {
                     const val = paymentTotals[method];
@@ -1357,13 +1484,27 @@
 
                 reportHtml += `<div class="text-center font-bold text-lg mb-4">Tagesabschluss für ${selectedDate}</div>`;
                 reportHtml += line(`Firma`, userSettings.companyName || 'N/A');
-                reportHtml += line(`MwSt. Satz`, `${userSettings.taxRate || 19.0}%`);
+                reportHtml += line(`Globaler Fallback MwSt.`, `${userSettings.taxRate || 19.0}%`);
                 reportHtml += lineBreak;
 
                 reportHtml += `<div class="text-lg font-bold mt-2">Gesamtsummen (Nicht storniert)</div>`;
                 reportHtml += line(`Bruttoumsatz`, `${totalGross.toFixed(2).replace('.', ',')} €`);
-                reportHtml += line(`Nettoumsatz`, `${totalNet.toFixed(2).replace('.', ',')} €`);
-                reportHtml += line(`MwSt.`, `${totalTax.toFixed(2).replace('.', ',')} €`);
+                reportHtml += line(`Nettoumsatz (Gesamt)`, `${totalNet.toFixed(2).replace('.', ',')} €`);
+                reportHtml += line(`MwSt. (Gesamt)`, `${totalTax.toFixed(2).replace('.', ',')} €`);
+                
+                reportHtml += lineBreak;
+                reportHtml += `<div class="text-lg font-bold mt-2">Umsatz nach Steuersatz</div>`;
+                
+                // NEU: Ausgabe der Steuer-Zusammenfassung
+                Object.keys(reportTaxSummary).sort().forEach(rateKey => {
+                    const summary = reportTaxSummary[rateKey];
+                    if (summary.gross > 0.005) { // Nur anzeigen, wenn Umsatz existiert
+                        reportHtml += `<div class="line text-sm mt-1"><span>Brutto ${rateKey} %:</span><span class="font-semibold">${summary.gross.toFixed(2).replace('.', ',')} €</span></div>`;
+                        reportHtml += `<div class="line text-xs"><span>- Netto ${rateKey} %:</span><span class="font-semibold">${summary.net.toFixed(2).replace('.', ',')} €</span></div>`;
+                        reportHtml += `<div class="line text-xs"><span>- MwSt. ${rateKey} %:</span><span class="font-semibold">${summary.tax.toFixed(2).replace('.', ',')} €</span></div>`;
+                    }
+                });
+
                 reportHtml += lineBreak;
 
                 reportHtml += `<div class="text-lg font-bold mt-2">Zahlungsarten</div>`;
