@@ -16,11 +16,33 @@
     #toast-container { position: fixed; top:1rem; right:1rem; z-index:1000; pointer-events:none; }
     .toast { padding: .75rem 1rem; border-radius: .5rem; color: #fff; margin-bottom:.5rem; opacity:0; transition: opacity .25s ease; }
     .toast-success { background: #16a34a; } .toast-error { background:#dc2626 } .toast-info { background:#2563eb }
+    
+    /* NEU: Druck-Container standardmäßig unsichtbar */
+    #print-receipt-container { display: none; } 
     .receipt-print { font-family: 'Consolas', 'Courier New', monospace; }
+
     @media print {
-      body * { visibility: hidden; }
-      .receipt-print, .receipt-print * { visibility: visible; }
-      .receipt-print { position: absolute; left: 0; top: 0; width: 80mm; font-family: monospace; font-size:9pt; color:#000; padding:0; margin:0; }
+      body * { visibility: hidden !important; }
+      
+      /* NEU: Print-Container mit !important erzwingen */
+      #print-receipt-container { 
+        visibility: visible !important; 
+        display: block !important; 
+        position: absolute !important; 
+        left: 0 !important; 
+        top: 0 !important; 
+        width: 80mm !important; /* Standardbreite für Kassenbon */
+        font-family: monospace !important; 
+        font-size: 9pt !important; 
+        color: #000 !important; 
+        padding: 0 !important; 
+        margin: 0 !important;
+      }
+      #print-receipt-container * { 
+        visibility: visible !important; 
+      }
+      
+      /* Print-Layout Regeln */
       .receipt-print .line { display:flex; justify-content:space-between; line-height:1.2; margin-bottom:0; }
       .receipt-print .item-name { width:70%; overflow:hidden; white-space:nowrap; }
       .receipt-print .item-price { width:30%; text-align:right; }
@@ -261,7 +283,6 @@
           <div id="category-tabs" class="flex space-x-1 overflow-x-auto pb-1">
             </div>
         </div>
-        <button onclick="window.openProductModal()" class="product-btn p-2 bg-indigo-500 text-white rounded-lg whitespace-nowrap">Produkte verwalten</button>
         <button onclick="window.handleLogout()" class="product-btn p-2 bg-red-500 text-white rounded-lg whitespace-nowrap">Logout</button>
       </div>
 
@@ -315,7 +336,7 @@
 
   </div>
   
-  <div id="print-receipt-container" style="display: none;" class="receipt-print"></div>
+  <div id="print-receipt-container" class="receipt-print"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -548,7 +569,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Settings (NEU: Refaktoriert) ----------
+    // ---------- Settings (unchanged) ----------
     async function loadSettings(){
         if(!currentUser) return;
         const sRef = settingsDocRef(currentUser.uid);
@@ -774,7 +795,7 @@
         });
     }
 
-    // ---------- Kasse / Bestellung (FIX: removeItem Logik) ----------
+    // ---------- Kasse / Bestellung (unchanged) ----------
     window.handleQuantityInput = function(input){
         if(input === 'clear'){
             currentQuantity = 1;
@@ -831,7 +852,7 @@
         window.showToast('Bon gelöscht.', 'info');
     }
 
-    // ACHTUNG: Refaktorisierte renderReceipt Funktion
+    // ACHTUNG: Refaktorisierte renderReceipt Funktion (unchanged)
     window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
         const container = forPrint 
             ? document.getElementById('print-receipt-container') // NEU: Dedizierter Container für Print
@@ -1094,7 +1115,7 @@
         finally{ window.showLoading(false); }
     }
 
-    // ---------- Transactions & Reports ----------
+    // ---------- Transactions & Reports (unchanged) ----------
     
     window.setReportDateToday = function(){
         const today = new Date().toISOString().split('T')[0];
