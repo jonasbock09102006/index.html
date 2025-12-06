@@ -1098,11 +1098,13 @@
                 const currentTimestamp = { seconds: Math.floor(Date.now() / 1000) }; 
                 window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
                 
-                // **FIX FÜR DRUCKFENSTER**
+                // **KORRIGIERT: window.print() muss DIREKT aufgerufen werden, um Browser-Blocker zu umgehen.**
+                window.print();
+                
+                // **NEU: Aufräumarbeiten des Druck-Containers leicht verzögern**
                 setTimeout(() => {
-                    window.print();
                     document.getElementById('print-receipt-container').innerHTML = ''; // Clean up print content
-                }, 100);
+                }, 500); 
             }
 
             // 3. Clear state and close modal
