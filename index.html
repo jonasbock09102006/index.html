@@ -18,13 +18,14 @@
     .toast-success { background: #16a34a; } .toast-error { background:#dc2626 } .toast-info { background:#2563eb }
     
     /* Druck-Container standardmäßig unsichtbar */
-    #print-receipt-container { display: none; } 
+    #print-receipt-container { display: none; visibility: hidden; } 
     .receipt-print { font-family: 'Consolas', 'Courier New', monospace; }
 
     /* **KORRIGIERTE DRUCK-STILE FÜR BESSERE LESBARKEIT** */
     @media print {
       body * { visibility: hidden !important; }
       
+      /* NEU: Wichtig, um den Druckbereich zu isolieren */
       #print-receipt-container { 
         visibility: visible !important; 
         display: block !important; 
@@ -647,6 +648,7 @@
     }
 
     window.saveProductsAndCategories = async function(){
+        // Diese Funktion wird in diesem Kontext nicht direkt verwendet, aber zur Vervollständigung beibehalten
         if(!currentUser) { window.showToast('Nicht angemeldet','error'); return; }
         const uid = currentUser.uid; window.showLoading(true);
         try{
@@ -1162,16 +1164,26 @@
             // 2. Print Receipt if requested
             if(receiptType !== 'none'){
                 const currentTimestamp = { seconds: Math.floor(Date.now() / 1000) }; 
-                window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
+                const printContainer = document.getElementById('print-receipt-container');
                 
-                // FIX: Erhöht die Verzögerung, um das Rendering des Druckinhalts zu gewährleisten.
-                await new Promise(resolve => setTimeout(resolve, 100)); 
+                // Render content into the hidden container
+                window.renderReceipt(true, receiptType, transRef.id, currentTimestamp);
 
+                // Force visibility and display temporarily to aid rendering
+                printContainer.style.display = 'block'; 
+                printContainer.style.visibility = 'visible'; 
+                
+                // **FIX: EXTREM VERZÖGERN FÜR GARANTIERTES RENDERING**
+                await new Promise(resolve => setTimeout(resolve, 500)); 
+
+                // Trigger print
                 window.print();
                 
                 // Aufräumarbeiten des Druck-Containers leicht verzögern
                 setTimeout(() => {
-                    document.getElementById('print-receipt-container').innerHTML = ''; // Clean up print content
+                    printContainer.innerHTML = ''; // Clean up print content
+                    printContainer.style.display = 'none';
+                    printContainer.style.visibility = 'hidden';
                 }, 500); 
             }
 
