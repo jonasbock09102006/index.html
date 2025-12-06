@@ -367,7 +367,7 @@
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
     import {
         getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-        query, where, orderBy, serverTimestamp, Timestamp, limit, runTransaction // <-- WICHTIG: runTransaction hinzugefügt
+        query, where, orderBy, serverTimestamp, Timestamp, limit
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
     // ---------- Firebase config (aus deiner Datei) ----------
@@ -616,46 +616,26 @@
         }
     }
     
-    // NEU: Funktion zur atomaren Erhöhung der Bon-Nummer (jetzt mit Firestore Transaction)
+    // NEU: Atomar (im Kontext dieser Anwendung) die Bon-Nummer erhöhen
     async function getAndIncrementReceiptNumber(){
         if(!currentUser) return 1;
         const sRef = settingsDocRef(currentUser.uid);
         
-        let newNumber = 1;
+        // 1. Lesen der aktuellen Nummer
+        const sSnap = await getDoc(sRef);
+        let currentNumber = sSnap.exists() && typeof sSnap.data().lastReceiptNumber === 'number' 
+            ? sSnap.data().lastReceiptNumber 
+            : 0;
 
-        try {
-            await runTransaction(db, async (transaction) => {
-                const sSnap = await transaction.get(sRef);
-                
-                let currentNumber = 0;
-                
-                // 1. Lesen der aktuellen Nummer mit robustem Fallback
-                if (sSnap.exists() && typeof sSnap.data().lastReceiptNumber === 'number') {
-                    currentNumber = sSnap.data().lastReceiptNumber;
-                } else if (sSnap.exists() && sSnap.data().lastReceiptNumber === undefined) {
-                    // Wenn das Feld fehlt, aber das Dokument existiert, initialisiere es
-                    currentNumber = 0; 
-                } else if (!sSnap.exists()) {
-                    // Wenn das Dokument fehlt (sollte durch seedUserDataIfNeeded nicht passieren, aber zur Sicherheit), erstelle es mit 0
-                    transaction.set(sRef, { lastReceiptNumber: 0 }, { merge: true });
-                    currentNumber = 0;
-                }
-                
-                newNumber = currentNumber + 1;
-                
-                // 2. Speichern der neuen Nummer
-                transaction.update(sRef, { lastReceiptNumber: newNumber });
-                
-                // 3. Globale Variable aktualisieren (für Report/Anzeige direkt nach dem Kauf)
-                userSettings.lastReceiptNumber = newNumber;
-            });
-            return newNumber;
+        const newNumber = currentNumber + 1;
+        
+        // 2. Speichern der neuen Nummer
+        await updateDoc(sRef, { lastReceiptNumber: newNumber });
+        
+        // 3. Globale Variable aktualisieren (optional, aber gut für den nächsten check)
+        userSettings.lastReceiptNumber = newNumber;
 
-        } catch (e) {
-            console.error("Transaction failed: ", e);
-            window.showToast('Fehler beim Abrufen/Speichern der Bon-Nummer.', 'error');
-            return Math.floor(Math.random() * 10000000); // Fallback auf große Zufallszahl
-        }
+        return newNumber;
     }
 
 
@@ -1196,8 +1176,7 @@
         
         currentBestellung = transaction.items;
         totalBrutto = transaction.totalBrutto; 
-        // Falls cashReceived nicht gespeichert wurde, nehmen wir den Bruttobetrag
-        cashReceivedInput = (transaction.cashReceived || transaction.totalBrutto).toFixed(2);
+        cashReceivedInput = transaction.cashReceived || transaction.totalBrutto.toFixed(2);
         cashPaymentMethod = transaction.paymentMethod || 'BAR';
 
 
@@ -1248,6 +1227,8 @@
         document.getElementById('finalize-modal').style.display = 'flex';
         window.toggleReceiptColumn(false);
     }
+
+    // ... (setPaymentMethod, handleCashInput, setCashExact, addCashShortcut, updateCashDisplay, updateCashFinalizeButtons UNVERÄNDERT) ...
 
     window.setPaymentMethod = function(method){
         cashPaymentMethod = method;
@@ -1357,7 +1338,7 @@
         
         window.showLoading(true);
         try{
-            // NEU: Bon-Nummer holen und inkrementieren (mit Transaktion)
+            // NEU: Bon-Nummer holen und inkrementieren
             const newReceiptNumber = await getAndIncrementReceiptNumber();
             
             // Vorbereitung der Tax Summary
@@ -1400,7 +1381,6 @@
                 taxRate: finalTaxRate, // Globaler Fallback-Satz (historisch)
             };
             
-            // ✨ KORRIGIERTE ZEILE (von transactionsCollectionCollection zu transactionsCollectionRef)
             const transRef = await addDoc(transactionsCollectionRef(currentUser.uid), transactionData);
             
             // 2. Print Receipt if requested
@@ -1629,7 +1609,7 @@
                 reportHtml += line(`Globaler Fallback MwSt.`, `${userSettings.taxRate || 19.0}%`);
                 reportHtml += lineBreak;
                 
-                // NEU: Letzte Bon-Nummer anzeigen (aktualisiert in getAndIncrementReceiptNumber)
+                // NEU: Letzte Bon-Nummer anzeigen
                 reportHtml += line(`Letzte Bon-Nr.`, `${userSettings.lastReceiptNumber}`);
                 reportHtml += lineBreak;
 
