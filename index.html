@@ -829,6 +829,7 @@
         window.showToast('Bon gelöscht.', 'info');
     }
 
+    // ACHTUNG: FIX FÜR ReferenceError: lineBreak is not defined
     window.renderReceipt = function(forPrint = false, receiptType = 'standard', transactionId = null, timestamp = null){
         const container = forPrint 
             ? document.getElementById('report-content') 
@@ -845,6 +846,9 @@
         // Prepare data for rendering
         const itemsToRender = forPrint ? currentBestellung : [...currentBestellung].reverse();
         
+        // FIX: lineBreak wird an den Anfang der Funktion verschoben
+        const lineBreak = "<div>----------------------------------------</div>";
+        
         if(itemsToRender.length === 0){
             container.innerHTML = '<p class="text-gray-500 text-center p-4">Es wurden noch keine Artikel gebucht.</p>';
             document.getElementById('btn-finalize').disabled = true;
@@ -853,7 +857,6 @@
             document.getElementById('btn-finalize').disabled = false;
             
             if(forPrint){
-                const lineBreak = "<div>----------------------------------------</div>";
                 
                 content += `<div class="text-center font-bold">${(userSettings.companyName||'Kassensystem').toUpperCase()}</div>`;
                 content += `<div class="text-center">${userSettings.address||''}</div>`;
