@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Kassensystem FH-Erfurt | Komplett & Modular</title>
+  <title>Kassensystem FH-Erfurt | Professional</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; user-select: none; }
@@ -12,7 +12,6 @@
     .numpad-btn { height: 50px; display:flex; justify-content:center; align-items:center; border-radius: 8px; font-weight: bold; border: 1px solid #e5e7eb; transition: 0.1s; background: white; }
     .numpad-btn:active { background-color: #f3f4f6; transform: scale(0.95); }
     
-    /* Stapelbare Toasts oben rechts */
     #toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 10000; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
     .toast { background: #1f2937; color: white; padding: 0.75rem 1.25rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out; pointer-events: auto; }
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -24,112 +23,95 @@
     @media print {
       body * { visibility: hidden !important; }
       #print-receipt-container { visibility: visible !important; display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 80mm !important; font-family: 'Courier New', Courier, monospace !important; font-size: 12px !important; color: #000 !important; }
-      #print-receipt-container * { visibility: visible !important; }
     }
   </style>
 </head>
-<body class="min-h-screen bg-gray-100">
+<body class="min-h-screen">
 
   <div id="toast-container"></div>
   <div id="async-loading-overlay"><div class="spinner"></div></div>
-
-  <div id="login-modal" class="fixed inset-0 bg-white z-[5000] flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
-      <h1 class="text-3xl font-black text-center mb-6 text-red-600">Kassensystem</h1>
-      <form id="login-form">
-        <input type="email" id="login-email" placeholder="E-Mail" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-red-500" required>
-        <input type="password" id="login-password" placeholder="Passwort" class="w-full p-4 mb-6 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-red-500" required>
-        <button type="submit" class="w-full bg-red-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">Anmelden</button>
-        <div class="flex justify-between mt-6 text-xs font-bold text-gray-400">
-          <button type="button" onclick="window.updateAppView('register')">REGISTRIEREN</button>
-          <button type="button" onclick="window.updateAppView('reset')">PASSWORT VERGESSEN?</button>
-        </div>
-      </form>
-    </div>
-  </div>
 
   <div id="register-modal" class="fixed inset-0 bg-white z-[5000] hidden flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 border">
       <h2 class="text-2xl font-bold mb-4">Konto erstellen</h2>
       <form id="register-form">
-        <input type="email" id="reg-email" placeholder="E-Mail" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl" required>
-        <input type="password" id="reg-password" placeholder="Passwort (min. 8 Zeichen)" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl" required>
-        <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 uppercase tracking-widest">System-Typ wählen</label>
-        <select id="system-type-select" class="w-full p-4 mb-6 bg-gray-50 rounded-2xl font-bold">
-          <option value="simple">Reduziert (Einfach, kein PIN, Schnell-Zahlung)</option>
-          <option value="complete">Vollständig (Alle Funktionen inkl. MwSt & PIN)</option>
+        <input type="email" id="reg-email" placeholder="E-Mail" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl border" required>
+        <input type="password" id="reg-password" placeholder="Passwort" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl border" required>
+        
+        <label class="block text-xs font-bold text-gray-400 mb-2 uppercase ml-1">Kassentyp wählen</label>
+        <select id="reg-system-type" class="w-full p-4 mb-6 bg-gray-50 rounded-2xl border font-bold">
+          <option value="complete">Vollständig (Alle Funktionen + PIN)</option>
+          <option value="simple">Einfach (Schnell-Kasse, kein PIN)</option>
         </select>
-        <button type="submit" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold">Konto erstellen</button>
-        <button type="button" onclick="window.updateAppView('login')" class="w-full mt-4 text-gray-400 font-bold text-center">Zurück</button>
+        
+        <button type="submit" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold">Registrieren</button>
+        <button type="button" onclick="window.updateAppView('login')" class="w-full mt-4 text-gray-400 font-bold">Zurück zum Login</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="login-modal" class="fixed inset-0 bg-white z-[5000] flex items-center justify-center p-4">
+    <div class="max-w-md w-full p-8">
+      <h1 class="text-4xl font-black text-center text-red-600 mb-8 uppercase tracking-tighter">Kassensystem</h1>
+      <form id="login-form">
+        <input type="email" id="login-email" placeholder="E-Mail" class="w-full p-4 mb-3 bg-gray-50 rounded-2xl border" required>
+        <input type="password" id="login-password" placeholder="Passwort" class="w-full p-4 mb-6 bg-gray-50 rounded-2xl border" required>
+        <button type="submit" class="w-full bg-red-600 text-white py-4 rounded-2xl font-bold shadow-lg">Anmelden</button>
+        <button type="button" onclick="window.updateAppView('register')" class="w-full mt-4 text-gray-400 font-bold text-xs uppercase tracking-widest">Neues Konto erstellen</button>
       </form>
     </div>
   </div>
 
   <div id="kasse-content" class="hidden min-h-screen flex flex-col md:flex-row gap-4 p-4">
     <div class="flex-1 flex flex-col min-h-0">
-      <div id="category-container" class="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar"></div>
-      <div id="product-container" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 overflow-y-auto pr-2"></div>
+      <div id="category-tabs" class="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar">
+        </div>
+      <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto">
+        </div>
     </div>
 
     <div class="w-full md:w-[450px] bg-white rounded-3xl shadow-xl flex flex-col p-6 border">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-black text-gray-800 uppercase tracking-tighter">Warenkorb</h2>
-        <button onclick="window.clearCart()" class="text-[10px] bg-gray-100 px-3 py-1 rounded font-bold text-gray-400">AC (LEEREN)</button>
+      <h2 class="text-xl font-black mb-4 uppercase">Aktueller Bon</h2>
+      
+      <div id="receipt-content-interactive" class="flex-1 space-y-2 mb-4 border-b pb-4">
+        <p class="text-center text-gray-300 mt-10 italic">Warenkorb leer</p>
       </div>
-
-      <div id="receipt-content-interactive" class="flex-1 space-y-2 mb-4">
-        </div>
 
       <div class="grid grid-cols-5 gap-1 mb-4">
         <button onclick="window.handleQuantityInput('7')" class="numpad-btn">7</button>
         <button onclick="window.handleQuantityInput('8')" class="numpad-btn">8</button>
         <button onclick="window.handleQuantityInput('9')" class="numpad-btn">9</button>
-        <button onclick="window.handleQuantityInput('11')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">11</button>
-        <button onclick="window.handleQuantityInput('12')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">12</button>
-        <button onclick="window.handleQuantityInput('4')" class="numpad-btn">4</button>
-        <button onclick="window.handleQuantityInput('5')" class="numpad-btn">5</button>
-        <button onclick="window.handleQuantityInput('6')" class="numpad-btn">6</button>
-        <button onclick="window.handleQuantityInput('13')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">13</button>
-        <button onclick="window.handleQuantityInput('14')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">14</button>
-        <button onclick="window.handleQuantityInput('1')" class="numpad-btn">1</button>
-        <button onclick="window.handleQuantityInput('2')" class="numpad-btn">2</button>
-        <button onclick="window.handleQuantityInput('3')" class="numpad-btn">3</button>
-        <button onclick="window.handleQuantityInput('15')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">15</button>
-        <button onclick="window.handleQuantityInput('16')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">16</button>
-        <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-600 border-red-100">DEL</button>
-        <button onclick="window.handleQuantityInput('0')" class="numpad-btn">0</button>
-        <button onclick="window.toggleQuantityMode()" id="qty-mode-btn" class="numpad-btn bg-green-600 text-white border-none">ADD</button>
-        <button onclick="window.handleQuantityInput('17')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">17</button>
-        <button onclick="window.handleQuantityInput('18')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100">18</button>
-        <button onclick="window.handleQuantityInput('19')" class="numpad-btn bg-blue-50 text-blue-600 border-blue-100 col-span-5 mt-1">19</button>
+        <button onclick="window.handleQuantityInput('11')" class="numpad-btn bg-blue-50 text-blue-600">11</button>
+        <button onclick="window.handleQuantityInput('12')" class="numpad-btn bg-blue-50 text-blue-600">12</button>
+        <button onclick="window.handleQuantityInput('19')" class="numpad-btn bg-blue-50 text-blue-600 col-span-5 mt-1">19</button>
       </div>
 
-      <div class="bg-gray-50 p-6 rounded-3xl mb-4">
-        <div class="flex justify-between items-center mb-1">
-          <span class="text-[10px] font-black uppercase text-gray-400 tracking-widest">Gewählte Menge</span>
-          <span id="qty-display" class="text-2xl font-black text-red-600">1</span>
+      <div class="bg-gray-50 p-4 rounded-2xl mb-4">
+        <div class="flex justify-between text-xs font-bold text-gray-400 uppercase mb-1">
+          <span>Menge</span>
+          <span id="qty-display" class="text-red-600">1</span>
         </div>
         <div class="flex justify-between items-center">
-          <span class="text-[10px] font-black uppercase text-gray-400 tracking-widest">Gesamt</span>
-          <span id="grand-total" class="text-4xl font-black text-gray-800">0,00 €</span>
+          <span class="font-black text-gray-800">GESAMT</span>
+          <span id="total-display" class="text-3xl font-black text-red-600">0,00 €</span>
         </div>
       </div>
 
-      <button onclick="window.openPaymentModal()" class="w-full bg-red-600 text-white py-5 rounded-3xl font-bold text-xl shadow-lg active:scale-95 transition-all">BEZAHLEN</button>
+      <button onclick="window.openFinalizeModal()" id="btn-finalize" class="w-full bg-green-600 text-white py-5 rounded-3xl font-bold text-xl shadow-lg mb-2">BEZAHLEN</button>
       
-      <div class="grid grid-cols-2 gap-2 mt-4">
-        <button onclick="window.openSettings()" class="py-2 text-[10px] font-bold uppercase text-gray-400 text-center border rounded-xl">⚙️ Einstellungen</button>
-        <button onclick="window.openReports()" class="py-2 text-[10px] font-bold uppercase text-gray-400 text-center border rounded-xl">📊 Berichte / Storno</button>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="window.openSettingsModal()" class="py-3 text-[10px] font-bold uppercase text-gray-500 border rounded-xl">⚙️ Einstellungen</button>
+        <button onclick="window.openReportModal()" class="py-3 text-[10px] font-bold uppercase text-gray-500 border rounded-xl">📊 Bericht/Storno</button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, Timestamp, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-    // Deine Original-Config
+    // Deine Konfiguration
     const firebaseConfig = {
       apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
       authDomain: "kassensystem-85412.firebaseapp.com",
@@ -146,53 +128,41 @@
     let currentUser = null;
     let cart = [];
     let currentInput = "";
-    let systemType = "complete"; 
 
-    // --- TOAST LOGIK (Stapelbar) ---
-    window.showToast = (msg) => {
-      const c = document.getElementById('toast-container');
-      const t = document.createElement('div');
-      t.className = 'toast';
-      t.innerText = msg;
-      c.appendChild(t);
-      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
-    };
+    // --- PRODUKTE LADEN (Fix für leeres Grid) ---
+    function loadProducts() {
+      if(!currentUser) return;
+      const q = query(collection(db, `users/${currentUser.uid}/products`), orderBy("name"));
+      onSnapshot(q, (snapshot) => {
+        const grid = document.getElementById('product-grid');
+        grid.innerHTML = "";
+        snapshot.forEach(doc => {
+          const p = { id: doc.id, ...doc.data() };
+          const btn = document.createElement('button');
+          btn.className = "product-btn p-4 bg-white border rounded-2xl shadow-sm text-left hover:border-red-500 transition-all";
+          btn.innerHTML = `<div class="font-bold text-sm">${p.name}</div><div class="text-red-600 font-black">${p.price.toFixed(2)} €</div>`;
+          btn.onclick = () => window.addToCart(p);
+          grid.appendChild(btn);
+        });
+      });
+    }
 
-    // --- WARENKORB LOGIK (Inkl. Menge -> Produkt Klick) ---
-    window.handleQuantityInput = (val) => {
-      if(val === 'clear') currentInput = "";
-      else currentInput = val;
-      document.getElementById('qty-display').innerText = currentInput || "1";
-    };
-
-    window.editCartItem = (idx) => {
-      const val = parseInt(currentInput);
-      if(!isNaN(val)) {
-        if(val === 0) cart.splice(idx, 1);
-        else cart[idx].amount = val;
-      } else {
-        // Schnell-Minus (-1) wenn keine Zahl getippt wurde
-        if(cart[idx].amount > 1) cart[idx].amount--;
-        else cart.splice(idx, 1);
-      }
-      currentInput = "";
-      renderCart();
-    };
-
-    window.addToCart = (prod) => {
+    // --- WARENKORB & RENDERING ---
+    window.addToCart = (p) => {
       const qty = parseInt(currentInput) || 1;
-      const existing = cart.find(i => i.id === prod.id);
-      if(existing) existing.amount += qty;
-      else cart.push({...prod, amount: qty});
+      const exist = cart.find(i => i.id === p.id);
+      if(exist) exist.amount += qty;
+      else cart.push({...p, amount: qty});
       currentInput = "";
       renderCart();
-      // KEIN Pop-Up beim Hinzufügen (Anforderung erfüllt)
     };
 
     function renderCart() {
       const container = document.getElementById('receipt-content-interactive');
-      const totalDisp = document.getElementById('grand-total');
-      document.getElementById('qty-display').innerText = currentInput || "1";
+      const totalDisp = document.getElementById('total-display');
+      const qtyDisp = document.getElementById('qty-display');
+      
+      qtyDisp.innerText = currentInput || "1";
       
       if(cart.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-300 mt-10 italic">Warenkorb leer</p>';
@@ -200,52 +170,38 @@
         return;
       }
 
-      let sum = 0;
-      container.innerHTML = cart.map((item, i) => {
+      let total = 0;
+      container.innerHTML = cart.map((item, idx) => {
         const lineTotal = item.price * item.amount;
-        sum += lineTotal;
-        return `
-          <div onclick="window.editCartItem(${i})" class="flex justify-between items-center p-3 bg-white border rounded-xl hover:bg-red-50 cursor-pointer transition-all">
-            <div class="flex items-center gap-3">
-              <span class="w-8 h-8 bg-gray-100 flex items-center justify-center rounded font-bold text-xs">${item.amount}x</span>
-              <span class="font-bold text-sm text-gray-700">${item.name}</span>
-            </div>
-            <span class="font-black text-gray-900">${lineTotal.toFixed(2)} €</span>
-          </div>`;
+        total += lineTotal;
+        return `<div onclick="window.editCartItem(${idx})" class="flex justify-between p-3 bg-gray-50 rounded-xl border">
+                  <span><b>${item.amount}x</b> ${item.name}</span>
+                  <span class="font-bold">${lineTotal.toFixed(2)} €</span>
+                </div>`;
       }).join('');
-      totalDisp.innerText = sum.toFixed(2).replace('.', ',') + " €";
+      totalDisp.innerText = total.toFixed(2).replace('.', ',') + " €";
     }
 
-    // --- BERICHTE LOGIK (Fix für vergangene Tage) ---
-    window.openReports = async () => {
-      const dateStr = document.getElementById('report-date')?.value || new Date().toISOString().split('T')[0];
-      const start = new Date(dateStr); start.setHours(0,0,0,0);
-      const end = new Date(dateStr); end.setHours(23,59,59,999);
-      
-      window.showToast("Bericht für " + dateStr + " wird geladen...");
-      // Hier erfolgt der Firestore-Query mit den exakten Zeitstempeln
-    };
-
-    // --- AUTH & LOGIN ---
-    onAuthStateChanged(auth, async (user) => {
+    // --- NAVIGATION & AUTH ---
+    onAuthStateChanged(auth, (user) => {
       if(user) {
         currentUser = user;
-        const sDoc = await getDoc(doc(db, "users", user.uid, "settings", "general"));
-        if(sDoc.exists()) systemType = sDoc.data().systemType || "complete";
         window.updateAppView('kasse');
-        // Initialer Ladevorgang (Produkte/Kategorien) hier...
+        loadProducts();
       } else {
         window.updateAppView('login');
       }
     });
 
     window.updateAppView = (view) => {
-      ['login-modal', 'register-modal', 'kasse-content'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-      document.getElementById(view + (view === 'kasse' ? '-content' : '-modal'))?.classList.remove('hidden');
+      document.getElementById('login-modal').classList.add('hidden');
+      document.getElementById('register-modal').classList.add('hidden');
+      document.getElementById('kasse-content').classList.add('hidden');
+      document.getElementById(view + (view === 'kasse' ? '-content' : '-modal')).classList.remove('hidden');
     };
 
-    window.clearCart = () => { cart = []; renderCart(); };
-    window.renderCart = renderCart;
+    // Initialisierung
+    window.handleQuantityInput = (val) => { currentInput = (val === 'clear' ? '' : val); renderCart(); };
     renderCart();
 
   </script>
