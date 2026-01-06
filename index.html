@@ -11,6 +11,9 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
 
+    /* WICHTIG: Erzwungenes Ausblenden */
+    .force-hidden { display: none !important; }
+
     #receipt-content-interactive { overflow-y: auto; max-height: 40vh; }
     .product-btn:active { transform: scale(0.98); }
     .numpad-btn { height: 60px; font-size: 1.5rem; font-weight: bold; border-radius: 0.75rem; transition: background-color 0.1s; display: flex; align-items: center; justify-content: center; shadow: sm; }
@@ -47,34 +50,34 @@
 
   <div id="setup-modal" class="modal-backdrop z-[2000]">
     <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-3xl text-center">
-      <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Kassensystem Einrichtung</h1>
-      <p class="text-gray-500 mb-8">Wählen Sie den gewünschten Funktionsumfang.</p>
+      <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Einrichtung</h1>
+      <p class="text-gray-500 mb-8">Wie möchten Sie starten?</p>
       
       <div class="grid md:grid-cols-3 gap-6 mb-8">
         <button onclick="window.selectSystemType('simple')" class="p-6 border-2 border-green-100 hover:border-green-500 bg-green-50 rounded-2xl transition group text-left">
           <div class="text-3xl mb-2">🚀 Einfach</div>
-          <p class="text-sm text-gray-600">Nur Kassieren. Keine Bestände, keine Steuern, kein Code. Sofort-Abschluss.</p>
+          <p class="text-sm text-gray-600">Nur Kassieren. Keine Bestände, keine Steuern, kein Code.</p>
         </button>
 
         <button onclick="window.selectSystemType('complex')" class="p-6 border-2 border-blue-100 hover:border-blue-500 bg-blue-50 rounded-2xl transition text-left">
           <div class="text-3xl mb-2">🏢 Komplett</div>
-          <p class="text-sm text-gray-600">Alles aktiviert: Bestand, MwSt, Kartengebühr, Storno-Code, Belegwahl.</p>
+          <p class="text-sm text-gray-600">Alles an: Bestand, MwSt, Code, Gebühren.</p>
         </button>
 
         <button onclick="window.toggleCustomSetup()" class="p-6 border-2 border-gray-100 hover:border-gray-500 bg-white rounded-2xl transition text-left">
           <div class="text-3xl mb-2">⚙️ Individuell</div>
-          <p class="text-sm text-gray-600">Funktionen selbst zusammenstellen.</p>
+          <p class="text-sm text-gray-600">Selbst auswählen.</p>
         </button>
       </div>
 
       <div id="custom-setup-options" class="hidden text-left bg-gray-100 p-6 rounded-xl mb-6">
-        <h4 class="font-bold mb-4">Module aktivieren:</h4>
+        <h4 class="font-bold mb-4">Module wählen:</h4>
         <div class="grid grid-cols-2 gap-4">
-            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-stock" class="w-5 h-5 accent-red-600"> <span>Warenbestand</span></label>
-            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-tax" class="w-5 h-5 accent-red-600"> <span>MwSt. Ausweisung</span></label>
-            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-security" class="w-5 h-5 accent-red-600"> <span>Sicherheitscode</span></label>
-            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-cardfee" class="w-5 h-5 accent-red-600"> <span>Kartengebühr</span></label>
-            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-receipts" class="w-5 h-5 accent-red-600"> <span>Beleg-Dialog</span></label>
+            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-stock" class="w-5 h-5 accent-red-600"> <span>Warenbestand</span></label>
+            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-tax" class="w-5 h-5 accent-red-600"> <span>MwSt.</span></label>
+            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-security" class="w-5 h-5 accent-red-600"> <span>Sicherheitscode</span></label>
+            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-cardfee" class="w-5 h-5 accent-red-600"> <span>Kartengebühr</span></label>
+            <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-receipts" class="w-5 h-5 accent-red-600"> <span>Beleg-Dialog</span></label>
         </div>
         <button onclick="window.selectSystemType('custom')" class="mt-4 w-full bg-gray-800 text-white p-3 rounded-xl font-bold">Speichern & Starten</button>
       </div>
@@ -158,13 +161,16 @@
         <button onclick="window.openProductModal()" class="p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold flex flex-col items-center">
           <span class="text-2xl mb-1">📦</span> Produkte
         </button>
-        <button onclick="window.openCashManagementModal()" class="p-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl font-bold flex flex-col items-center">
+        
+        <button onclick="window.openCashManagementModal()" class="mod-stock p-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl font-bold flex flex-col items-center">
           <span class="text-2xl mb-1">💶</span> Kasse
         </button>
-        <button onclick="window.openCodeSettings()" class="p-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold flex flex-col items-center">
+        
+        <button onclick="window.openCodeSettings()" class="mod-security p-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold flex flex-col items-center">
           <span class="text-2xl mb-1">🔒</span> Code
         </button>
-        <button onclick="window.openCardFeeSettings()" class="p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold flex flex-col items-center">
+        
+        <button onclick="window.openCardFeeSettings()" class="mod-cardfee p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold flex flex-col items-center">
           <span class="text-2xl mb-1">💳</span> Gebühr
         </button>
       </div>
@@ -188,14 +194,17 @@
       </div>
 
       <div class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
-         <input type="hidden" id="edit-product-id"> <div class="flex gap-3 mb-3">
+         <input type="hidden" id="edit-product-id"> 
+         <div class="flex gap-3 mb-3">
              <input type="text" id="prod-name" placeholder="Produktname" class="flex-grow p-3 border rounded-xl">
              <input type="number" id="prod-price" placeholder="Preis €" step="0.01" class="w-32 p-3 border rounded-xl">
          </div>
          <div class="flex gap-3 mb-3">
              <select id="prod-cat" class="flex-grow p-3 border rounded-xl bg-white"><option value="">Kategorie...</option></select>
-             <input type="number" id="prod-stock" placeholder="Bestand" class="w-24 p-3 border rounded-xl complex-only" value="100">
-             <select id="prod-tax" class="w-32 p-3 border rounded-xl bg-white complex-only">
+             
+             <input type="number" id="prod-stock" placeholder="Bestand" class="mod-stock w-24 p-3 border rounded-xl" value="100">
+             
+             <select id="prod-tax" class="mod-tax w-32 p-3 border rounded-xl bg-white">
                  <option value="19">19%</option>
                  <option value="7">7%</option>
                  <option value="0">0%</option>
@@ -431,6 +440,25 @@
         }
     });
 
+    // --- VISIBILITY CONTROL (THE FIX) ---
+    function updateVisibility() {
+        // Diese Funktion erzwingt das Ausblenden, wenn Optionen deaktiviert sind
+        // Sie wird nach dem Laden, beim Speichern und beim Öffnen von Modals ausgeführt.
+
+        const toggle = (className, isVisible) => {
+            document.querySelectorAll('.' + className).forEach(el => {
+                if(isVisible) el.classList.remove('force-hidden');
+                else el.classList.add('force-hidden');
+            });
+        };
+
+        toggle('mod-stock', settings.stock);
+        toggle('mod-tax', settings.tax);
+        toggle('mod-security', settings.security);
+        toggle('mod-cardfee', settings.cardFee);
+        toggle('mod-receipts', settings.receipts);
+    }
+
     // --- CORE UI FUNCTIONS ---
     window.uiState = (view) => {
         document.querySelectorAll('.modal-backdrop, #kasse-content').forEach(e => {
@@ -439,7 +467,7 @@
         if(view === 'login') document.getElementById('login-modal').style.display = 'flex';
         if(view === 'kasse') {
             document.getElementById('kasse-content').style.display = 'flex';
-            applySettingsToUI();
+            updateVisibility(); // Initial trigger
         }
     }
     
@@ -482,16 +510,15 @@
         } else if(type === 'complex') {
             settings.stock = true; settings.tax = true; settings.security = true; settings.cardFee = true; settings.receipts = true;
         } else if(type === 'custom') {
-            settings.stock = document.getElementById('mod-stock').checked;
-            settings.tax = document.getElementById('mod-tax').checked;
-            settings.security = document.getElementById('mod-security').checked;
-            settings.cardFee = document.getElementById('mod-cardfee').checked;
-            settings.receipts = document.getElementById('mod-receipts').checked;
+            settings.stock = document.getElementById('mod-check-stock').checked;
+            settings.tax = document.getElementById('mod-check-tax').checked;
+            settings.security = document.getElementById('mod-check-security').checked;
+            settings.cardFee = document.getElementById('mod-check-cardfee').checked;
+            settings.receipts = document.getElementById('mod-check-receipts').checked;
         }
         
         window.showLoading(true);
         await setDoc(doc(db, `users/${currentUser.uid}/settings/config`), settings);
-        // Seed Defaults
         await seedDefaults(); 
         document.getElementById('setup-modal').style.display = 'none';
         await Promise.all([loadData('products'), loadData('categories')]);
@@ -500,12 +527,6 @@
     }
     
     window.toggleCustomSetup = () => document.getElementById('custom-setup-options').classList.remove('hidden');
-
-    function applySettingsToUI() {
-        // Hide/Show elements based on modules
-        const complexEls = document.querySelectorAll('.complex-only');
-        complexEls.forEach(el => el.style.display = (settings.mode !== 'simple') ? 'block' : 'none');
-    }
 
     // --- DATA LOADING ---
     async function loadData(type) {
@@ -523,13 +544,11 @@
     }
 
     async function seedDefaults() {
-        // Basic Categories
         const batch = writeBatch(db);
         const catRef = doc(collection(db, `users/${currentUser.uid}/categories`));
         batch.set(catRef, { name: 'Allgemein', order: 1 });
-        // Basic Products
         batch.set(doc(collection(db, `users/${currentUser.uid}/products`)), {
-            name: 'Produkt A', price: 1.00, categoryId: catRef.id, stock: 100, taxRate: 19
+            name: 'Test Produkt', price: 1.00, categoryId: catRef.id, stock: 100, taxRate: 19
         });
         await batch.commit();
     }
@@ -565,7 +584,7 @@
         if(key === 'ac') qtyInput = "1";
         else {
             if(qtyInput === "1") qtyInput = key;
-            else if(qtyInput.length < 2) qtyInput += key; // Max 99
+            else if(qtyInput.length < 2) qtyInput += key; 
         }
         document.getElementById('qty-display').innerText = qtyInput;
     }
@@ -587,7 +606,6 @@
             });
         }
         
-        // Stock Visuell runterzählen (wird erst beim zahlen gespeichert)
         if(settings.stock) products[pid].stock -= qty;
         
         qtyInput = "1";
@@ -598,7 +616,6 @@
 
     window.clearCart = () => {
         if(cart.length === 0) return;
-        // Stock restore
         if(settings.stock) {
             cart.forEach(i => { if(products[i.id]) products[i.id].stock += i.quantity; });
             window.renderMainGrid();
@@ -607,7 +624,6 @@
         updateCartUI();
     }
     
-    // Löschen durch Klicken auf Bon (benutzt aktuelle Nummern-Menge)
     window.removeFromCart = (idx) => {
         const item = cart[idx];
         const removeQty = parseInt(qtyInput);
@@ -651,9 +667,10 @@
         document.getElementById('btn-main-pay').disabled = (cart.length === 0);
     }
 
-    // --- SETTINGS: PRODUCT MANAGEMENT (EDITING FIX) ---
+    // --- SETTINGS: PRODUCT MANAGEMENT ---
     window.openProductModal = () => {
         document.getElementById('product-modal').style.display = 'flex';
+        updateVisibility(); // Refresh Visibility inside modal
         renderMgmtLists();
     }
 
@@ -681,7 +698,6 @@
         });
     }
 
-    // NEW: Edit Functionality
     window.editProduct = (id) => {
         const p = products[id];
         document.getElementById('edit-product-id').value = id;
@@ -725,10 +741,8 @@
 
         window.showLoading(true);
         if(id) {
-            // Update
             await updateDoc(doc(db, `users/${currentUser.uid}/products/${id}`), data);
         } else {
-            // New
             await setDoc(doc(collection(db, `users/${currentUser.uid}/products`)), data);
         }
         await loadData('products');
@@ -778,7 +792,6 @@
         const batch = writeBatch(db);
         batch.update(doc(db, `users/${currentUser.uid}/settings/config`), { cashBalance: newBal });
         
-        // Log transaction
         const tRef = doc(collection(db, `users/${currentUser.uid}/transactions`));
         batch.set(tRef, {
             type: dir === 'in' ? 'CASH_IN' : 'CASH_OUT',
@@ -794,7 +807,7 @@
         window.showToast('Gebucht!', 'success');
     }
 
-    // --- SETTINGS: CODE & FEE (EXTRA BUTTONS) ---
+    // --- SETTINGS: CODE & FEE ---
     let singleSettingType = '';
 
     window.openCodeSettings = () => {
@@ -859,7 +872,6 @@
         const cashArea = document.getElementById('cash-area');
         const numpad = document.getElementById('cash-numpad');
         
-        // Fee calc
         let cartTotal = cart.reduce((a,b)=>a+b.total,0);
         let final = cartTotal;
         if(m === 'KARTE' && settings.cardFee && settings.cardFeeVal > 0) {
@@ -938,7 +950,6 @@
         window.showLoading(true);
         const batch = writeBatch(db);
         
-        // Transaction Log
         const tRef = doc(collection(db, `users/${currentUser.uid}/transactions`));
         const fee = (currentPayMethod === 'KARTE' && settings.cardFee) ? total - cart.reduce((a,b)=>a+b.total,0) : 0;
         
@@ -954,15 +965,12 @@
         };
         batch.set(tRef, data);
         
-        // Stock Persistent
         if(settings.stock) {
             cart.forEach(i => {
-                // Stock was already locally decremented, just save it
                 if(products[i.id]) batch.update(doc(db, `users/${currentUser.uid}/products/${i.id}`), { stock: products[i.id].stock });
             });
         }
         
-        // Cash Balance
         if(currentPayMethod === 'BAR') {
             const newBal = settings.cashBalance + total;
             batch.update(doc(db, `users/${currentUser.uid}/settings/config`), { cashBalance: newBal });
@@ -1010,6 +1018,7 @@
     window.openSettingsModalAuth = () => authProtected(() => { 
         document.getElementById('settings-modal').style.display = 'flex'; 
         document.getElementById('setting-company-name').value = settings.company;
+        updateVisibility(); 
     });
     window.openReportModalAuth = () => authProtected(() => { document.getElementById('report-modal').style.display = 'flex'; });
     window.handleLogout = () => signOut(auth).then(()=>window.location.reload());
@@ -1068,7 +1077,7 @@
         snap.forEach(d => {
             const t = d.data();
             if(t.status === 'completed') {
-                if(t.type && t.type.includes('CASH')) return; // Ignore movements for sales sum
+                if(t.type && t.type.includes('CASH')) return; 
                 total += t.total;
                 if(t.paymentMethod === 'BAR') cash += t.total;
                 if(t.paymentMethod === 'KARTE') card += t.total;
@@ -1086,7 +1095,6 @@
         window.showLoading(false);
     }
     
-    // SETUP FORMS
     document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value).catch(e=>window.showToast(e.message,'error')); }
     document.getElementById('register-form').onsubmit = (e) => { e.preventDefault(); createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value).catch(e=>window.showToast(e.message,'error')); }
     document.getElementById('reset-form').onsubmit = (e) => { e.preventDefault(); sendPasswordResetEmail(auth, document.getElementById('reset-email').value).then(()=>window.showToast('Gesendet')).catch(e=>window.showToast(e.message,'error')); }
