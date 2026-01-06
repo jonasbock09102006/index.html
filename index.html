@@ -64,8 +64,7 @@
 
   <div id="kasse-content" class="hidden min-h-screen flex flex-col md:flex-row gap-4 p-4">
     <div class="flex-1 flex flex-col min-h-0">
-      <div id="category-tabs" class="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar">
-        </div>
+      <div id="category-tabs" class="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar"></div>
       <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto">
         </div>
     </div>
@@ -74,8 +73,7 @@
       <h2 class="text-xl font-black mb-4 uppercase">Aktueller Bon</h2>
       
       <div id="receipt-content-interactive" class="flex-1 space-y-2 mb-4 border-b pb-4">
-        <p class="text-center text-gray-300 mt-10 italic">Warenkorb leer</p>
-      </div>
+        </div>
 
       <div class="grid grid-cols-5 gap-1 mb-4">
         <button onclick="window.handleQuantityInput('7')" class="numpad-btn">7</button>
@@ -83,7 +81,21 @@
         <button onclick="window.handleQuantityInput('9')" class="numpad-btn">9</button>
         <button onclick="window.handleQuantityInput('11')" class="numpad-btn bg-blue-50 text-blue-600">11</button>
         <button onclick="window.handleQuantityInput('12')" class="numpad-btn bg-blue-50 text-blue-600">12</button>
-        <button onclick="window.handleQuantityInput('19')" class="numpad-btn bg-blue-50 text-blue-600 col-span-5 mt-1">19</button>
+        <button onclick="window.handleQuantityInput('4')" class="numpad-btn">4</button>
+        <button onclick="window.handleQuantityInput('5')" class="numpad-btn">5</button>
+        <button onclick="window.handleQuantityInput('6')" class="numpad-btn">6</button>
+        <button onclick="window.handleQuantityInput('13')" class="numpad-btn bg-blue-50 text-blue-600">13</button>
+        <button onclick="window.handleQuantityInput('14')" class="numpad-btn bg-blue-50 text-blue-600">14</button>
+        <button onclick="window.handleQuantityInput('1')" class="numpad-btn">1</button>
+        <button onclick="window.handleQuantityInput('2')" class="numpad-btn">2</button>
+        <button onclick="window.handleQuantityInput('3')" class="numpad-btn">3</button>
+        <button onclick="window.handleQuantityInput('15')" class="numpad-btn bg-blue-50 text-blue-600">15</button>
+        <button onclick="window.handleQuantityInput('16')" class="numpad-btn bg-blue-50 text-blue-600">16</button>
+        <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
+        <button onclick="window.handleQuantityInput('0')" class="numpad-btn">0</button>
+        <button onclick="window.handleQuantityInput('17')" class="numpad-btn bg-blue-50 text-blue-600">17</button>
+        <button onclick="window.handleQuantityInput('18')" class="numpad-btn bg-blue-50 text-blue-600">18</button>
+        <button onclick="window.handleQuantityInput('19')" class="numpad-btn bg-blue-50 text-blue-600">19</button>
       </div>
 
       <div class="bg-gray-50 p-4 rounded-2xl mb-4">
@@ -108,10 +120,9 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-    // Deine Konfiguration
     const firebaseConfig = {
       apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
       authDomain: "kassensystem-85412.firebaseapp.com",
@@ -129,13 +140,16 @@
     let cart = [];
     let currentInput = "";
 
-    // --- PRODUKTE LADEN (Fix für leeres Grid) ---
+    // Fix: Echtzeit-Laden der Produkte
     function loadProducts() {
       if(!currentUser) return;
       const q = query(collection(db, `users/${currentUser.uid}/products`), orderBy("name"));
       onSnapshot(q, (snapshot) => {
         const grid = document.getElementById('product-grid');
         grid.innerHTML = "";
+        if(snapshot.empty) {
+            grid.innerHTML = '<p class="col-span-full text-center text-gray-400">Keine Produkte gefunden. Bitte in den Einstellungen anlegen.</p>';
+        }
         snapshot.forEach(doc => {
           const p = { id: doc.id, ...doc.data() };
           const btn = document.createElement('button');
@@ -147,7 +161,7 @@
       });
     }
 
-    // --- WARENKORB & RENDERING ---
+    // Warenkorb Logik
     window.addToCart = (p) => {
       const qty = parseInt(currentInput) || 1;
       const exist = cart.find(i => i.id === p.id);
@@ -161,20 +175,17 @@
       const container = document.getElementById('receipt-content-interactive');
       const totalDisp = document.getElementById('total-display');
       const qtyDisp = document.getElementById('qty-display');
-      
       qtyDisp.innerText = currentInput || "1";
-      
       if(cart.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-300 mt-10 italic">Warenkorb leer</p>';
         totalDisp.innerText = "0,00 €";
         return;
       }
-
       let total = 0;
       container.innerHTML = cart.map((item, idx) => {
         const lineTotal = item.price * item.amount;
         total += lineTotal;
-        return `<div onclick="window.editCartItem(${idx})" class="flex justify-between p-3 bg-gray-50 rounded-xl border">
+        return `<div class="flex justify-between p-3 bg-gray-50 rounded-xl border">
                   <span><b>${item.amount}x</b> ${item.name}</span>
                   <span class="font-bold">${lineTotal.toFixed(2)} €</span>
                 </div>`;
@@ -182,7 +193,12 @@
       totalDisp.innerText = total.toFixed(2).replace('.', ',') + " €";
     }
 
-    // --- NAVIGATION & AUTH ---
+    window.handleQuantityInput = (val) => {
+      if(val === 'clear') currentInput = "";
+      else currentInput += val;
+      renderCart();
+    };
+
     onAuthStateChanged(auth, (user) => {
       if(user) {
         currentUser = user;
@@ -197,13 +213,17 @@
       document.getElementById('login-modal').classList.add('hidden');
       document.getElementById('register-modal').classList.add('hidden');
       document.getElementById('kasse-content').classList.add('hidden');
-      document.getElementById(view + (view === 'kasse' ? '-content' : '-modal')).classList.remove('hidden');
+      if(view === 'kasse') document.getElementById('kasse-content').classList.remove('hidden');
+      else document.getElementById(view + '-modal').classList.remove('hidden');
     };
 
-    // Initialisierung
-    window.handleQuantityInput = (val) => { currentInput = (val === 'clear' ? '' : val); renderCart(); };
-    renderCart();
-
+    // Formular-Handler
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+      } catch (err) { alert("Login fehlgeschlagen: " + err.message); }
+    };
   </script>
 </body>
 </html>
