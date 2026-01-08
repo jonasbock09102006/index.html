@@ -3,59 +3,68 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Kassensystem Pro</title>
+  <title>Kassensystem FH-Erfurt (Hybrid)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    
+    /* STYLING AUS ANPASSUNGEN */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-
-    /* WICHTIG: Erzwungenes Ausblenden */
+    .product-btn:active { transform: scale(0.98); }
+    
+    /* WICHTIG: Erzwungenes Ausblenden für den Wizard */
     .force-hidden { display: none !important; }
 
     #receipt-content-interactive { overflow-y: auto; max-height: 40vh; }
-    .product-btn:active { transform: scale(0.98); }
-    .numpad-btn { height: 60px; font-size: 1.5rem; font-weight: bold; border-radius: 0.75rem; transition: background-color 0.1s; display: flex; align-items: center; justify-content: center; shadow: sm; }
+    .numpad-btn { height: 50px; display:flex; justify-content:center; align-items:center; font-weight: bold; border-radius: 0.5rem; }
     
     #async-loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.8); z-index:5000; display:none; justify-content:center; align-items:center; }
-    .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #dc2626; border-radius: 50%; width:40px; height:40px; animation: spin 1s linear infinite; }
+    .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #b91c1c; border-radius: 50%; width:40px; height:40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
     
     #toast-container { position: fixed; top:1rem; right:1rem; z-index:6000; pointer-events:none; }
-    .toast { padding: 1rem 1.5rem; border-radius: 0.5rem; color: #fff; margin-bottom:0.5rem; opacity:0; transition: opacity 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-weight: bold; }
+    .toast { padding: .75rem 1rem; border-radius: .5rem; color: #fff; margin-bottom:.5rem; opacity:0; transition: opacity .25s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
     .toast-success { background: #16a34a; } 
     .toast-error { background:#dc2626; } 
     .toast-info { background:#2563eb; }
     
-    .modal-backdrop { display:none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 1rem; z-index: 1000; backdrop-filter: blur(2px); }
+    /* Druck-Stile */
+    #print-receipt-container { display: none; visibility: hidden; } 
+    .receipt-print { font-family: 'Consolas', 'Courier New', monospace; }
 
-    /* Print Styles */
-    #print-receipt-container { display: none; } 
     @media print {
       body * { visibility: hidden !important; }
-      #print-receipt-container, #print-receipt-container * { visibility: visible !important; }
       #print-receipt-container { 
-        position: absolute !important; left: 0 !important; top: 0 !important; width: 80mm !important; 
-        font-family: 'Courier New', monospace !important; font-size: 12px !important; color: black !important;
+        visibility: visible !important; display: block !important; 
+        position: absolute !important; left: 0 !important; top: 0 !important; width: 80mm !important;
+        font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12px !important;
+        color: #000 !important; padding: 2px !important; margin: 0 !important; line-height: 1.2 !important;
       }
-      .receipt-line { display: flex; justify-content: space-between; margin-bottom: 2px; }
+      #print-receipt-container * { visibility: visible !important; }
+      .receipt-print .line { display:flex; justify-content:space-between; margin-bottom: 2px; }
+      .receipt-print .item-name { width:70%; overflow:hidden; white-space:normal; } 
+      .receipt-print .item-price { width:30%; text-align:right; font-weight:bold; }
+      .receipt-print .separator { border-top: 1px dashed #000; margin: 4px 0; }
+      .receipt-print .total-line { font-size: 14px !important; font-weight: bold; }
+      .fill-line { border-bottom: 1px solid #000; height: 1.5em; margin-top: 0.5em; }
     }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex flex-col text-gray-800 select-none">
+<body class="min-h-screen p-4 md:p-4 overflow-x-hidden select-none">
 
   <div id="toast-container"></div>
   <div id="async-loading-overlay"><div class="spinner"></div></div>
 
-  <div id="setup-modal" class="modal-backdrop z-[2000]">
+  <div id="setup-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[2000] flex items-center justify-center p-4" style="display:none;">
     <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-3xl text-center">
       <h1 class="text-4xl font-extrabold text-gray-800 mb-2">Einrichtung</h1>
       <p class="text-gray-500 mb-8">Wie möchten Sie starten?</p>
       
       <div class="grid md:grid-cols-3 gap-6 mb-8">
         <button onclick="window.selectSystemType('simple')" class="p-6 border-2 border-green-100 hover:border-green-500 bg-green-50 rounded-2xl transition group text-left">
-          <div class="text-3xl mb-2">🚀 Einfach</div>
+           <div class="text-3xl mb-2">⚡ Einfach</div>
           <p class="text-sm text-gray-600">Nur Kassieren. Keine Bestände, keine Steuern, kein Code.</p>
         </button>
 
@@ -79,60 +88,16 @@
             <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-cardfee" class="w-5 h-5 accent-red-600"> <span>Kartengebühr</span></label>
             <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border"><input type="checkbox" id="mod-check-receipts" class="w-5 h-5 accent-red-600"> <span>Beleg-Dialog</span></label>
         </div>
-        <button onclick="window.selectSystemType('custom')" class="mt-4 w-full bg-gray-800 text-white p-3 rounded-xl font-bold">Speichern & Starten</button>
+         <button onclick="window.selectSystemType('custom')" class="mt-4 w-full bg-gray-800 text-white p-3 rounded-xl font-bold">Speichern & Starten</button>
       </div>
     </div>
   </div>
 
-  <div id="login-modal" class="modal-backdrop z-[1500]" style="display:flex;">
-    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
-      <h1 class="text-3xl font-extrabold text-center text-gray-800 mb-6">Login</h1>
-      <form id="login-form">
-        <div class="mb-4">
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">E-Mail</label>
-          <input type="email" id="login-email" required class="w-full p-3 border rounded-xl bg-gray-50">
-        </div>
-        <div class="mb-6">
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Passwort</label>
-          <input type="password" id="login-password" required class="w-full p-3 border rounded-xl bg-gray-50">
-        </div>
-        <button type="submit" class="w-full p-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition">Anmelden</button>
-      </form>
-      <div class="mt-6 text-center space-y-2">
-        <button onclick="window.switchAuthModal('register')" class="text-sm text-indigo-600 font-semibold block w-full">Konto erstellen</button>
-        <button onclick="window.switchAuthModal('forgot')" class="text-sm text-gray-400 block w-full">Passwort vergessen?</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="registration-modal" class="modal-backdrop z-[1500]">
-    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
-      <h2 class="text-2xl font-bold text-center mb-6">Registrieren</h2>
-      <form id="register-form">
-        <input type="email" id="register-email" placeholder="E-Mail" required class="w-full p-3 border rounded-xl mb-3 bg-gray-50">
-        <input type="password" id="register-password" placeholder="Passwort (min. 6 Zeichen)" required minlength="6" class="w-full p-3 border rounded-xl mb-6 bg-gray-50">
-        <button type="submit" class="w-full p-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700">Registrieren</button>
-      </form>
-      <button onclick="window.switchAuthModal('login')" class="mt-4 text-gray-500 w-full">Zurück zum Login</button>
-    </div>
-  </div>
-  
-  <div id="forgot-password-modal" class="modal-backdrop z-[1500]">
-    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
-      <h2 class="text-2xl font-bold text-center mb-4">Passwort Reset</h2>
-      <form id="reset-form">
-        <input type="email" id="reset-email" placeholder="E-Mail Adresse" required class="w-full p-3 border rounded-xl mb-6 bg-gray-50">
-        <button type="submit" class="w-full p-3 rounded-xl font-bold text-white bg-blue-600">Link senden</button>
-      </form>
-      <button onclick="window.switchAuthModal('login')" class="mt-4 text-gray-500 w-full">Zurück</button>
-    </div>
-  </div>
-
-  <div id="pin-modal" class="modal-backdrop z-[1400]">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs">
-      <h2 id="pin-modal-title" class="text-xl font-bold text-center text-red-600 mb-4">Code Eingabe</h2>
-      <div id="pin-input-display" class="w-full h-12 flex items-center justify-center text-3xl font-mono bg-gray-100 rounded-xl mb-4 tracking-[0.5em]"></div>
-      <div class="grid grid-cols-3 gap-2">
+  <div id="pin-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 id="pin-modal-title" class="text-2xl font-bold text-center text-red-700 mb-4">Sicherheitscode eingeben</h2>
+      <div id="pin-input-display" class="w-full h-10 flex items-center justify-center text-2xl font-extrabold text-gray-800 bg-gray-100 rounded-lg mb-4 tracking-widest"></div>
+      <div id="pin-numpad-container" class="grid grid-cols-3 gap-2">
         <button onclick="handlePinInput('7')" class="numpad-btn bg-gray-200">7</button>
         <button onclick="handlePinInput('8')" class="numpad-btn bg-gray-200">8</button>
         <button onclick="handlePinInput('9')" class="numpad-btn bg-gray-200">9</button>
@@ -142,254 +107,377 @@
         <button onclick="handlePinInput('1')" class="numpad-btn bg-gray-200">1</button>
         <button onclick="handlePinInput('2')" class="numpad-btn bg-gray-200">2</button>
         <button onclick="handlePinInput('3')" class="numpad-btn bg-gray-200">3</button>
-        <button onclick="handlePinInput('clear')" class="numpad-btn bg-red-100 text-red-600">C</button>
+        <button onclick="handlePinInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
         <button onclick="handlePinInput('0')" class="numpad-btn bg-gray-200">0</button>
-        <button onclick="handlePinInput('enter')" class="numpad-btn bg-green-500 text-white">OK</button>
+        <button onclick="handlePinInput('enter')" class="numpad-btn bg-green-500 text-white" id="pin-enter-btn">OK</button>
       </div>
-      <button onclick="closeModal('pin-modal')" class="mt-4 w-full py-2 text-gray-400 font-bold">Abbrechen</button>
+      <button onclick="closeModal('pin-modal')" class="mt-4 w-full p-1 text-sm text-gray-500">Abbrechen</button>
     </div>
   </div>
 
-  <div id="settings-modal" class="modal-backdrop z-[1300]">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md">
-      <h2 class="text-2xl font-bold text-gray-800 mb-6 flex justify-between items-center">
-        Einstellungen
-        <button onclick="closeModal('settings-modal')" class="text-gray-400 hover:text-gray-600 text-sm">Schließen</button>
-      </h2>
-      
-      <div class="grid grid-cols-2 gap-3 mb-6">
-        <button onclick="window.openProductModal()" class="p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold flex flex-col items-center">
-          <span class="text-2xl mb-1">📦</span> Produkte
-        </button>
-        
-        <button onclick="window.openCashManagementModal()" class="mod-stock p-4 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl font-bold flex flex-col items-center">
-          <span class="text-2xl mb-1">💶</span> Kasse
-        </button>
-        
-        <button onclick="window.openCodeSettings()" class="mod-security p-4 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl font-bold flex flex-col items-center">
-          <span class="text-2xl mb-1">🔒</span> Code
-        </button>
-        
-        <button onclick="window.openCardFeeSettings()" class="mod-cardfee p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold flex flex-col items-center">
-          <span class="text-2xl mb-1">💳</span> Gebühr
-        </button>
-      </div>
-
-      <div class="border-t pt-4">
-        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Firmenname</label>
-        <div class="flex gap-2">
-            <input type="text" id="setting-company-name" class="flex-grow p-2 border rounded-lg">
-            <button onclick="window.saveBaseSettings()" class="bg-gray-800 text-white px-4 rounded-lg font-bold">OK</button>
+  <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h1 class="text-3xl font-bold text-center text-red-700 mb-2">Kassensystem</h1>
+      <p class="text-sm text-center text-gray-500 mb-6">Bitte anmelden oder registrieren.</p>
+      <form id="login-form">
+        <div class="mb-4">
+          <label for="login-email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+          <input type="email" id="login-email" required class="mt-1 w-full px-3 py-2 border rounded-lg">
         </div>
-        <button onclick="window.resetSystem()" class="mt-6 text-xs text-red-400 w-full text-center">System zurücksetzen (Wizard)</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="product-modal" class="modal-backdrop z-[1350]">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-gray-800">Produktverwaltung</h2>
-        <button onclick="closeModal('product-modal'); window.resetProductForm();" class="text-gray-400 font-bold">X</button>
-      </div>
-
-      <div class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
-         <input type="hidden" id="edit-product-id"> 
-         <div class="flex gap-3 mb-3">
-             <input type="text" id="prod-name" placeholder="Produktname" class="flex-grow p-3 border rounded-xl">
-             <input type="number" id="prod-price" placeholder="Preis €" step="0.01" class="w-32 p-3 border rounded-xl">
-         </div>
-         <div class="flex gap-3 mb-3">
-             <select id="prod-cat" class="flex-grow p-3 border rounded-xl bg-white"><option value="">Kategorie...</option></select>
-             
-             <input type="number" id="prod-stock" placeholder="Bestand" class="mod-stock w-24 p-3 border rounded-xl" value="100">
-             
-             <select id="prod-tax" class="mod-tax w-32 p-3 border rounded-xl bg-white">
-                 <option value="19">19%</option>
-                 <option value="7">7%</option>
-                 <option value="0">0%</option>
-             </select>
-         </div>
-         <button onclick="window.saveProduct()" id="btn-save-prod" class="w-full p-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition">Hinzufügen</button>
-         <button onclick="window.resetProductForm()" id="btn-cancel-edit" class="w-full mt-2 p-2 text-gray-500 font-bold hidden">Abbrechen</button>
-      </div>
-
-      <div class="flex gap-2 mb-4">
-          <input type="text" id="new-cat-name" placeholder="Neue Kategorie" class="flex-grow p-2 border rounded-lg text-sm">
-          <button onclick="window.addCategory()" class="bg-indigo-100 text-indigo-700 px-4 rounded-lg font-bold text-sm">Kat. +</button>
-      </div>
-
-      <div class="flex-grow overflow-y-auto grid md:grid-cols-2 gap-4">
-         <div>
-             <h4 class="font-bold text-gray-500 text-xs uppercase mb-2">Produkte</h4>
-             <div id="mgmt-product-list" class="space-y-2"></div>
-         </div>
-         <div>
-             <h4 class="font-bold text-gray-500 text-xs uppercase mb-2">Kategorien</h4>
-             <div id="mgmt-category-list" class="space-y-2"></div>
-         </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="cash-modal" class="modal-backdrop z-[1350]">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-        <h2 class="text-xl font-bold mb-4">Kassenbestand</h2>
-        <div class="text-4xl font-extrabold text-blue-600 mb-6" id="cash-modal-balance">0,00 €</div>
-        
-        <label class="block text-left text-xs font-bold text-gray-500 mb-1">Betrag für Einlage/Entnahme</label>
-        <input type="number" id="cash-movement-amount" class="w-full p-3 border rounded-xl mb-4 text-center text-xl" placeholder="0.00">
-        
-        <div class="grid grid-cols-2 gap-3">
-            <button onclick="window.handleCashMovement('in')" class="p-3 bg-green-100 text-green-700 font-bold rounded-xl">Einlage (+)</button>
-            <button onclick="window.handleCashMovement('out')" class="p-3 bg-red-100 text-red-700 font-bold rounded-xl">Entnahme (-)</button>
+        <div class="mb-6">
+          <label for="login-password" class="block text-sm font-medium text-gray-700">Passwort</label>
+          <input type="password" id="login-password" required class="mt-1 w-full px-3 py-2 border rounded-lg">
         </div>
-        <button onclick="closeModal('cash-modal')" class="mt-4 text-gray-400 font-bold">Schließen</button>
+        <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600">Anmelden</button>
+      </form>
+      <div class="mt-4 text-center">
+        <button onclick="openRegistrationModal()" class="text-sm text-indigo-600">Registrieren</button>
+        <button onclick="openForgotPasswordModal()" class="ml-2 text-sm text-red-600">Passwort vergessen?</button>
+      </div>
     </div>
   </div>
 
-  <div id="single-setting-modal" class="modal-backdrop z-[1350]">
-      <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs">
-          <h2 id="single-setting-title" class="text-lg font-bold mb-4">Einstellung</h2>
-          <input type="text" id="single-setting-input" class="w-full p-3 border rounded-xl mb-4 text-center text-lg">
-          <button onclick="window.saveSingleSetting()" class="w-full p-3 bg-gray-800 text-white font-bold rounded-xl">Speichern</button>
-          <button onclick="closeModal('single-setting-modal')" class="mt-3 w-full text-gray-400 font-bold">Abbrechen</button>
-      </div>
+  <div id="registration-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-center text-indigo-700 mb-4">Konto erstellen</h2>
+      <form id="register-form" onsubmit="event.preventDefault(); handleRegisterSubmit()">
+        <div class="mb-4">
+          <label for="register-email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+          <input type="email" id="register-email" required class="mt-1 w-full px-3 py-2 border rounded-lg">
+        </div>
+        <div class="mb-6">
+          <label for="register-password" class="block text-sm font-medium text-gray-700">Passwort (mindestens 6 Zeichen)</label>
+          <input type="password" id="register-password" required minlength="6" class="mt-1 w-full px-3 py-2 border rounded-lg">
+        </div>
+        <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-green-600">Registrieren</button>
+      </form>
+      <button onclick="closeModal('registration-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+    </div>
   </div>
 
-  <div id="finalize-modal" class="modal-backdrop z-[1200]">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md">
-      <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">Bezahlen</h2>
-      <div class="bg-green-50 border border-green-200 p-4 rounded-xl text-center mb-6">
-          <span class="block text-sm text-green-600 font-bold">Zu zahlen</span>
-          <span id="finalize-total" class="text-4xl font-extrabold text-green-700">0,00 €</span>
-      </div>
+  <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-center text-red-700 mb-4">Passwort zurücksetzen</h2>
+      <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
+        <div class="mb-6">
+          <label for="reset-email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+          <input type="email" id="reset-email" required class="mt-1 w-full px-3 py-2 border rounded-lg">
+        </div>
+        <button type="submit" class="w-full p-2 rounded-lg font-bold text-white bg-red-600">Link senden</button>
+      </form>
+      <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+    </div>
+  </div>
 
-      <div class="grid grid-cols-2 gap-4 mb-4">
-          <button onclick="window.setPaymentMethod('KARTE')" id="btn-pay-card" class="p-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-indigo-600 hover:text-white transition">Karte</button>
-          <button onclick="window.setPaymentMethod('BAR')" id="btn-pay-cash" class="p-4 rounded-xl font-bold bg-green-600 text-white shadow-lg transform scale-105">Bar</button>
-      </div>
-
-      <div id="cash-area" class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
-          <div class="flex justify-between items-center mb-2">
-              <span class="font-bold text-gray-500">Gegeben:</span>
-              <div id="cash-given-display" class="text-2xl font-mono font-bold bg-white px-3 py-1 rounded border">0,00</div>
-          </div>
-          <div class="flex justify-between items-center pt-2 border-t border-gray-200">
-              <span class="font-bold text-gray-800">Rückgeld:</span>
-              <span id="cash-change-display" class="text-2xl font-extrabold text-gray-800">0,00 €</span>
+  <div id="product-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4 text-indigo-700">Produkt- & Kategorie-Verwaltung</h2>
+      <div id="product-modal-content">
+        <div class="mb-4 border-b pb-3">
+          <h3 class="text-lg font-semibold mb-2">Neue Kategorie/Produkt</h3>
+          <div class="flex space-x-2 mb-2">
+            <input type="text" id="new-category-name" placeholder="Kategorie" class="flex-grow p-2 border rounded-lg">
+            <button onclick="window.addCategory()" class="p-2 bg-indigo-500 text-white rounded-lg">Kategorie</button>
           </div>
           
-          <div class="grid grid-cols-3 gap-2 mt-4">
-              <button onclick="window.addCash(5)" class="bg-white border hover:bg-gray-100 p-2 rounded font-bold">+5€</button>
-              <button onclick="window.addCash(10)" class="bg-white border hover:bg-gray-100 p-2 rounded font-bold">+10€</button>
-              <button onclick="window.addCash(20)" class="bg-white border hover:bg-gray-100 p-2 rounded font-bold">+20€</button>
-              <button onclick="window.addCash(50)" class="bg-white border hover:bg-gray-100 p-2 rounded font-bold">+50€</button>
-              <button onclick="window.setCashExact()" class="bg-blue-100 text-blue-700 col-span-2 p-2 rounded font-bold">Passend</button>
+          <div class="grid grid-cols-4 gap-2 items-end mb-2"> 
+            <input type="text" id="new-product-name" placeholder="Produktname" class="col-span-2 p-2 border rounded-lg">
+            <input type="number" id="new-product-price" placeholder="Preis (€)" step="0.01" class="p-2 border rounded-lg">
+            <input type="number" id="new-product-stock" placeholder="Bestand" min="0" value="1" class="mod-stock p-2 border rounded-lg">
           </div>
-      </div>
-
-      <div id="cash-numpad" class="grid grid-cols-3 gap-2 mb-4 hidden">
-        <button onclick="handleCashInput('7')" class="numpad-btn bg-gray-200 text-base h-12">7</button>
-        <button onclick="handleCashInput('8')" class="numpad-btn bg-gray-200 text-base h-12">8</button>
-        <button onclick="handleCashInput('9')" class="numpad-btn bg-gray-200 text-base h-12">9</button>
-        <button onclick="handleCashInput('4')" class="numpad-btn bg-gray-200 text-base h-12">4</button>
-        <button onclick="handleCashInput('5')" class="numpad-btn bg-gray-200 text-base h-12">5</button>
-        <button onclick="handleCashInput('6')" class="numpad-btn bg-gray-200 text-base h-12">6</button>
-        <button onclick="handleCashInput('1')" class="numpad-btn bg-gray-200 text-base h-12">1</button>
-        <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200 text-base h-12">2</button>
-        <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200 text-base h-12">3</button>
-        <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-100 text-red-600 text-base h-12">C</button>
-        <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200 text-base h-12">0</button>
-        <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200 text-base h-12">,</button>
-      </div>
-
-      <div id="finalize-action-buttons" class="space-y-2">
+          <div class="grid grid-cols-2 gap-2 items-end mb-2">
+            <select id="new-product-category" class="p-2 border rounded-lg"><option value="">Kategorie</option></select>
+            <select type="number" id="new-product-tax-rate" class="mod-tax p-2 border rounded-lg">
+                <option value="19.0">19% MwSt.</option>
+                <option value="7.0">7% MwSt.</option>
+                <option value="0.0">0% MwSt.</option>
+            </select>
           </div>
-      <button onclick="closeModal('finalize-modal')" class="mt-4 w-full text-gray-400 font-bold">Abbrechen</button>
-    </div>
-  </div>
-
-  <div id="report-modal" class="modal-backdrop z-[1300]">
-      <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
-          <h2 class="text-xl font-bold mb-4">Tagesbericht</h2>
-          <div class="flex gap-2 mb-4">
-              <input type="date" id="report-date" class="p-2 border rounded-lg flex-grow">
-              <button onclick="window.loadReport()" class="bg-blue-600 text-white px-4 rounded-lg font-bold">Laden</button>
-          </div>
-          <div id="report-content" class="flex-grow bg-gray-50 border rounded-xl p-4 overflow-y-auto font-mono text-sm whitespace-pre-wrap"></div>
-          <button onclick="closeModal('report-modal')" class="mt-4 p-3 bg-gray-200 rounded-xl font-bold">Schließen</button>
-      </div>
-  </div>
-
-  <div id="kasse-content" class="hidden flex-grow flex-col md:flex-row h-full">
-    
-    <div class="md:w-2/3 flex flex-col p-4 gap-4 h-full bg-gray-100">
-       <div class="flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm">
-           <div id="category-tabs" class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide"></div>
-           <button onclick="window.handleLogout()" class="ml-2 p-2 bg-red-50 text-red-500 rounded-lg font-bold text-xs">Logout</button>
-       </div>
-       
-       <div id="product-grid" class="flex-grow grid grid-cols-3 lg:grid-cols-4 gap-3 content-start overflow-y-auto pr-1">
-           </div>
-
-       <div class="bg-white p-4 rounded-2xl shadow-sm grid grid-cols-[1fr_3fr] gap-4 h-64">
-            <div class="flex flex-col">
-                <div class="text-xs font-bold text-gray-400 uppercase">Menge</div>
-                <div id="qty-display" class="flex-grow flex items-center justify-center text-5xl font-extrabold text-blue-600 bg-blue-50 rounded-2xl border border-blue-100">1</div>
-            </div>
-            <div class="grid grid-cols-4 gap-2">
-                <button onclick="handleQtyInput('7')" class="numpad-btn bg-gray-100 hover:bg-gray-200">7</button>
-                <button onclick="handleQtyInput('8')" class="numpad-btn bg-gray-100 hover:bg-gray-200">8</button>
-                <button onclick="handleQtyInput('9')" class="numpad-btn bg-gray-100 hover:bg-gray-200">9</button>
-                <button onclick="handleQtyInput('ac')" class="numpad-btn bg-red-100 text-red-600 hover:bg-red-200">AC</button>
-                
-                <button onclick="handleQtyInput('4')" class="numpad-btn bg-gray-100 hover:bg-gray-200">4</button>
-                <button onclick="handleQtyInput('5')" class="numpad-btn bg-gray-100 hover:bg-gray-200">5</button>
-                <button onclick="handleQtyInput('6')" class="numpad-btn bg-gray-100 hover:bg-gray-200">6</button>
-                <div class="row-span-2"></div> <button onclick="handleQtyInput('1')" class="numpad-btn bg-gray-100 hover:bg-gray-200">1</button>
-                <button onclick="handleQtyInput('2')" class="numpad-btn bg-gray-100 hover:bg-gray-200">2</button>
-                <button onclick="handleQtyInput('3')" class="numpad-btn bg-gray-100 hover:bg-gray-200">3</button>
-                
-                <button onclick="handleQtyInput('0')" class="numpad-btn col-span-3 bg-gray-100 hover:bg-gray-200">0</button>
-            </div>
-       </div>
-    </div>
-
-    <div class="md:w-1/3 bg-white shadow-2xl flex flex-col z-10 border-l border-gray-200">
-        <div class="p-4 bg-gray-900 text-white shadow-md flex justify-between items-center">
-            <span class="font-bold text-lg">Aktueller Bon</span>
-            <button onclick="window.clearCart()" class="text-xs bg-gray-700 px-2 py-1 rounded hover:bg-red-600 transition">Leeren</button>
+          <button onclick="window.addProduct()" class="w-full p-2 bg-green-500 text-white rounded-lg font-bold">Produkt hinzufügen</button>
         </div>
+
+        <h3 class="text-lg font-semibold mb-2">Kategorien</h3>
+        <div id="category-list" class="space-y-2 mb-4"></div>
+        <h3 class="text-lg font-semibold mb-2">Produkte (Preis bearbeiten)</h3>
+        <div id="product-list" class="space-y-2"></div>
+      </div>
+      <div class="mt-6 text-right"><button onclick="closeModal('product-modal')" class="p-2 bg-gray-300 rounded-lg">Schließen</button></div>
+    </div>
+  </div>
+
+  <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-3 rounded-xl shadow-2xl w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-4 text-green-700 text-center">Zahlung abschließen</h2>
+      <div class="mb-3 p-2 border-2 border-green-500 rounded-lg bg-green-50">
+        <p class="text-xs font-bold text-gray-700">Gesamtbetrag:</p>
+        <div id="finalize-total" class="text-3xl font-extrabold text-right text-green-700">0.00 €</div>
+      </div>
+
+      <div id="payment-buttons" class="grid grid-cols-1 gap-3 mb-4">
+        <button onclick="setPaymentMethod('KARTE')" id="btn-karte" class="p-3 rounded-xl font-semibold text-white bg-indigo-600">KARTE</button>
+      </div>
+
+      <div id="cash-payment-area" class="mt-4 p-3 border rounded-lg bg-gray-50">
+        <h3 class="text-lg font-semibold mb-2 flex justify-between items-center text-blue-700">
+          BAR Zahlung
+          <span id="btn-bar-indicator" class="text-xs bg-blue-500 text-white px-2 py-1 rounded-full">AKTIV</span>
+        </h3>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Erhaltener Betrag</label>
+        <div id="cash-received-display" class="w-full h-10 flex items-center justify-end px-3 py-2 border rounded-xl text-xl font-extrabold text-gray-800 bg-white">0,00</div>
+
+        <div class="mt-3 pt-2 border-t flex justify-between items-center">
+          <span class="text-lg font-bold text-gray-700">Rückgeld:</span>
+          <span id="change-display" class="text-2xl font-extrabold text-green-700">0,00 €</span>
+        </div>
+
+        <div id="cash-numpad-container" class="mt-4 grid grid-cols-3 gap-2">
+          <button onclick="handleCashInput('7')" class="numpad-btn bg-gray-200">7</button>
+          <button onclick="handleCashInput('8')" class="numpad-btn bg-gray-200">8</button>
+          <button onclick="handleCashInput('9')" class="numpad-btn bg-gray-200">9</button>
+          <button onclick="handleCashInput('4')" class="numpad-btn bg-gray-200">4</button>
+          <button onclick="handleCashInput('5')" class="numpad-btn bg-gray-200">5</button>
+          <button onclick="handleCashInput('6')" class="numpad-btn bg-gray-200">6</button>
+          <button onclick="handleCashInput('1')" class="numpad-btn bg-gray-200">1</button>
+          <button onclick="handleCashInput('2')" class="numpad-btn bg-gray-200">2</button>
+          <button onclick="handleCashInput('3')" class="numpad-btn bg-gray-200">3</button>
+          <button onclick="handleCashInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
+          <button onclick="handleCashInput('0')" class="numpad-btn bg-gray-200">0</button>
+          <button onclick="handleCashInput('dot')" class="numpad-btn bg-gray-200">,</button>
+        </div>
+        <div class="mt-3 grid grid-cols-3 gap-2">
+            <button onclick="setCashExact()" class="product-btn h-10 bg-blue-500 text-white rounded-xl">Exakt</button>
+            <button onclick="addCashShortcut(5)" class="product-btn h-10 bg-blue-500 text-white rounded-xl">+5 €</button>
+            <button onclick="addCashShortcut(10)" class="product-btn h-10 bg-blue-500 text-white rounded-xl">+10 €</button>
+        </div>
+      </div>
+
+      <div id="finalize-button-container" class="mt-4">
+        <div id="cash-finalize-buttons" style="display:block;">
+          <p class="text-sm text-center text-gray-500 mb-2 font-semibold">Transaktion abschließen:</p>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="handleFinalizeAction('BAR','none')" disabled id="btn-cash-none" class="p-3 rounded-xl font-extrabold text-white bg-red-400">Ohne Beleg</button>
+            <button onclick="handleFinalizeAction('BAR','standard')" disabled id="btn-cash-standard" class="mod-receipts p-3 rounded-xl font-extrabold text-white bg-green-400">Standard Bon</button>
+            <button onclick="handleFinalizeAction('BAR','bewirtung')" disabled id="btn-cash-bewirtung" class="mod-receipts p-3 rounded-xl font-extrabold text-white bg-red-600">Bewirtung</button>
+          </div>
+        </div>
+
+        <div id="card-finalize-buttons" style="display:none;">
+          <p class="text-lg font-bold text-center text-indigo-700 mb-3">Belegoptionen:</p>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="handleFinalizeAction('KARTE','none')" class="p-3 rounded-xl font-extrabold text-white bg-gray-500">NEIN</button>
+            <button onclick="handleFinalizeAction('KARTE','standard')" class="mod-receipts p-3 rounded-xl font-extrabold text-white bg-green-600">Standard Bon</button>
+            <button onclick="handleFinalizeAction('KARTE','bewirtung')" class="mod-receipts p-3 rounded-xl font-extrabold text-white bg-red-700">Bewirtung</button>
+        </div>
+        </div>
+      </div>
+      <div class="mt-4 text-right"><button onclick="closeModal('finalize-modal')" class="p-2 bg-gray-300 rounded-lg">Abbrechen</button></div>
+    </div>
+  </div>
+
+  <div id="cash-management-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-center text-indigo-700 mb-6">Kassenverwaltung</h2>
+      <div class="mb-4 p-3 border-2 border-indigo-500 rounded-lg bg-indigo-50">
+        <p class="text-sm font-bold text-gray-700">Aktueller Kassenstand (System):</p>
+        <div id="cash-balance-display" class="text-3xl font-extrabold text-right text-indigo-700">0.00 €</div>
+      </div>
+      <div id="cash-man-input-area" class="mt-4 p-3 border rounded-lg bg-gray-50">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Betrag (€)</label>
+        <div id="cash-man-received-display" class="w-full h-10 flex items-center justify-end px-3 py-2 border rounded-xl text-xl font-extrabold text-gray-800 bg-white">0,00</div>
+        <div id="cash-man-numpad-container" class="mt-4 grid grid-cols-3 gap-2">
+          <button onclick="handleCashManInput('7')" class="numpad-btn bg-gray-200">7</button>
+          <button onclick="handleCashManInput('8')" class="numpad-btn bg-gray-200">8</button>
+          <button onclick="handleCashManInput('9')" class="numpad-btn bg-gray-200">9</button>
+          <button onclick="handleCashManInput('4')" class="numpad-btn bg-gray-200">4</button>
+          <button onclick="handleCashManInput('5')" class="numpad-btn bg-gray-200">5</button>
+          <button onclick="handleCashManInput('6')" class="numpad-btn bg-gray-200">6</button>
+          <button onclick="handleCashManInput('1')" class="numpad-btn bg-gray-200">1</button>
+          <button onclick="handleCashManInput('2')" class="numpad-btn bg-gray-200">2</button>
+          <button onclick="handleCashManInput('3')" class="numpad-btn bg-gray-200">3</button>
+          <button onclick="handleCashManInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
+          <button onclick="handleCashManInput('0')" class="numpad-btn bg-gray-200">0</button>
+          <button onclick="handleCashManInput('dot')" class="numpad-btn bg-gray-200">,</button>
+        </div>
+      </div>
+      <div class="mt-6 grid grid-cols-2 gap-4">
+        <button onclick="window.handleCashManagement('EINLAGE')" class="p-3 rounded-lg font-bold text-white bg-green-600">Einlage (+)</button>
+        <button onclick="window.handleCashManagement('ENTNAHME')" class="p-3 rounded-lg font-bold text-white bg-red-600">Entnahme (-)</button>
+      </div>
+      <div class="mt-4 text-right"><button onclick="closeModal('cash-management-modal')" class="p-2 bg-gray-300 rounded-lg">Schließen</button></div>
+    </div>
+  </div>
+
+  <div id="settings-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div id="settings-content-container" class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-center text-red-700 mb-6">Einstellungen</h2>
+      <div id="settings-menu" class="space-y-4">
+        <button onclick="window.openCashManagementModal(); closeModal('settings-modal')" class="mod-stock w-full p-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700">Kassenverwaltung</button>
+        <button onclick="window.openSecurityCodeSettings()" class="mod-security w-full p-3 rounded-lg font-bold text-white bg-orange-600 hover:bg-orange-700">Sicherheitscode</button>
+        <button onclick="window.openGeneralSettings()" class="mod-receipts w-full p-3 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700">Kassenbon-Daten</button>
+        <button onclick="window.openCardFeeSettings()" class="mod-cardfee w-full p-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700">Kartengebühr</button>
         
-        <div id="receipt-content-interactive" class="flex-grow p-2">
-             <p class="text-gray-400 text-center mt-10 italic">Warenkorb leer</p>
-        </div>
+        <button onclick="window.openProductModal(); closeModal('settings-modal')" class="w-full p-3 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700">Produkte</button>
+        <button onclick="window.resetSystemWizard()" class="mt-4 text-xs text-red-300 w-full">System zurücksetzen (Wizard)</button>
+      </div>
 
-        <div class="p-5 bg-gray-50 border-t space-y-4">
-            <div class="flex justify-between items-end">
-                <span class="text-gray-500 font-bold text-sm">Gesamtbetrag</span>
-                <span id="total-display" class="text-4xl font-extrabold text-gray-900">0,00 €</span>
-            </div>
-            
-            <button onclick="window.openFinalizeModal()" id="btn-main-pay" disabled class="w-full p-4 bg-green-600 text-white rounded-xl font-extrabold text-xl shadow-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">ABRECHNEN</button>
-            
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="window.openSettingsModalAuth()" class="p-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300">Einstellungen</button>
-                <button onclick="window.openReportModalAuth()" class="p-3 bg-blue-100 text-blue-700 font-bold rounded-xl hover:bg-blue-200">Berichte</button>
-            </div>
+      <div id="general-settings-form-container" style="display:none;">
+        <h3 class="text-xl font-bold text-red-700 mb-4 border-b pb-2">Firmendaten</h3>
+        <form id="settings-form">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Firmenname</label>
+            <input type="text" id="company-name" class="mt-1 w-full p-2 border rounded-lg">
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Adresse</label>
+            <input type="text" id="address" class="mt-1 w-full p-2 border rounded-lg">
+          </div>
+          <div class="mb-4 mod-tax">
+            <label class="block text-sm font-medium text-gray-700">Steuernummer</label>
+            <input type="text" id="tax-id" class="mt-1 w-full p-2 border rounded-lg">
+          </div>
+          <div class="mb-6 mod-tax">
+            <label class="block text-sm font-medium text-gray-700">Steuersatz Fallback (%)</label>
+            <input type="number" id="tax-rate" step="0.1" class="mt-1 w-full p-2 border rounded-lg">
+          </div>
+          <button type="button" onclick="window.saveSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600">Speichern</button>
+        </form>
+        <button onclick="window.showSettingsMenu()" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+      </div>
+      
+      <div id="security-code-settings-container" style="display:none;">
+        <h3 class="text-xl font-bold text-red-700 mb-4 border-b pb-2">Code</h3>
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700">Code (4-stellig)</label>
+          <input type="text" id="reversal-code-separate" maxlength="4" class="mt-1 w-full p-2 border rounded-lg" placeholder="####">
+        </div>
+        <button type="button" onclick="window.saveSecurityCode()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600">Speichern</button>
+        <button onclick="window.showSettingsMenu()" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+      </div>
+      
+      <div id="card-fee-settings-container" style="display:none;">
+        <h3 class="text-xl font-bold text-red-700 mb-4 border-b pb-2">Kartengebühr</h3>
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700">Gebühr (%)</label>
+            <input type="number" id="card-fee-rate" step="0.01" value="0.00" min="0" max="100" class="mt-1 w-full p-2 border rounded-lg">
+        </div>
+        <button type="button" onclick="window.saveCardFeeSettings()" class="w-full p-3 rounded-lg font-bold text-white bg-red-600">Speichern</button>
+        <button onclick="window.showSettingsMenu()" class="mt-4 w-full p-1 text-sm text-gray-500">Zurück</button>
+      </div>
+      <button onclick="closeModal('settings-modal')" id="btn-close-settings-modal" class="mt-6 w-full p-2 text-sm text-gray-500 border rounded-lg hover:bg-gray-100">Schließen</button>
+    </div>
+  </div>
+
+  <div id="report-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-70 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
+        <h2 class="text-xl font-bold mb-4 text-blue-700">Tagesbericht</h2>
+        <div class="flex gap-2 mb-4">
+            <input type="date" id="report-date" class="p-2 border rounded-lg flex-grow">
+            <button onclick="window.runDailyReport()" class="bg-blue-600 text-white px-4 rounded-lg font-bold">Laden</button>
+            <button onclick="window.setReportDateToday()" class="bg-gray-200 px-3 rounded-lg font-bold text-xs">Heute</button>
+        </div>
+        <div id="report-content" class="flex-grow bg-gray-50 border rounded-xl p-4 overflow-y-auto font-mono text-sm whitespace-pre-wrap"></div>
+        <div class="mt-4 flex justify-between">
+             <button onclick="window.exportCSV()" class="p-3 bg-green-100 text-green-700 font-bold rounded-xl">CSV Export</button>
+             <button onclick="closeModal('report-modal')" class="p-3 bg-gray-200 rounded-xl font-bold">Schließen</button>
         </div>
     </div>
   </div>
-  
-  <div id="print-receipt-container"></div>
+
+  <div id="kasse-content" style="display:none;" class="grid md:grid-cols-3 gap-4 h-full">
+    <div class="md:col-span-2 flex flex-col space-y-4">
+      <div class="flex space-x-2 p-2 bg-white rounded-xl shadow-lg">
+        <div class="flex-grow">
+          <div id="category-tabs" class="flex space-x-1 overflow-x-auto pb-1"></div>
+        </div>
+        <button onclick="window.handleLogout()" class="product-btn p-2 bg-red-500 text-white rounded-lg whitespace-nowrap">Logout</button>
+      </div>
+      <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 flex-grow min-h-[300px]">
+        <p class="text-gray-500 col-span-full text-center p-4">Produkte werden geladen...</p>
+      </div>
+
+      <div class="p-4 bg-white rounded-xl shadow-lg grid grid-cols-4 gap-4">
+        <div class="col-span-1">
+            <span class="text-sm font-bold text-gray-600 block mb-1">Menge (<span id="quantity-mode-display" class="font-extrabold text-green-600">ADD</span>):</span> 
+            <div id="quantity-display" class="w-full h-10 flex items-center justify-center text-xl font-extrabold text-red-600 bg-red-100 rounded-xl">1</div>
+        </div>
+        <div id="main-numpad-container" class="grid grid-cols-3 gap-2 col-span-3">
+          <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-gray-200">7</button>
+          <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-gray-200">8</button>
+          <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-gray-200">9</button>
+          <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-gray-200">4</button>
+          <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-gray-200">5</button>
+          <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-gray-200">6</button>
+          <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-gray-200">1</button>
+          <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-gray-200">2</button>
+          <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-gray-200">3</button>
+          <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-500 text-white">C</button>
+          <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-gray-200">0</button>
+          <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white font-extrabold">ADD</button> 
+        </div>
+      </div>
+    </div>
+
+    <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4">
+      <div class="bg-white p-4 rounded-xl shadow-lg flex-grow flex flex-col">
+        <h2 class="text-lg font-bold text-red-700 mb-2 border-b pb-1">Aktueller Bon</h2>
+        <div id="receipt-content-interactive" class="flex-grow overflow-y-auto mb-2 space-y-1">
+          <p class="text-gray-500 text-center p-4">Warenkorb leer.</p>
+        </div>
+        <div class="border-t pt-2 flex justify-between items-center">
+          <button onclick="window.clearBestellung()" class="text-red-500 text-sm font-semibold">Leeren</button>
+          <span id="total-display" class="text-2xl font-extrabold text-red-700">GESAMT: 0,00 €</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-lg space-y-3">
+        <button onclick="window.openFinalizeModal()" class="product-btn w-full p-4 rounded-xl font-extrabold text-white bg-green-600 hover:bg-green-700 shadow-xl" disabled id="btn-finalize">Zahlung abschließen</button>
+        <button onclick="window.openSettingsModalWithPin()" class="product-btn w-full p-3 rounded-xl font-bold text-white bg-gray-600 hover:bg-gray-700">Einstellungen</button>
+        <button onclick="window.openReportModalWithPin()" class="product-btn w-full p-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700">Tagesabschluss / Storno</button>
+      </div>
+    </div>
+    <div id="print-receipt-container"></div> 
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-    // --- FIREBASE SETUP ---
+    // Globale Zustände
+    let currentUser = null;
+    let products = {};
+    let categories = {};
+    let currentBestellung = [];
+    let totalBrutto = 0.00;
+    let currentQuantity = 1;
+    let quantityInputString = '1';
+    let isRemovalMode = false;
+    let cashReceivedInput = '0';
+    let cashPaymentMethod = 'BAR';
+    let reversalCode = '';
+    let currentPinInput = '';
+    let cashBoxBalance = 0.00;
+    let pinActionCallback = null;
+    
+    // Globale Settings (erweitert um Wizard-Optionen)
+    let userSettings = {
+        companyName: '',
+        address: '',
+        taxId: '',
+        taxRate: 19.0,
+        reversalCode: '',
+        cashBoxBalance: 0.00,
+        cardFeeRate: 0.00,
+        // Wizard Defaults
+        mode: null,
+        stock: true, 
+        tax: true, 
+        security: true, 
+        cardFee: true, 
+        receipts: true
+    };
+
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
       authDomain: "kassensystem-85412.firebaseapp.com",
@@ -397,678 +485,707 @@
       projectId: "kassensystem-85412",
       storageBucket: "kassensystem-85412.firebasestorage.app",
       messagingSenderId: "916536785810",
-      appId: "1:916536785810:web:0d0319ef565af65d279f4b"
+      appId: "1:916536785810:web:0d0319ef565af65d279f4b",
+      measurementId: "G-W5HWYEXWJ5"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const productsCollectionRef = (uid) => collection(db, `users/${uid}/products`);
+    const categoriesCollectionRef = (uid) => collection(db, `users/${uid}/categories`);
+    const transactionsCollectionRef = (uid) => collection(db, `users/${uid}/transactions`);
+    const settingsDocRef = (uid) => doc(db, `users/${uid}/settings/config`);
 
-    // --- STATE ---
-    let currentUser = null;
-    let products = {};
-    let categories = {};
-    let cart = [];
-    let qtyInput = "1";
-    let cashInput = "0";
-    let currentPayMethod = 'BAR';
-    
-    let settings = {
-        mode: 'complex',
-        company: 'Kiosk',
-        stock: true, tax: true, security: true, cardFee: true, receipts: true,
-        reversalCode: '',
-        cashBalance: 0.00,
-        taxRate: 19,
-        cardFeeVal: 0
-    };
-
-    // --- AUTH OBSERVER ---
-    onAuthStateChanged(auth, async (user) => {
-        if(user) {
-            currentUser = user;
-            window.showLoading(true);
-            await loadSettings();
-            if(settings.mode) {
-                await Promise.all([loadData('products'), loadData('categories')]);
-                uiState('kasse');
-            }
-            window.showLoading(false);
-        } else {
-            currentUser = null;
-            uiState('login');
-        }
+    // Auth Observer
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        window.showLoading(true);
+        window.loadSettings(); // Lädt Settings und prüft auf Wizard
+      } else {
+        currentUser = null;
+        window.updateAppView('login');
+      }
     });
 
-    // --- VISIBILITY CONTROL (THE FIX) ---
-    function updateVisibility() {
-        // Diese Funktion erzwingt das Ausblenden, wenn Optionen deaktiviert sind
-        // Sie wird nach dem Laden, beim Speichern und beim Öffnen von Modals ausgeführt.
-
+    // --- SETUP WIZARD & VISIBILITY ---
+    window.updateVisibility = function() {
+        // Blendet Elemente basierend auf den Einstellungen aus
         const toggle = (className, isVisible) => {
             document.querySelectorAll('.' + className).forEach(el => {
                 if(isVisible) el.classList.remove('force-hidden');
                 else el.classList.add('force-hidden');
             });
         };
-
-        toggle('mod-stock', settings.stock);
-        toggle('mod-tax', settings.tax);
-        toggle('mod-security', settings.security);
-        toggle('mod-cardfee', settings.cardFee);
-        toggle('mod-receipts', settings.receipts);
+        toggle('mod-stock', userSettings.stock);
+        toggle('mod-tax', userSettings.tax);
+        toggle('mod-security', userSettings.security);
+        toggle('mod-cardfee', userSettings.cardFee);
+        toggle('mod-receipts', userSettings.receipts);
     }
 
-    // --- CORE UI FUNCTIONS ---
-    window.uiState = (view) => {
-        document.querySelectorAll('.modal-backdrop, #kasse-content').forEach(e => {
-            if(e.id !== 'toast-container' && e.id !== 'async-loading-overlay') e.style.display = 'none';
-        });
-        if(view === 'login') document.getElementById('login-modal').style.display = 'flex';
-        if(view === 'kasse') {
-            document.getElementById('kasse-content').style.display = 'flex';
-            updateVisibility(); // Initial trigger
-        }
-    }
-    
-    window.switchAuthModal = (target) => {
-        document.getElementById('login-modal').style.display = 'none';
-        document.getElementById('registration-modal').style.display = 'none';
-        document.getElementById('forgot-password-modal').style.display = 'none';
-        
-        if(target === 'login') document.getElementById('login-modal').style.display = 'flex';
-        if(target === 'register') document.getElementById('registration-modal').style.display = 'flex';
-        if(target === 'forgot') document.getElementById('forgot-password-modal').style.display = 'flex';
-    }
-
-    window.closeModal = (id) => document.getElementById(id).style.display = 'none';
-    window.showLoading = (s) => document.getElementById('async-loading-overlay').style.display = s ? 'flex' : 'none';
-    window.showToast = (msg, type = 'info') => {
-        const t = document.createElement('div');
-        t.className = `toast toast-${type}`;
-        t.innerText = msg;
-        document.getElementById('toast-container').prepend(t);
-        setTimeout(() => { t.style.opacity = '1'; }, 10);
-        setTimeout(() => { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); }, 2000);
-    }
-
-    // --- SETTINGS LOGIC ---
-    async function loadSettings() {
-        const ref = doc(db, `users/${currentUser.uid}/settings/config`);
-        const snap = await getDoc(ref);
-        if(snap.exists()) {
-            settings = { ...settings, ...snap.data() };
-        } else {
-            document.getElementById('setup-modal').style.display = 'flex';
-        }
-    }
-
-    window.selectSystemType = async (type) => {
-        settings.mode = type;
+    window.selectSystemType = async function(type) {
+        userSettings.mode = type;
         if(type === 'simple') {
-            settings.stock = false; settings.tax = false; settings.security = false; settings.cardFee = false; settings.receipts = false;
+            userSettings.stock = false; userSettings.tax = false; 
+            userSettings.security = false; userSettings.cardFee = false; 
+            userSettings.receipts = false;
         } else if(type === 'complex') {
-            settings.stock = true; settings.tax = true; settings.security = true; settings.cardFee = true; settings.receipts = true;
+            userSettings.stock = true; userSettings.tax = true; 
+            userSettings.security = true; userSettings.cardFee = true; 
+            userSettings.receipts = true;
         } else if(type === 'custom') {
-            settings.stock = document.getElementById('mod-check-stock').checked;
-            settings.tax = document.getElementById('mod-check-tax').checked;
-            settings.security = document.getElementById('mod-check-security').checked;
-            settings.cardFee = document.getElementById('mod-check-cardfee').checked;
-            settings.receipts = document.getElementById('mod-check-receipts').checked;
+            userSettings.stock = document.getElementById('mod-check-stock').checked;
+            userSettings.tax = document.getElementById('mod-check-tax').checked;
+            userSettings.security = document.getElementById('mod-check-security').checked;
+            userSettings.cardFee = document.getElementById('mod-check-cardfee').checked;
+            userSettings.receipts = document.getElementById('mod-check-receipts').checked;
         }
         
         window.showLoading(true);
-        await setDoc(doc(db, `users/${currentUser.uid}/settings/config`), settings);
-        await seedDefaults(); 
+        await updateDoc(settingsDocRef(currentUser.uid), userSettings);
+        // Falls Defaults benötigt werden, hier seeden
+        await seedUserDataIfNeeded(currentUser.uid); 
+        
         document.getElementById('setup-modal').style.display = 'none';
-        await Promise.all([loadData('products'), loadData('categories')]);
-        uiState('kasse');
+        window.loadProductsAndCategories();
+        window.updateAppView('kasse');
         window.showLoading(false);
     }
     
-    window.toggleCustomSetup = () => document.getElementById('custom-setup-options').classList.remove('hidden');
-
-    // --- DATA LOADING ---
-    async function loadData(type) {
-        const cRef = collection(db, `users/${currentUser.uid}/${type}`);
-        const snap = await getDocs(query(cRef, orderBy(type === 'categories' ? 'order' : 'name')));
-        if(type === 'products') {
-            products = {};
-            snap.forEach(d => products[d.id] = {id: d.id, ...d.data()});
-            window.renderMainGrid();
-        } else {
-            categories = {};
-            snap.forEach(d => categories[d.id] = {id: d.id, ...d.data()});
-            renderTabs();
-        }
-    }
-
-    async function seedDefaults() {
-        const batch = writeBatch(db);
-        const catRef = doc(collection(db, `users/${currentUser.uid}/categories`));
-        batch.set(catRef, { name: 'Allgemein', order: 1 });
-        batch.set(doc(collection(db, `users/${currentUser.uid}/products`)), {
-            name: 'Test Produkt', price: 1.00, categoryId: catRef.id, stock: 100, taxRate: 19
-        });
-        await batch.commit();
-    }
-
-    // --- MAIN GRID & NUMPAD ---
-    window.renderMainGrid = (catId = null) => {
-        const grid = document.getElementById('product-grid');
-        grid.innerHTML = '';
-        
-        const list = Object.values(products).filter(p => !catId || p.categoryId === catId);
-        list.sort((a,b) => a.name.localeCompare(b.name));
-
-        list.forEach(p => {
-            const stockBadge = (settings.stock && p.stock < 10) ? `<div class="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-1 rounded">${p.stock}</div>` : '';
-            grid.innerHTML += `
-            <button onclick="window.addToCart('${p.id}')" class="product-btn relative bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center h-28 hover:border-blue-300">
-                ${stockBadge}
-                <div class="font-bold text-gray-700 text-center leading-tight mb-1 line-clamp-2">${p.name}</div>
-                <div class="font-black text-blue-600">${p.price.toFixed(2).replace('.',',')} €</div>
-            </button>`;
-        });
-    }
-
-    function renderTabs() {
-        const c = document.getElementById('category-tabs');
-        c.innerHTML = `<button onclick="window.renderMainGrid()" class="px-4 py-2 bg-gray-800 text-white rounded-xl font-bold whitespace-nowrap shadow-sm">Alle</button>`;
-        Object.values(categories).forEach(cat => {
-            c.innerHTML += `<button onclick="window.renderMainGrid('${cat.id}')" class="px-4 py-2 bg-white text-gray-600 hover:bg-gray-50 border rounded-xl font-bold whitespace-nowrap shadow-sm transition">${cat.name}</button>`;
-        });
-    }
-
-    window.handleQtyInput = (key) => {
-        if(key === 'ac') qtyInput = "1";
-        else {
-            if(qtyInput === "1") qtyInput = key;
-            else if(qtyInput.length < 2) qtyInput += key; 
-        }
-        document.getElementById('qty-display').innerText = qtyInput;
-    }
-
-    window.addToCart = (pid) => {
-        const p = products[pid];
-        const qty = parseInt(qtyInput);
-        
-        if(settings.stock && p.stock < qty) return window.showToast(`Nur noch ${p.stock} Stk.`, 'error');
-
-        const existing = cart.find(i => i.id === pid);
-        if(existing) {
-            existing.quantity += qty;
-            existing.total = existing.quantity * existing.price;
-        } else {
-            cart.push({
-                id: p.id, name: p.name, price: p.price, quantity: qty,
-                total: qty * p.price, taxRate: p.taxRate, catId: p.categoryId
-            });
-        }
-        
-        if(settings.stock) products[pid].stock -= qty;
-        
-        qtyInput = "1";
-        document.getElementById('qty-display').innerText = "1";
-        window.renderMainGrid(p.categoryId);
-        updateCartUI();
-    }
-
-    window.clearCart = () => {
-        if(cart.length === 0) return;
-        if(settings.stock) {
-            cart.forEach(i => { if(products[i.id]) products[i.id].stock += i.quantity; });
-            window.renderMainGrid();
-        }
-        cart = [];
-        updateCartUI();
-    }
+    window.toggleCustomSetup = function() { document.getElementById('custom-setup-options').classList.remove('hidden'); }
     
-    window.removeFromCart = (idx) => {
-        const item = cart[idx];
-        const removeQty = parseInt(qtyInput);
-        
-        if(removeQty >= item.quantity) {
-             if(settings.stock) products[item.id].stock += item.quantity;
-             cart.splice(idx, 1);
-        } else {
-             item.quantity -= removeQty;
-             item.total = item.quantity * item.price;
-             if(settings.stock) products[item.id].stock += removeQty;
-        }
-        
-        qtyInput = "1";
-        document.getElementById('qty-display').innerText = "1";
-        window.renderMainGrid(item.catId);
-        updateCartUI();
-    }
-
-    function updateCartUI() {
-        const c = document.getElementById('receipt-content-interactive');
-        c.innerHTML = '';
-        let total = 0;
-        cart.forEach((item, i) => {
-            total += item.total;
-            c.innerHTML += `
-            <div onclick="window.removeFromCart(${i})" class="flex justify-between items-center p-2 border-b hover:bg-red-50 cursor-pointer group">
-                <div class="flex items-center gap-2 overflow-hidden">
-                    <span class="font-bold bg-gray-200 px-2 rounded text-sm min-w-[30px] text-center">${item.quantity}</span>
-                    <span class="truncate text-sm font-medium text-gray-700">${item.name}</span>
-                </div>
-                <span class="font-bold text-gray-900 ml-2">${item.total.toFixed(2).replace('.',',')}</span>
-            </div>`;
-        });
-        
-        if(cart.length === 0) c.innerHTML = '<p class="text-gray-400 text-center mt-10 italic">Warenkorb leer</p>';
-        
-        const fmtTotal = total.toFixed(2).replace('.',',') + ' €';
-        document.getElementById('total-display').innerText = fmtTotal;
-        document.getElementById('finalize-total').innerText = fmtTotal;
-        document.getElementById('btn-main-pay').disabled = (cart.length === 0);
-    }
-
-    // --- SETTINGS: PRODUCT MANAGEMENT ---
-    window.openProductModal = () => {
-        document.getElementById('product-modal').style.display = 'flex';
-        updateVisibility(); // Refresh Visibility inside modal
-        renderMgmtLists();
-    }
-
-    function renderMgmtLists() {
-        const pl = document.getElementById('mgmt-product-list');
-        const cl = document.getElementById('mgmt-category-list');
-        const catSel = document.getElementById('prod-cat');
-        
-        pl.innerHTML = ''; cl.innerHTML = ''; catSel.innerHTML = '<option value="">Kategorie...</option>';
-        
-        Object.values(categories).forEach(c => {
-            cl.innerHTML += `<div class="flex justify-between p-2 bg-gray-50 rounded border text-sm"><span>${c.name}</span> <button onclick="window.delCat('${c.id}')" class="text-red-500 font-bold">X</button></div>`;
-            catSel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-        });
-
-        Object.values(products).forEach(p => {
-            pl.innerHTML += `
-            <div class="flex justify-between items-center p-2 bg-white border rounded mb-1 shadow-sm">
-                <span class="font-medium text-sm truncate w-1/2">${p.name}</span>
-                <div class="flex gap-2">
-                    <button onclick="window.editProduct('${p.id}')" class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold">Bearbeiten</button>
-                    <button onclick="window.delProd('${p.id}')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">X</button>
-                </div>
-            </div>`;
-        });
-    }
-
-    window.editProduct = (id) => {
-        const p = products[id];
-        document.getElementById('edit-product-id').value = id;
-        document.getElementById('prod-name').value = p.name;
-        document.getElementById('prod-price').value = p.price;
-        document.getElementById('prod-cat').value = p.categoryId;
-        if(settings.stock) document.getElementById('prod-stock').value = p.stock;
-        if(settings.tax) document.getElementById('prod-tax').value = p.taxRate;
-        
-        const btn = document.getElementById('btn-save-prod');
-        btn.innerText = "Speichern";
-        btn.classList.replace('bg-green-600', 'bg-blue-600');
-        document.getElementById('btn-cancel-edit').style.display = 'block';
-    }
-
-    window.resetProductForm = () => {
-        document.getElementById('edit-product-id').value = '';
-        document.getElementById('prod-name').value = '';
-        document.getElementById('prod-price').value = '';
-        document.getElementById('prod-stock').value = '100';
-        
-        const btn = document.getElementById('btn-save-prod');
-        btn.innerText = "Hinzufügen";
-        btn.classList.replace('bg-blue-600', 'bg-green-600');
-        document.getElementById('btn-cancel-edit').style.display = 'none';
-    }
-
-    window.saveProduct = async () => {
-        const id = document.getElementById('edit-product-id').value;
-        const name = document.getElementById('prod-name').value;
-        const price = parseFloat(document.getElementById('prod-price').value);
-        const catId = document.getElementById('prod-cat').value;
-        
-        if(!name || isNaN(price) || !catId) return window.showToast('Bitte alle Felder füllen', 'error');
-        
-        const data = {
-            name, price, categoryId: catId,
-            stock: settings.stock ? parseInt(document.getElementById('prod-stock').value) : 9999,
-            taxRate: settings.tax ? parseFloat(document.getElementById('prod-tax').value) : 19
-        };
-
-        window.showLoading(true);
-        if(id) {
-            await updateDoc(doc(db, `users/${currentUser.uid}/products/${id}`), data);
-        } else {
-            await setDoc(doc(collection(db, `users/${currentUser.uid}/products`)), data);
-        }
-        await loadData('products');
-        renderMgmtLists();
-        window.resetProductForm();
-        window.showLoading(false);
-    }
-    
-    window.addCategory = async () => {
-        const name = document.getElementById('new-cat-name').value;
-        if(!name) return;
-        await setDoc(doc(collection(db, `users/${currentUser.uid}/categories`)), {name, order: Date.now()});
-        document.getElementById('new-cat-name').value = '';
-        await loadData('categories');
-        renderMgmtLists();
-    }
-    
-    window.delProd = async (id) => {
-        if(confirm('Löschen?')) {
-            await deleteDoc(doc(db, `users/${currentUser.uid}/products/${id}`));
-            await loadData('products');
-            renderMgmtLists();
-        }
-    }
-    window.delCat = async (id) => {
-        if(confirm('Löschen?')) {
-            await deleteDoc(doc(db, `users/${currentUser.uid}/categories/${id}`));
-            await loadData('categories');
-            renderMgmtLists();
-        }
-    }
-
-    // --- SETTINGS: CASH MANAGEMENT ---
-    window.openCashManagementModal = () => {
-        document.getElementById('cash-modal').style.display = 'flex';
-        document.getElementById('cash-modal-balance').innerText = settings.cashBalance.toFixed(2).replace('.',',') + ' €';
-        document.getElementById('cash-movement-amount').value = '';
-    }
-
-    window.handleCashMovement = async (dir) => {
-        const amount = parseFloat(document.getElementById('cash-movement-amount').value);
-        if(!amount || amount <= 0) return;
-        
-        const newBal = dir === 'in' ? settings.cashBalance + amount : settings.cashBalance - amount;
-        
-        window.showLoading(true);
-        const batch = writeBatch(db);
-        batch.update(doc(db, `users/${currentUser.uid}/settings/config`), { cashBalance: newBal });
-        
-        const tRef = doc(collection(db, `users/${currentUser.uid}/transactions`));
-        batch.set(tRef, {
-            type: dir === 'in' ? 'CASH_IN' : 'CASH_OUT',
-            amount: amount,
-            timestamp: Timestamp.now(),
-            status: 'completed'
-        });
-        
-        await batch.commit();
-        settings.cashBalance = newBal;
-        window.closeModal('cash-modal');
-        window.showLoading(false);
-        window.showToast('Gebucht!', 'success');
-    }
-
-    // --- SETTINGS: CODE & FEE ---
-    let singleSettingType = '';
-
-    window.openCodeSettings = () => {
-        singleSettingType = 'code';
-        document.getElementById('single-setting-title').innerText = "Sicherheitscode ändern";
-        document.getElementById('single-setting-input').value = settings.reversalCode || '';
-        document.getElementById('single-setting-input').placeholder = "4-stelliger Code";
-        document.getElementById('single-setting-modal').style.display = 'flex';
-    }
-
-    window.openCardFeeSettings = () => {
-        singleSettingType = 'fee';
-        document.getElementById('single-setting-title').innerText = "Kartengebühr (%)";
-        document.getElementById('single-setting-input').value = settings.cardFeeVal || 0;
-        document.getElementById('single-setting-input').placeholder = "0.0";
-        document.getElementById('single-setting-modal').style.display = 'flex';
-    }
-
-    window.saveSingleSetting = async () => {
-        const val = document.getElementById('single-setting-input').value;
-        const update = {};
-        
-        if(singleSettingType === 'code') {
-            update.reversalCode = val;
-            settings.reversalCode = val;
-        } else {
-            update.cardFeeVal = parseFloat(val) || 0;
-            settings.cardFeeVal = update.cardFeeVal;
-        }
-        
-        await updateDoc(doc(db, `users/${currentUser.uid}/settings/config`), update);
-        window.closeModal('single-setting-modal');
-        window.showToast('Gespeichert', 'success');
-    }
-    
-    window.saveBaseSettings = async () => {
-        const name = document.getElementById('setting-company-name').value;
-        if(name) {
-            await updateDoc(doc(db, `users/${currentUser.uid}/settings/config`), { company: name });
-            settings.company = name;
-            window.showToast('Gespeichert');
-        }
-    }
-
-    window.resetSystem = () => {
-        if(confirm("Alles zurücksetzen?")) {
+    window.resetSystemWizard = function() {
+        if(confirm("System-Assistent neu starten?")) {
             document.getElementById('setup-modal').style.display = 'flex';
             window.closeModal('settings-modal');
         }
     }
 
-    // --- FINALIZE / PAY ---
-    window.openFinalizeModal = () => {
-        document.getElementById('finalize-modal').style.display = 'flex';
-        setPaymentMethod('BAR');
+    // --- UI FUNCTIONS ---
+    window.showLoading = function(show){
+      document.getElementById('async-loading-overlay').style.display = show ? 'flex' : 'none';
     }
 
-    window.setPaymentMethod = (m) => {
-        currentPayMethod = m;
-        const cardBtn = document.getElementById('btn-pay-card');
-        const cashBtn = document.getElementById('btn-pay-cash');
-        const cashArea = document.getElementById('cash-area');
-        const numpad = document.getElementById('cash-numpad');
-        
-        let cartTotal = cart.reduce((a,b)=>a+b.total,0);
-        let final = cartTotal;
-        if(m === 'KARTE' && settings.cardFee && settings.cardFeeVal > 0) {
-            final += cartTotal * (settings.cardFeeVal / 100);
-        }
-        document.getElementById('finalize-total').innerText = final.toFixed(2).replace('.',',') + ' €';
+    window.showToast = function(message, type = 'info'){
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type} shadow-lg`;
+      toast.innerText = message;
+      container.prepend(toast);
+      setTimeout(() => { toast.style.opacity = '1'; }, 50);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 250);
+      }, 3000);
+    }
 
-        if(m === 'BAR') {
-            cashBtn.classList.add('bg-green-600', 'text-white', 'scale-105', 'shadow-lg');
-            cashBtn.classList.remove('bg-gray-100', 'text-gray-600');
-            cardBtn.classList.remove('bg-indigo-600', 'text-white', 'scale-105', 'shadow-lg');
-            cardBtn.classList.add('bg-gray-100', 'text-gray-600');
-            
-            cashArea.style.display = 'block';
-            numpad.style.display = 'grid';
-            cashInput = "0";
-            updateCashDisplay();
-        } else {
-            cardBtn.classList.add('bg-indigo-600', 'text-white', 'scale-105', 'shadow-lg');
-            cardBtn.classList.remove('bg-gray-100', 'text-gray-600');
-            cashBtn.classList.remove('bg-green-600', 'text-white', 'scale-105', 'shadow-lg');
-            cashBtn.classList.add('bg-gray-100', 'text-gray-600');
-            
-            cashArea.style.display = 'none';
-            numpad.style.display = 'none';
-        }
-        
-        renderFinalizeButtons(final);
+    window.updateAppView = function(view){
+      document.getElementById('login-modal').style.display = 'none';
+      document.getElementById('kasse-content').style.display = 'none';
+      if(view === 'login') document.getElementById('login-modal').style.display = 'flex';
+      if(view === 'kasse') {
+          document.getElementById('kasse-content').style.display = 'grid';
+          window.updateVisibility();
+      }
+    }
+
+    window.openLoginModal = function(){ window.updateAppView('login'); }
+    window.openRegistrationModal = function(){ closeModal('login-modal'); document.getElementById('registration-modal').style.display='flex'; }
+    window.openForgotPasswordModal = function(){ closeModal('login-modal'); document.getElementById('forgot-password-modal').style.display='flex'; }
+    
+    window.openProductModal = function(){
+      document.getElementById('product-modal').style.display='flex';
+      window.renderProductManagement();
+      window.renderCategoryManagement();
+      window.updateVisibility();
     }
     
-    function renderFinalizeButtons(total) {
-        const con = document.getElementById('finalize-action-buttons');
-        con.innerHTML = '';
-        
-        if(!settings.receipts) {
-            con.innerHTML = `<button onclick="window.processTransaction('none', ${total})" class="w-full p-4 bg-green-700 text-white font-bold rounded-xl shadow-lg">BEZAHLEN</button>`;
+    // MODIFIZIERT: Nutzt jetzt die vereinfachte Report-Funktion
+    window.openReportModal = function(){
+        window.setReportDateToday();
+        document.getElementById('report-modal').style.display='flex';
+        // Automatisch laden
+        window.runDailyReport();
+    }
+
+    window.openReportModalWithPin = function(){ window.openPinModal('Tagesabschluss & Storno', window.openReportModal); }
+    
+    window.openSettingsModal = function(){
+      document.getElementById('settings-modal').style.display='flex';
+      window.showSettingsMenu();
+      window.updateVisibility();
+    }
+
+    window.openSettingsModalWithPin = function(){ window.openPinModal('Einstellungen freischalten', window.openSettingsModal); }
+    
+    window.showSettingsMenu = function(){
+      document.getElementById('settings-menu').style.display = 'block';
+      document.getElementById('general-settings-form-container').style.display = 'none';
+      document.getElementById('security-code-settings-container').style.display = 'none';
+      document.getElementById('card-fee-settings-container').style.display = 'none';
+      document.getElementById('btn-close-settings-modal').style.display = 'block';
+      window.updateVisibility();
+    }
+    
+    window.openGeneralSettings = function(){
+      document.getElementById('settings-menu').style.display = 'none';
+      document.getElementById('general-settings-form-container').style.display = 'block';
+      document.getElementById('security-code-settings-container').style.display = 'none';
+      document.getElementById('card-fee-settings-container').style.display = 'none';
+      document.getElementById('btn-close-settings-modal').style.display = 'none';
+    }
+    
+    window.openSecurityCodeSettings = function(){
+      document.getElementById('settings-menu').style.display = 'none';
+      document.getElementById('general-settings-form-container').style.display = 'none';
+      document.getElementById('security-code-settings-container').style.display = 'block';
+      document.getElementById('card-fee-settings-container').style.display = 'none';
+      document.getElementById('reversal-code-separate').value = reversalCode;
+      document.getElementById('btn-close-settings-modal').style.display = 'none';
+    }
+    
+    window.openCardFeeSettings = function(){
+      document.getElementById('settings-menu').style.display = 'none';
+      document.getElementById('general-settings-form-container').style.display = 'none';
+      document.getElementById('security-code-settings-container').style.display = 'none';
+      document.getElementById('card-fee-settings-container').style.display = 'block';
+      document.getElementById('card-fee-rate').value = userSettings.cardFeeRate !== undefined ? userSettings.cardFeeRate : 0.00;
+      document.getElementById('btn-close-settings-modal').style.display = 'none';
+    }
+
+    window.closeModal = function(id){
+      document.getElementById(id).style.display='none';
+    }
+
+    // --- AUTH LOGIC ---
+    window.handleRegisterSubmit = function(){
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      window.showLoading(true);
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(() => window.showToast('Registrierung erfolgreich!', 'success'))
+        .catch((error) => window.showToast(`Fehler: ${error.message}`, 'error'))
+        .finally(() => window.showLoading(false));
+    }
+
+    window.handlePasswordReset = function(){
+      const email = document.getElementById('reset-email').value;
+      window.showLoading(true);
+      sendPasswordResetEmail(auth, email)
+        .then(() => {
+          window.showToast('Link gesendet!', 'success');
+          closeModal('forgot-password-modal'); openLoginModal();
+        })
+        .catch((e) => window.showToast(`Fehler: ${e.message}`, 'error'))
+        .finally(() => window.showLoading(false));
+    }
+
+    window.handleLoginSubmit = function(){
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      window.showLoading(true);
+      signInWithEmailAndPassword(auth, email, password)
+        .catch((e) => window.showToast(`Anmeldung fehlgeschlagen: ${e.message}`, 'error'))
+        .finally(() => window.showLoading(false));
+    }
+
+    window.handleLogout = function(){
+      signOut(auth).then(() => {
+        window.location.reload();
+      });
+    }
+
+    // --- SETTINGS LOADING & SAVING ---
+    window.loadSettings = async function(){
+      if (!currentUser) return;
+      try{
+        const docSnap = await getDoc(settingsDocRef(currentUser.uid));
+        if (docSnap.exists()) {
+          userSettings = { ...userSettings, ...docSnap.data() };
+          
+          // Formular befüllen
+          document.getElementById('company-name').value = userSettings.companyName || '';
+          document.getElementById('address').value = userSettings.address || '';
+          document.getElementById('tax-id').value = userSettings.taxId || '';
+          document.getElementById('tax-rate').value = userSettings.taxRate || 19.0;
+          reversalCode = userSettings.reversalCode || '';
+          cashBoxBalance = userSettings.cashBoxBalance || 0.00; 
+
+          // WIZARD CHECK: Wenn mode nicht gesetzt ist, Wizard zeigen
+          if(!userSettings.mode) {
+             document.getElementById('setup-modal').style.display = 'flex';
+             window.showLoading(false);
+             return; 
+          }
+
+          window.loadProductsAndCategories();
+          window.updateAppView('kasse');
+          window.showLoading(false);
+
         } else {
-            con.innerHTML = `
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="window.processTransaction('none', ${total})" class="p-3 bg-gray-500 text-white font-bold rounded-xl">Ohne Beleg</button>
-                    <button onclick="window.processTransaction('bon', ${total})" class="p-3 bg-blue-600 text-white font-bold rounded-xl">Kassenbon</button>
-                    <button onclick="window.processTransaction('bewirtung', ${total})" class="col-span-2 p-3 bg-gray-800 text-white font-bold rounded-xl text-sm">Bewirtungsbeleg</button>
+            // Neuer User -> Wizard
+            document.getElementById('setup-modal').style.display = 'flex';
+            window.showLoading(false);
+        }
+      } catch(err){
+        window.showToast('Fehler beim Laden der Einstellungen.', 'error');
+        window.showLoading(false);
+      }
+    }
+
+    window.saveSecurityCode = async function(){
+        const newCode = document.getElementById('reversal-code-separate').value.trim();
+        await updateDoc(settingsDocRef(currentUser.uid), { reversalCode: newCode });
+        reversalCode = newCode;
+        userSettings.reversalCode = newCode;
+        window.showToast('Gespeichert.', 'success');
+        closeModal('settings-modal');
+    }
+
+    window.saveSettings = async function(){
+      window.showLoading(true);
+      try{
+        const settings = {
+          companyName: document.getElementById('company-name').value,
+          address: document.getElementById('address').value,
+          taxId: document.getElementById('tax-id').value,
+          taxRate: parseFloat(document.getElementById('tax-rate').value) || 19.0,
+        };
+        await updateDoc(settingsDocRef(currentUser.uid), settings);
+        userSettings = {...userSettings, ...settings}; 
+        window.showToast('Gespeichert.', 'success');
+        closeModal('settings-modal');
+      } catch(err){ window.showToast('Fehler.', 'error'); } 
+      finally { window.showLoading(false); }
+    }
+    
+    window.saveCardFeeSettings = async function(){
+        const rate = parseFloat(document.getElementById('card-fee-rate').value) || 0;
+        await updateDoc(settingsDocRef(currentUser.uid), { cardFeeRate: rate });
+        userSettings.cardFeeRate = rate;
+        window.showToast('Gespeichert.', 'success');
+        closeModal('settings-modal');
+    }
+
+    // --- PIN SYSTEM (Modifiziert: Checks userSettings.security) ---
+    window.updatePinInputDisplay = function(){
+      document.getElementById('pin-input-display').innerText = '*'.repeat(currentPinInput.length);
+    }
+    window.handlePinInput = function(key){
+      if(key === 'clear'){ currentPinInput = ''; } 
+      else if (key === 'enter'){
+        if(currentPinInput === reversalCode || (!reversalCode && pinActionCallback)){ 
+          closeModal('pin-modal'); pinActionCallback();
+        } else { window.showToast('Falscher Code.', 'error'); currentPinInput = ''; }
+      } else if (currentPinInput.length < 4){ currentPinInput += key; }
+      window.updatePinInputDisplay();
+    }
+    window.openPinModal = function(title, callback){
+      // Wenn Security ausgeschaltet ist oder kein Code gesetzt: direkt ausführen
+      if(!userSettings.security || !reversalCode){ 
+        callback(); return;
+      }
+      document.getElementById('pin-modal-title').innerText = title;
+      currentPinInput = '';
+      pinActionCallback = callback;
+      window.updatePinInputDisplay();
+      document.getElementById('pin-modal').style.display='flex';
+    }
+
+    // --- PRODUCT & CATEGORIES ---
+    const seedUserDataIfNeeded = async (uid) => {
+      // Nur Beispiel-Daten wenn Produkte leer
+      const snap = await getDocs(productsCollectionRef(uid));
+      if(!snap.empty) return;
+      
+      const batch = writeBatch(db);
+      const catRef = doc(categoriesCollectionRef(uid));
+      batch.set(catRef, { name: 'Allgemein', order: 1 });
+      batch.set(doc(productsCollectionRef(uid)), { 
+          name: 'Test Produkt', price: 1.00, categoryId: catRef.id, 
+          stock: 100, taxRate: 19.0 
+      });
+      await batch.commit();
+    }
+
+    window.loadProductsAndCategories = async function(){
+      const catSnapshot = await getDocs(query(categoriesCollectionRef(currentUser.uid), orderBy('order', 'asc')));
+      categories = {};
+      catSnapshot.forEach(doc => { categories[doc.id] = { id: doc.id, ...doc.data() }; });
+      
+      const prodSnapshot = await getDocs(productsCollectionRef(currentUser.uid));
+      products = {};
+      prodSnapshot.forEach(doc => { 
+          const d = doc.data();
+          products[doc.id] = { id: doc.id, ...d, price: parseFloat(d.price)||0 }; 
+      });
+      window.renderCategoryTabs();
+      window.renderProductGrid(null);
+    }
+    
+    window.addCategory = async function(){
+      const name = document.getElementById('new-category-name').value.trim();
+      if(!name) return;
+      await setDoc(doc(categoriesCollectionRef(currentUser.uid)), { name: name, order: Date.now() });
+      document.getElementById('new-category-name').value = '';
+      await window.loadProductsAndCategories();
+      window.renderCategoryManagement();
+    }
+
+    window.addProduct = async function(){
+      const name = document.getElementById('new-product-name').value.trim();
+      const price = parseFloat(document.getElementById('new-product-price').value);
+      const stock = parseInt(document.getElementById('new-product-stock').value) || 0;
+      const catId = document.getElementById('new-product-category').value;
+      const tax = parseFloat(document.getElementById('new-product-tax-rate').value);
+
+      if(!name || isNaN(price)) return window.showToast('Name/Preis fehlt.', 'error');
+      
+      await setDoc(doc(productsCollectionRef(currentUser.uid)), {
+        name: name, price: price, categoryId: catId, 
+        stock: userSettings.stock ? stock : 9999, 
+        taxRate: userSettings.tax ? tax : 19.0
+      });
+      
+      document.getElementById('new-product-name').value = '';
+      document.getElementById('new-product-price').value = '';
+      window.showToast('Produkt hinzugefügt.', 'success');
+      await window.loadProductsAndCategories();
+      window.renderProductManagement();
+    }
+
+    window.deleteProduct = async (id) => {
+        if(confirm('Löschen?')) {
+            await deleteDoc(doc(productsCollectionRef(currentUser.uid), id));
+            await window.loadProductsAndCategories(); window.renderProductManagement();
+        }
+    }
+
+    window.renderCategoryTabs = function(){
+      const c = document.getElementById('category-tabs');
+      c.innerHTML = `<button onclick="window.renderProductGrid(null)" id="tab-all" class="product-btn p-2 text-sm bg-red-600 text-white rounded-lg whitespace-nowrap shadow-md">Alle</button>`;
+      Object.values(categories).sort((a,b)=>a.order-b.order).forEach(cat => {
+        c.innerHTML += `<button onclick="window.renderProductGrid('${cat.id}')" id="tab-${cat.id}" class="product-btn p-2 text-sm bg-gray-200 hover:bg-red-200 rounded-lg whitespace-nowrap shadow-md">${cat.name}</button>`;
+      });
+    }
+
+    window.renderProductGrid = function(categoryId){
+      const grid = document.getElementById('product-grid');
+      grid.innerHTML = '';
+      
+      // Tabs Styling
+      document.querySelectorAll('#category-tabs button').forEach(b => {
+          b.classList.remove('bg-red-600', 'text-white'); b.classList.add('bg-gray-200');
+      });
+      const activeBtn = categoryId ? document.getElementById(`tab-${categoryId}`) : document.getElementById('tab-all');
+      if(activeBtn) { activeBtn.classList.add('bg-red-600', 'text-white'); activeBtn.classList.remove('bg-gray-200'); }
+
+      const filtered = categoryId ? Object.values(products).filter(p => p.categoryId === categoryId) : Object.values(products);
+      
+      filtered.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
+        // Stock Check: Nur anzeigen wenn Stock-Modul aktiv UND Bestand niedrig
+        const stockStatus = (userSettings.stock && p.stock <= 5) 
+            ? `<div class="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-md">${p.stock}</div>` 
+            : '';
+            
+        grid.innerHTML += `
+          <button onclick="window.addToBestellung('${p.id}')" class="product-btn p-3 bg-white rounded-xl shadow-md flex flex-col items-center justify-center space-y-1 relative overflow-hidden h-32">
+            ${stockStatus}
+            <div class="font-bold text-base text-gray-800 text-center leading-tight">${p.name}</div>
+            <div class="text-xl font-extrabold text-red-600">${p.price.toFixed(2).replace('.', ',')} €</div>
+          </button>
+        `;
+      });
+    }
+    
+    window.renderCategoryManagement = function(){
+      const list = document.getElementById('category-list');
+      const select = document.getElementById('new-product-category');
+      list.innerHTML = ''; select.innerHTML = '<option value="">Kategorie</option>';
+      Object.values(categories).forEach(c => {
+          list.innerHTML += `<div class="flex justify-between p-2 border bg-gray-50 rounded"><span>${c.name}</span></div>`;
+          select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+      });
+    }
+
+    window.renderProductManagement = function(){
+        const list = document.getElementById('product-list');
+        list.innerHTML = '';
+        Object.values(products).sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
+            list.innerHTML += `
+                <div class="p-3 border rounded-lg bg-white shadow-sm flex flex-col space-y-2">
+                    <div class="font-bold text-red-700">${p.name}</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="window.deleteProduct('${p.id}')" class="text-red-500 text-xs text-right">Löschen</button>
+                    </div>
                 </div>`;
+        });
+    }
+
+    // --- QUANTITY & CART ---
+    window.updateQuantityDisplay = function(){
+      document.getElementById('quantity-display').innerText = quantityInputString;
+      currentQuantity = parseInt(quantityInputString);
+    }
+    window.toggleQuantityMode = function(){
+      isRemovalMode = !isRemovalMode;
+      quantityInputString = '1'; 
+      const btn = document.getElementById('btn-quantity-mode');
+      const disp = document.getElementById('quantity-mode-display');
+      if(isRemovalMode) { btn.classList.replace('bg-green-500','bg-red-500'); btn.innerText='DEL'; disp.innerText='DEL'; }
+      else { btn.classList.replace('bg-red-500','bg-green-500'); btn.innerText='ADD'; disp.innerText='ADD'; }
+      window.updateQuantityDisplay();
+    }
+    window.handleQuantityInput = function(key){
+      if(key === 'clear') quantityInputString = '1';
+      else if (key.match(/^\d$/)){
+        if (quantityInputString === '1' && key !== '0') quantityInputString = key;
+        else if (quantityInputString === '1' && key === '0') quantityInputString = '10';
+        else if (quantityInputString.length < 2) quantityInputString += key;
+      }
+      window.updateQuantityDisplay();
+    }
+
+    window.addToBestellung = function(id){
+      const p = products[id];
+      const qty = currentQuantity;
+      if (!p) return;
+
+      if (isRemovalMode) {
+          const idx = currentBestellung.findIndex(i => i.id === id);
+          if(idx > -1) {
+              const item = currentBestellung[idx];
+              const remove = Math.min(qty, item.quantity);
+              item.quantity -= remove;
+              item.totalBrutto = item.quantity * p.price;
+              if(userSettings.stock) p.stock += remove;
+              if(item.quantity <= 0) currentBestellung.splice(idx, 1);
+          }
+      } else {
+          // Stock Check
+          if(userSettings.stock && p.stock < qty) return window.showToast(`Nur noch ${p.stock} verfügbar.`, 'error');
+          
+          if(userSettings.stock) p.stock -= qty;
+          const existing = currentBestellung.find(i => i.id === id);
+          if(existing){
+              existing.quantity += qty;
+              existing.totalBrutto = existing.quantity * p.price;
+          } else {
+              currentBestellung.push({
+                  id: p.id, name: p.name, price: p.price, quantity: qty,
+                  totalBrutto: qty * p.price, taxRate: p.taxRate || userSettings.taxRate
+              });
+          }
+      }
+      window.renderProductGrid(p.categoryId || null);
+      window.updateReceipt();
+      quantityInputString = '1'; window.updateQuantityDisplay();
+    }
+
+    window.clearBestellung = function(){
+      if(currentBestellung.length === 0) return;
+      if(userSettings.stock) {
+          currentBestellung.forEach(i => { if(products[i.id]) products[i.id].stock += i.quantity; });
+      }
+      currentBestellung = [];
+      window.updateReceipt();
+      window.renderProductGrid(null);
+    }
+
+    window.updateReceipt = function(){
+      const c = document.getElementById('receipt-content-interactive');
+      totalBrutto = currentBestellung.reduce((s, i) => s + i.totalBrutto, 0);
+      
+      if(currentBestellung.length === 0){
+        c.innerHTML = '<p class="text-gray-500 text-center p-4">Warenkorb leer.</p>';
+        document.getElementById('btn-finalize').disabled = true;
+      } else {
+        c.innerHTML = '';
+        currentBestellung.forEach((item, index) => {
+          c.innerHTML += `
+            <div class="flex justify-between items-center p-2 border-b">
+              <span class="font-bold w-1/12">${item.quantity}x</span>
+              <span class="flex-grow">${item.name}</span>
+              <span class="font-semibold text-red-600">${item.totalBrutto.toFixed(2).replace('.', ',')} €</span>
+              <button onclick="window.removeFromBestellungByIndex(${index})" class="text-red-500 ml-2 font-bold">X</button>
+            </div>`;
+        });
+        document.getElementById('btn-finalize').disabled = false;
+      }
+      document.getElementById('total-display').innerText = `GESAMT: ${totalBrutto.toFixed(2).replace('.', ',')} €`;
+    }
+    
+    window.removeFromBestellungByIndex = (idx) => {
+        // Wrapper for single remove using the logic
+        const item = currentBestellung[idx];
+        if(item) {
+            if(userSettings.stock && products[item.id]) products[item.id].stock += item.quantity;
+            currentBestellung.splice(idx, 1);
+            window.updateReceipt();
+            window.renderProductGrid(item.categoryId || null);
         }
     }
 
-    window.handleCashInput = (k) => {
-        if(k === 'clear') cashInput = "0";
-        else if (k === 'dot') { if(!cashInput.includes('.')) cashInput += '.'; }
-        else { if(cashInput === "0") cashInput = k; else cashInput += k; }
-        updateCashDisplay();
+    // --- FINALIZE ---
+    window.openFinalizeModal = function(){
+      document.getElementById('finalize-modal').style.display='flex';
+      setPaymentMethod('BAR');
+      window.updateVisibility(); // Refresh, um ggf. Belegbuttons auszublenden
     }
-    window.addCash = (amount) => {
-        let curr = parseFloat(cashInput) || 0;
-        cashInput = (curr + amount).toFixed(2);
-        updateCashDisplay();
-    }
-    window.setCashExact = () => {
-        let total = parseFloat(document.getElementById('finalize-total').innerText.replace(',','.'));
-        cashInput = total.toFixed(2);
-        updateCashDisplay();
+
+    window.setPaymentMethod = function(method){
+      cashPaymentMethod = method;
+      const total = calculateTotalWithFee();
+      document.getElementById('finalize-total').innerText = total.toFixed(2).replace('.', ',') + ' €';
+
+      const cashArea = document.getElementById('cash-payment-area');
+      const cashBtns = document.getElementById('cash-finalize-buttons');
+      const cardBtns = document.getElementById('card-finalize-buttons');
+      const btnKarte = document.getElementById('btn-karte');
+
+      if(method === 'BAR'){
+         cashArea.style.display = 'block'; cashBtns.style.display = 'block'; cardBtns.style.display = 'none';
+         btnKarte.classList.replace('bg-indigo-700','bg-indigo-600');
+         cashReceivedInput = '0'; updateCashChangeDisplay();
+      } else {
+         cashArea.style.display = 'none'; cashBtns.style.display = 'none'; cardBtns.style.display = 'block';
+         btnKarte.classList.replace('bg-indigo-600','bg-indigo-700');
+      }
     }
     
-    function updateCashDisplay() {
-        document.getElementById('cash-given-display').innerText = cashInput.replace('.',',');
-        let given = parseFloat(cashInput) || 0;
-        let total = parseFloat(document.getElementById('finalize-total').innerText.replace(',','.'));
-        let diff = given - total;
-        document.getElementById('cash-change-display').innerText = diff.toFixed(2).replace('.',',') + ' €';
+    function calculateTotalWithFee() {
+        let t = totalBrutto;
+        if(cashPaymentMethod === 'KARTE' && userSettings.cardFee && userSettings.cardFeeRate > 0) {
+            t += totalBrutto * (userSettings.cardFeeRate / 100);
+        }
+        return t;
     }
 
-    window.processTransaction = async (receiptType, total) => {
-        let given = (currentPayMethod === 'BAR') ? parseFloat(cashInput) : total;
-        if(currentPayMethod === 'BAR' && given < total) return window.showToast("Zu wenig Geld!", 'error');
+    window.updateCashChangeDisplay = function(){
+      const total = calculateTotalWithFee();
+      document.getElementById('finalize-total').innerText = total.toFixed(2).replace('.', ',') + ' €';
+      
+      const given = parseFloat(cashReceivedInput) / 100;
+      document.getElementById('cash-received-display').innerText = given.toFixed(2).replace('.', ',');
+      document.getElementById('change-display').innerText = (given - total).toFixed(2).replace('.', ',') + ' €';
+      
+      const enough = given >= total;
+      document.getElementById('btn-cash-none').disabled = !enough;
+      document.getElementById('btn-cash-standard').disabled = !enough;
+      document.getElementById('btn-cash-bewirtung').disabled = !enough;
+    }
 
+    window.handleCashInput = function(key){
+      if(key === 'clear') cashReceivedInput = '0';
+      else if (key === 'dot') { /* ignore for simplified cents logic, or adapt */ }
+      else if (key.match(/^\d$/)){
+         if(cashReceivedInput === '0') cashReceivedInput = key;
+         else cashReceivedInput += key;
+      }
+      window.updateCashChangeDisplay();
+    }
+    window.setCashExact = () => { cashReceivedInput = Math.round(calculateTotalWithFee()*100).toString(); updateCashChangeDisplay(); }
+    window.addCashShortcut = (val) => { 
+        let curr = parseFloat(cashReceivedInput); 
+        cashReceivedInput = (curr + (val*100)).toString(); 
+        updateCashChangeDisplay(); 
+    }
+
+    window.handleFinalizeAction = async function(method, receiptType){
+        window.showLoading(true);
+        try {
+            const finalTotal = calculateTotalWithFee();
+            const fee = finalTotal - totalBrutto;
+            const given = method === 'BAR' ? parseFloat(cashReceivedInput)/100 : finalTotal;
+            
+            const items = [...currentBestellung];
+            if(fee > 0) items.push({ id:'FEE', name:'Gebühr', price:fee, quantity:1, totalBrutto:fee, taxRate:0, isFee:true });
+            
+            const batch = writeBatch(db);
+            // Stock Update
+            if(userSettings.stock) {
+                currentBestellung.forEach(i => {
+                   if(products[i.id]) batch.update(doc(productsCollectionRef(currentUser.uid), i.id), { stock: products[i.id].stock });
+                });
+            }
+            
+            // Transaction
+            const tData = {
+                items: items,
+                totalBrutto: finalTotal,
+                timestamp: new Date(),
+                paymentMethod: method,
+                status: 'completed',
+                received: given,
+                change: given - finalTotal
+            };
+            batch.set(doc(transactionsCollectionRef(currentUser.uid)), tData);
+            
+            // Balance
+            if(method === 'BAR') {
+                const newBal = cashBoxBalance + finalTotal; // Einfache Kassenlogik
+                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal });
+                cashBoxBalance = newBal;
+            }
+            
+            await batch.commit();
+            
+            if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType);
+            
+            currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null);
+            closeModal('finalize-modal'); window.showToast('Erfolg!', 'success');
+            
+        } catch(e) { console.error(e); window.showToast('Fehler', 'error'); }
+        finally { window.showLoading(false); }
+    }
+
+    // --- CASH MANAGEMENT ---
+    window.openCashManagementModal = () => {
+        document.getElementById('cash-management-modal').style.display='flex';
+        document.getElementById('cash-balance-display').innerText = cashBoxBalance.toFixed(2).replace('.', ',') + ' €';
+        cashReceivedInput = '0';
+        document.getElementById('cash-man-received-display').innerText = '0,00';
+    }
+    window.handleCashManInput = (k) => {
+        window.handleCashInput(k);
+        document.getElementById('cash-man-received-display').innerText = (parseFloat(cashReceivedInput)/100).toFixed(2).replace('.', ',');
+    }
+    window.handleCashManagement = async (type) => {
+        const amount = parseFloat(cashReceivedInput)/100;
+        if(amount <= 0) return;
         window.showLoading(true);
         const batch = writeBatch(db);
+        let newBal = type === 'EINLAGE' ? cashBoxBalance + amount : cashBoxBalance - amount;
         
-        const tRef = doc(collection(db, `users/${currentUser.uid}/transactions`));
-        const fee = (currentPayMethod === 'KARTE' && settings.cardFee) ? total - cart.reduce((a,b)=>a+b.total,0) : 0;
+        batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal });
+        batch.set(doc(transactionsCollectionRef(currentUser.uid)), {
+            type: type === 'EINLAGE' ? 'CASH-EINLAGE' : 'CASH-ENTNAHME',
+            amount: amount, timestamp: new Date(), status: 'completed'
+        });
         
-        const data = {
-            timestamp: Timestamp.now(),
-            items: cart,
-            total: total,
-            paymentMethod: currentPayMethod,
-            received: given,
-            change: given - total,
-            fee: fee,
-            status: 'completed'
-        };
-        batch.set(tRef, data);
-        
-        if(settings.stock) {
-            cart.forEach(i => {
-                if(products[i.id]) batch.update(doc(db, `users/${currentUser.uid}/products/${i.id}`), { stock: products[i.id].stock });
-            });
-        }
-        
-        if(currentPayMethod === 'BAR') {
-            const newBal = settings.cashBalance + total;
-            batch.update(doc(db, `users/${currentUser.uid}/settings/config`), { cashBalance: newBal });
-            settings.cashBalance = newBal;
-        }
-
         await batch.commit();
-        window.closeModal('finalize-modal');
-        cart = [];
-        updateCartUI();
-        window.showLoading(false);
-        window.showToast("Zahlung erfolgreich!", 'success');
-        
-        if(receiptType !== 'none') printReceipt(data, receiptType);
-    }
-    
-    // --- PRINTING ---
-    function printReceipt(t, type) {
-        let html = `<div style="padding:10px;">
-            <div style="text-align:center;font-weight:bold;">${settings.company}</div>
-            <hr style="border-top:1px dashed black;">
-            ${t.items.map(i => `<div class="receipt-line"><span>${i.quantity}x ${i.name}</span><span>${i.total.toFixed(2)}</span></div>`).join('')}
-            ${t.fee > 0 ? `<div class="receipt-line"><span>Gebühr</span><span>${t.fee.toFixed(2)}</span></div>` : ''}
-            <hr style="border-top:1px dashed black;">
-            <div class="receipt-line" style="font-weight:bold;"><span>SUMME</span><span>${t.total.toFixed(2)} €</span></div>
-            <div class="receipt-line"><span>Gegeben</span><span>${t.received.toFixed(2)}</span></div>
-            <div class="receipt-line"><span>Rückgeld</span><span>${t.change.toFixed(2)}</span></div>
-            <div style="text-align:center;font-size:10px;margin-top:10px;">${t.timestamp.toDate().toLocaleString()}</div>
-        </div>`;
-        
-        if(type === 'bewirtung') {
-            html += `<div style="margin-top:20px;border-top:1px dashed black;padding-top:10px;">
-                <div style="text-align:center;font-weight:bold;">Bewirtungsbeleg</div>
-                <div style="font-size:10px;margin-top:5px;">Bewirtende Person: ..........................</div>
-                <div style="font-size:10px;margin-top:5px;">Anlass: .......................................</div>
-                <div style="font-size:10px;margin-top:5px;">Teilnehmer: .................................</div>
-            </div>`;
-        }
-        
-        document.getElementById('print-receipt-container').innerHTML = html;
-        window.print();
+        cashBoxBalance = newBal;
+        closeModal('cash-management-modal'); window.showToast('Gebucht', 'success'); window.showLoading(false);
     }
 
-    // --- AUTH UI ---
-    window.openSettingsModalAuth = () => authProtected(() => { 
-        document.getElementById('settings-modal').style.display = 'flex'; 
-        document.getElementById('setting-company-name').value = settings.company;
-        updateVisibility(); 
-    });
-    window.openReportModalAuth = () => authProtected(() => { document.getElementById('report-modal').style.display = 'flex'; });
-    window.handleLogout = () => signOut(auth).then(()=>window.location.reload());
-
-    function authProtected(cb) {
-        if(settings.security && settings.reversalCode) {
-            window.openPinModal('Zugang', cb);
-        } else {
-            cb();
-        }
+    // --- REPORTS (ADOPTED FROM ANPASSUNGEN - Text Logic) ---
+    window.setReportDateToday = function(){
+        document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
     }
     
-    // PIN Logic
-    let pinCb = null;
-    let pinVal = "";
-    window.openPinModal = (title, cb) => {
-        pinCb = cb; pinVal = "";
-        document.getElementById('pin-modal-title').innerText = title;
-        document.getElementById('pin-input-display').innerText = "";
-        document.getElementById('pin-modal').style.display = 'flex';
-    }
-    window.handlePinInput = (k) => {
-        if(k === 'clear') pinVal = "";
-        else if(k === 'enter') {
-            if(pinVal === settings.reversalCode) {
-                window.closeModal('pin-modal');
-                if(pinCb) pinCb();
-            } else {
-                window.showToast("Falscher Code", 'error');
-                pinVal = "";
-            }
-        } else {
-            if(pinVal.length < 4) pinVal += k;
-        }
-        document.getElementById('pin-input-display').innerText = '*'.repeat(pinVal.length);
-    }
-    
-    // --- REPORTS ---
-    window.loadReport = async () => {
+    window.runDailyReport = async function() {
         const dateStr = document.getElementById('report-date').value;
         if(!dateStr) return;
         window.showLoading(true);
+        
         const start = new Date(dateStr); start.setHours(0,0,0,0);
         const end = new Date(dateStr); end.setHours(23,59,59,999);
         
-        const q = query(collection(db, `users/${currentUser.uid}/transactions`), 
-            where('timestamp', '>=', Timestamp.fromDate(start)),
-            where('timestamp', '<=', Timestamp.fromDate(end)),
-            orderBy('timestamp', 'desc')
-        );
+        const q = query(transactionsCollectionRef(currentUser.uid), 
+            where('timestamp', '>=', start), where('timestamp', '<=', end), orderBy('timestamp', 'desc'));
+            
         const snap = await getDocs(q);
         
         let total = 0, cash = 0, card = 0, fee = 0;
@@ -1076,28 +1193,80 @@
         
         snap.forEach(d => {
             const t = d.data();
+            const time = t.timestamp ? new Date(t.timestamp.seconds*1000).toLocaleTimeString() : '-';
+            
             if(t.status === 'completed') {
-                if(t.type && t.type.includes('CASH')) return; 
-                total += t.total;
-                if(t.paymentMethod === 'BAR') cash += t.total;
-                if(t.paymentMethod === 'KARTE') card += t.total;
-                if(t.fee) fee += t.fee;
-                txt += `${t.timestamp.toDate().toLocaleTimeString()} | ${t.total.toFixed(2)}€ (${t.paymentMethod})\n`;
+                if(t.type && t.type.includes('CASH')) {
+                    txt += `${time} | ${t.type} | ${t.amount.toFixed(2)}€\n`;
+                    return; 
+                }
+                
+                total += t.totalBrutto;
+                if(t.paymentMethod === 'BAR') cash += t.totalBrutto;
+                if(t.paymentMethod === 'KARTE') card += t.totalBrutto;
+                
+                // Gebühr finden
+                const feeItem = t.items ? t.items.find(i=>i.isFee) : null;
+                if(feeItem) fee += feeItem.totalBrutto;
+                
+                txt += `${time} | ${t.totalBrutto.toFixed(2)}€ (${t.paymentMethod})\n`;
+            } else if (t.status === 'cancelled') {
+                txt += `${time} | STORNIERT | ${t.totalBrutto.toFixed(2)}€\n`;
             }
         });
         
-        txt = `GESAMT UMSATZ: ${total.toFixed(2)} €\n` + 
-              `Bar: ${cash.toFixed(2)} €\n` + 
-              `Karte: ${card.toFixed(2)} €\n` + 
-              `Darin Gebühren: ${fee.toFixed(2)} €\n\n` + txt;
-              
-        document.getElementById('report-content').innerText = txt;
+        const header = `GESAMT UMSATZ: ${total.toFixed(2)} €\n` + 
+                       `Bar: ${cash.toFixed(2)} €\n` + 
+                       `Karte: ${card.toFixed(2)} €\n` + 
+                       (fee > 0 ? `Darin Gebühren: ${fee.toFixed(2)} €\n` : '') + 
+                       `\n`;
+                       
+        document.getElementById('report-content').innerText = header + txt;
         window.showLoading(false);
     }
     
-    document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value).catch(e=>window.showToast(e.message,'error')); }
-    document.getElementById('register-form').onsubmit = (e) => { e.preventDefault(); createUserWithEmailAndPassword(auth, document.getElementById('register-email').value, document.getElementById('register-password').value).catch(e=>window.showToast(e.message,'error')); }
-    document.getElementById('reset-form').onsubmit = (e) => { e.preventDefault(); sendPasswordResetEmail(auth, document.getElementById('reset-email').value).then(()=>window.showToast('Gesendet')).catch(e=>window.showToast(e.message,'error')); }
+    // Einfache CSV basierend auf dem gleichen Datenbestand
+    window.exportCSV = function() {
+        const txt = document.getElementById('report-content').innerText;
+        const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(txt);
+        const link = document.createElement("a");
+        link.setAttribute("href", csvContent);
+        link.setAttribute("download", `Bericht_${document.getElementById('report-date').value}.txt`); // Als Text exportieren da Format unstrukturiert
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+
+    // --- PRINT ---
+    window.printReceipt = function(items, total, type){
+       const container = document.getElementById('print-receipt-container');
+       const time = new Date().toLocaleString('de-DE');
+       let html = `
+         <div class="receipt-print">
+           <div class="text-center font-bold">${(userSettings.companyName||'').toUpperCase()}</div>
+           <div class="separator"></div>
+           ${items.map(i => `<div class="line"><span class="item-name">${i.quantity}x ${i.name}</span><span class="item-price">${i.totalBrutto.toFixed(2)}</span></div>`).join('')}
+           <div class="separator"></div>
+           <div class="line total-line"><span>SUMME</span><span>${total.toFixed(2)} €</span></div>
+           <div class="text-center text-xs mt-2">${time}</div>
+         </div>
+       `;
+       
+       if(type === 'bewirtung'){
+           html += `<div class="receipt-print mt-4 border-t border-dashed border-black pt-2">
+            <div class="text-center font-bold">Bewirtungsbeleg</div>
+            <div class="fill-line"></div><div class="text-xs">Bewirtende Person</div>
+            <div class="fill-line"></div><div class="text-xs">Anlass</div>
+            <div class="fill-line"></div><div class="text-xs">Teilnehmer</div>
+           </div>`;
+       }
+       container.innerHTML = html;
+       window.print();
+    }
+    
+    // --- STARTUP ---
+    document.addEventListener('DOMContentLoaded', () => {
+        window.updateAppView('login');
+        document.getElementById('login-form').addEventListener('submit', (e)=>{ e.preventDefault(); window.handleLoginSubmit(); });
+    });
 
   </script>
 </body>
