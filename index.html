@@ -646,22 +646,19 @@
     const transactionsCollectionRef = (uid) => collection(db, `users/${uid}/transactions`);
     const settingsDocRef = (uid) => doc(db, `users/${uid}/settings/config`);
 
-// Korrekte Schreibweise für deinen Code:
+// --- AUTH STATE LISTENER (Korrekt für Module) ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        console.log("Firebase: Eingeloggt als", user.email);
-        // Prüfen ob gesperrt, sonst Kasse
-        if (typeof isAppLocked !== 'undefined' && isAppLocked) {
-            window.updateAppView('lock');
-        } else {
-            window.updateAppView('kasse');
-        }
+        console.log("Eingeloggt als:", user.email);
+        // Wir laden die Einstellungen und gehen dann zur Kasse
+        loadSettings();
+        window.updateAppView('kasse'); 
     } else {
-        console.log("Firebase: Nicht eingeloggt.");
+        console.log("Nicht eingeloggt");
         window.updateAppView('login');
     }
     
-    // Overlay entfernen
+    // Lade-Overlay entfernen
     const overlay = document.getElementById('async-loading-overlay');
     if (overlay) overlay.style.display = 'none';
 });
