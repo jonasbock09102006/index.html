@@ -1759,12 +1759,13 @@ window.updateAppView = function(view) {
        window.print();
     }
     
-   // --- STARTUP ---
+  // --- STARTUP ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Verzögerung um sicherzugehen, dass Firebase & DOM bereit sind
+        // Kurze Verzögerung, damit Firebase Zeit hat, den Login-Status zu prüfen
         setTimeout(() => {
             const loginBtn = document.getElementById('login-btn');
             
+            // Nur binden, wenn der Button auch wirklich da ist
             if (loginBtn) {
                 loginBtn.onclick = (e) => {
                     e.preventDefault();
@@ -1772,15 +1773,17 @@ window.updateAppView = function(view) {
                         handleLoginSubmit();
                     }
                 };
-                console.log("Login-Button erfolgreich verknüpft.");
-            } else {
-                // Wenn wir schon in der Kasse sind, brauchen wir den Button nicht
-                console.warn("Login-Button nicht gefunden - evtl. bereits eingeloggt?");
             }
 
-            // Start-Ansicht festlegen
-            if(document.getElementById('lock-screen')) {
-                window.updateAppView('lock');
+            // Prüfen, ob wir zur Kasse geschickt wurden
+            // Wenn der Bildschirm noch grau ist, erzwingen wir das Ausblenden des Overlays
+            const overlay = document.getElementById('async-loading-overlay');
+            if (overlay && (document.getElementById('kasse-screen').style.display === 'block' || 
+                            document.getElementById('lock-screen').style.display === 'block')) {
+                overlay.style.display = 'none';
             }
-        }, 500); 
+        }, 1000); 
     });
+    </script>
+</body>
+</html>
