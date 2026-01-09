@@ -2,25 +2,25 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Kassensystem Pro (Final)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Kassensystem Pro (Final v2)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden; height: 100vh; width: 100vw; }
+    /* FIX: 100dvh verhindert, dass Safari-Leisten Inhalte verdecken */
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden; height: 100vh; height: 100dvh; width: 100vw; }
     
     /* Scrollbar Styling */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
     
-    /* FIX: Zoom bei Inputs auf Mobile verhindern */
     input, button, select, textarea { font-size: 16px !important; touch-action: manipulation; }
     
     .product-btn:active { transform: scale(0.97); transition: transform 0.1s; }
     .force-hidden { display: none !important; }
 
-    /* FIX: Safari Tab-Bar Überdeckung verhindern */
-    #product-grid { padding-bottom: 120px; }
+    /* FIX: Extra viel Platz unten für iPad Home-Bar & Tab-Leiste */
+    #product-grid { padding-bottom: 180px; }
     
     #receipt-content-interactive { overflow-y: auto; max-height: 50vh; scrollbar-width: thin; }
     
@@ -31,15 +31,12 @@
     }
     .numpad-btn:active { background-color: #e2e8f0; transform: translateY(1px); }
     
-    /* Modern Card Style */
     .glass-panel { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f1f5f9; }
     
-    /* Spinner */
     #async-loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.9); z-index:5000; display:none; justify-content:center; align-items:center; backdrop-filter: blur(2px); }
     .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #2563eb; border-radius: 50%; width:50px; height:50px; animation: spin 0.8s linear infinite; }
     @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
     
-    /* Toast Messages */
     #toast-container { position: fixed; top:1.5rem; right:1.5rem; z-index:6000; pointer-events:none; }
     .toast { padding: 1rem 1.5rem; border-radius: 0.75rem; color: #fff; margin-bottom:0.75rem; opacity:0; transition: opacity .3s ease, transform .3s ease; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); font-weight: 600; transform: translateY(-10px); }
     .toast.show { opacity: 1; transform: translateY(0); }
@@ -47,10 +44,12 @@
     .toast-error { background: #dc2626; } 
     .toast-info { background: #2563eb; }
     
-    /* --- DRUCK STYLES (80mm Optimiert) --- */
     #print-receipt-container { display: none; visibility: hidden; } 
     
     @media print {
+      /* FIX: Entfernt Browser-Header/Footer (Datum, URL) */
+      @page { size: auto; margin: 0mm; }
+      
       body * { visibility: hidden !important; }
       #print-receipt-container { 
         visibility: visible !important; display: block !important; 
@@ -61,7 +60,7 @@
       }
       #print-receipt-container * { visibility: visible !important; }
       
-      .receipt-print { width: 100%; }
+      .receipt-print { width: 100%; padding-top: 5mm; } /* Etwas Abstand oben */
       .receipt-print .line { display:flex; justify-content:space-between; margin-bottom: 2px; }
       .receipt-print .item-name { width:65%; overflow:hidden; white-space:normal; text-align: left; } 
       .receipt-print .item-price { width:35%; text-align:right; font-weight:bold; }
@@ -257,8 +256,8 @@
               <button onclick="handleFinalizeAction('BAR', 'none')" class="w-full p-6 bg-green-600 hover:bg-green-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
                  <span class="text-2xl font-bold">BAR (Passend)</span>
               </button>
-              <button onclick="checkSimpleCardPay()" class="w-full p-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
-                  <span class="text-2xl font-bold">KARTE</span>
+              <button onclick="handleFinalizeAction('KARTE', 'none')" id="btn-simple-card" class="w-full p-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
+                  <span class="text-2xl font-bold" id="btn-simple-card-text">KARTE</span>
               </button>
           </div>
       </div>
@@ -463,7 +462,7 @@
         <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
       </div>
 
-      <div class="p-5 glass-panel grid grid-cols-4 gap-4">
+      <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
         <div class="col-span-1 flex flex-col justify-between">
             <div>
                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
@@ -488,7 +487,7 @@
       </div>
     </div>
 
-    <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full">
+    <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
       <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
         <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
@@ -538,7 +537,7 @@
     let currentQuantity = 1;
     let quantityInputString = '1';
     let isQtyDirty = false;
-    let activeCategoryFilter = null; // Fix: Punkt 1 (Produkte immer anzeigen)
+    let activeCategoryFilter = null; 
     
     let isRemovalMode = false;
     let cashReceivedInput = '0';
@@ -553,7 +552,7 @@
         companyName: '', address: '', taxId: '', taxRate: 19.0,
         reversalCode: '', cashBoxBalance: 0.00, cardFeeRate: 0.00, receiptCounter: 1,
         mode: null, stock: true, tax: true, security: true, cardFee: true, receipts: true, 
-        simplePayment: false // Fix: Punkt 2
+        simplePayment: false 
     };
 
     // Firebase Init
@@ -604,7 +603,7 @@
         toggle('mod-receipts', userSettings.receipts);
     }
 
-    // Fix: Setup Freeze (Sicherstellen, dass Objekt komplett ist)
+    // Fix: Setup Freeze (Sicherstellen, dass Dokument erstellt wird wenn neu)
     window.selectSystemType = async function(type) {
         userSettings.mode = type;
         if(type === 'simple') {
@@ -626,9 +625,10 @@
         
         window.showLoading(true);
         try {
-            await updateDoc(settingsDocRef(currentUser.uid), userSettings);
+            // FIX: setDoc mit merge statt updateDoc, damit es bei neuen Usern nicht crasht
+            await setDoc(settingsDocRef(currentUser.uid), userSettings, { merge: true });
             document.getElementById('setup-modal').style.display = 'none';
-            window.loadProductsAndCategories();
+            await window.loadProductsAndCategories();
             window.updateAppView('kasse');
         } catch(e) {
             console.error(e);
@@ -677,7 +677,6 @@
     window.openProductModal = function(){
       document.getElementById('product-modal').style.display='flex';
       window.resetProductForm();
-      // FIX: Kategorien auch laden/rendern, wenn noch keine da sind
       window.renderCategoryManagement();
       window.renderProductManagement();
       window.updateVisibility();
@@ -786,10 +785,16 @@
     window.handlePasswordReset = function(){
       const email = document.getElementById('reset-email').value;
       window.showLoading(true);
-      // FIX: Passwort Reset korrekt aufrufen
+      console.log("Sende Reset für:", email);
       sendPasswordResetEmail(auth, email)
-        .then(() => { window.showToast('E-Mail gesendet! Spam prüfen.', 'success'); closeModal('forgot-password-modal'); openLoginModal(); })
-        .catch((e) => window.showToast("Fehler: " + e.message, 'error'))
+        .then(() => { 
+            window.showToast('E-Mail gesendet! Spam prüfen.', 'success'); 
+            closeModal('forgot-password-modal'); openLoginModal(); 
+        })
+        .catch((e) => {
+            console.error(e);
+            window.showToast("Fehler: " + e.message, 'error');
+        })
         .finally(() => window.showLoading(false));
     }
     window.handleLoginSubmit = function(){
@@ -897,7 +902,6 @@
           products[doc.id] = { id: doc.id, ...d, price: parseFloat(d.price)||0 }; 
       });
       window.renderCategoryTabs();
-      // FIX: activeCategoryFilter auf null setzen beim Start
       activeCategoryFilter = null;
       window.renderProductGrid(null);
     }
@@ -931,7 +935,6 @@
       const c = document.getElementById('category-tabs');
       c.innerHTML = '';
       
-      // FIX: Button "Alle Produkte"
       const allBtn = document.createElement('button');
       const isAllActive = activeCategoryFilter === null;
       allBtn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${isAllActive ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
@@ -953,12 +956,10 @@
       });
     }
 
-    // FIX: Render Logic + Filter Logic (Punkt 1)
     window.renderProductGrid = function(dummy){
       const grid = document.getElementById('product-grid');
       grid.innerHTML = '';
       
-      // Filter Logic: Wenn Filter aktiv, nur diese Kat. Sonst Alle.
       const filtered = Object.values(products).filter(p => {
           if(activeCategoryFilter === null) return true;
           return p.categoryId === activeCategoryFilter;
@@ -1136,7 +1137,7 @@
         }
     }
 
-    // --- FINALIZE (MODERNIZED & SIMPLE MODE) ---
+    // --- FINALIZE ---
     window.openFinalizeModal = function(){
       document.getElementById('finalize-modal').style.display='flex';
       
@@ -1148,8 +1149,18 @@
           simpleDiv.style.display = 'block';
           complexDiv.style.display = 'none';
           modalContent.style.maxWidth = '400px';
-          // Fix: Punkt 2 - Betrag im Einfachen Modus anzeigen
-          document.getElementById('finalize-total-simple').innerText = calculateTotalWithFee('BAR').toFixed(2).replace('.', ',') + ' €';
+          
+          // FIX: Preise & Button-Text für Einfach-Modus berechnen
+          const simpleTotal = calculateTotalWithFee('BAR');
+          document.getElementById('finalize-total-simple').innerText = simpleTotal.toFixed(2).replace('.', ',') + ' €';
+          
+          // FIX: Karte Button Text
+          let cardTotal = simpleTotal;
+          if (userSettings.cardFee && userSettings.cardFeeRate > 0) {
+             cardTotal = simpleTotal * (1 + userSettings.cardFeeRate / 100);
+          }
+          document.getElementById('btn-simple-card-text').innerText = `KARTE (${cardTotal.toFixed(2).replace('.',',')} €)`;
+
       } else {
           simpleDiv.style.display = 'none';
           complexDiv.style.display = 'block';
@@ -1157,20 +1168,6 @@
           setPaymentMethod('BAR');
       }
       window.updateVisibility(); 
-    }
-
-    // FIX: Punkt 8 - Bestätigung für Kartengebühr im Einfachen Modus
-    window.checkSimpleCardPay = function() {
-        let total = totalBrutto;
-        if(userSettings.cardFee && userSettings.cardFeeRate > 0) {
-            const fee = total * (userSettings.cardFeeRate / 100);
-            const newTotal = total + fee;
-            if(confirm(`Kartengebühr (${userSettings.cardFeeRate}%) hinzufügen?\n\nAlter Betrag: ${total.toFixed(2)}€\nGebühr: ${fee.toFixed(2)}€\n\nNEU: ${newTotal.toFixed(2)}€`)) {
-                window.handleFinalizeAction('KARTE', 'none');
-            }
-        } else {
-            window.handleFinalizeAction('KARTE', 'none');
-        }
     }
 
     window.setPaymentMethod = function(method){
@@ -1244,7 +1241,6 @@
             const items = [...currentBestellung];
             if(fee > 0) items.push({ id:'FEE', name:`Kartengebühr`, price:fee, quantity:1, totalBrutto:fee, taxRate:0, isFee:true });
             
-            // FIX: Bon-Nummer hochzählen
             const nextReceiptId = (userSettings.receiptCounter || 0) + 1;
             
             const batch = writeBatch(db);
@@ -1278,7 +1274,7 @@
             
             await batch.commit();
             
-            // FIX: Drucken OHNE Timeout
+            // FIX: Druck ohne Timeout
             if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType, nextReceiptId);
             
             currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null);
@@ -1323,7 +1319,6 @@
         document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
     }
     
-    // FIX: Report Button Funktion
     window.openReportModal = function(){
         window.setReportDateToday();
         document.getElementById('report-modal').style.display='flex';
@@ -1402,7 +1397,7 @@
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
-    // --- DRUCK (FIX: MwSt und Zähler) ---
+    // --- DRUCK ---
     window.printReceipt = function(items, total, type, receiptId){
        const container = document.getElementById('print-receipt-container');
        const time = new Date().toLocaleString('de-DE');
@@ -1410,7 +1405,6 @@
        const addr = userSettings.address || '';
        const taxId = userSettings.taxId || '';
        
-       // FIX: MwSt Berechnung Gruppiert
        let taxGroups = {};
        items.forEach(item => {
            if(item.isFee) return; 
