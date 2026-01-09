@@ -758,33 +758,35 @@
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
 
-   window.updateAppView = function(view) {
+window.updateAppView = function(view) {
     console.log("Wechsle Ansicht zu:", view);
     
-    // 1. Das graue Overlay sofort entfernen
+    // Overlay ausblenden
     const overlay = document.getElementById('async-loading-overlay');
-    if (overlay) {
-        overlay.style.setProperty('display', 'none', 'important');
-    }
+    if (overlay) overlay.style.display = 'none';
 
-    // 2. Alle Bildschirme verstecken
-    const screens = ['login-screen', 'pos-screen', 'admin-screen'];
-    screens.forEach(id => {
-        const el = document.getElementById(id);
+    // Hier müssen EXAKT die Namen stehen, die vor dem "-screen" in deiner HTML-ID kommen
+    // Wenn dein HTML <div id="lock-screen"> hat, muss hier 'lock' stehen.
+    const screens = ['lock', 'pos', 'admin', 'login', 'kasse']; 
+
+    screens.forEach(s => {
+        const el = document.getElementById(s + '-screen');
         if (el) el.style.display = 'none';
     });
 
-    // 3. Den gewünschten Bildschirm anzeigen
+    // Versuch den Ziel-Screen anzuzeigen
     const targetId = view + '-screen';
     const target = document.getElementById(targetId);
     
     if (target) {
         target.style.display = 'block';
-        console.log("Erfolg: " + targetId + " wird angezeigt.");
     } else {
-        console.error("KRITISCH: Das Element " + targetId + " fehlt im HTML!");
-        // Falls 'pos' nicht geht, versuche wenigstens den Login zu zeigen
-        if(view !== 'login') window.updateAppView('login');
+        // Falls 'login' aufgerufen wird, dein HTML aber 'lock' heißt:
+        if(view === 'login' && document.getElementById('lock-screen')) {
+            document.getElementById('lock-screen').style.display = 'block';
+        } else {
+            console.error("KRITISCH: Das Element " + targetId + " fehlt im HTML!");
+        }
     }
 };
 
