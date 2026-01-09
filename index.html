@@ -758,25 +758,35 @@
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
 
-    window.updateAppView = function(view){
-      document.getElementById('login-modal').style.display = 'none';
-      document.getElementById('pos-app-container').style.display = 'none';
-      document.getElementById('customer-display-view').style.display = 'none';
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      if(urlParams.get('mode') === 'display') {
-          // FEATURE 7: Customer Display Mode
-          document.getElementById('customer-display-view').style.display = 'flex';
-          initCustomerDisplayListener();
-          return;
-      }
-
-      if(view === 'login') document.getElementById('login-modal').style.display = 'flex';
-      if(view === 'kasse') {
-          document.getElementById('pos-app-container').style.display = 'block';
-          window.updateVisibility();
-      }
+   window.updateAppView = function(view) {
+    console.log("Wechsle Ansicht zu:", view);
+    
+    // 1. Das graue Overlay sofort entfernen
+    const overlay = document.getElementById('async-loading-overlay');
+    if (overlay) {
+        overlay.style.setProperty('display', 'none', 'important');
     }
+
+    // 2. Alle Bildschirme verstecken
+    const screens = ['login-screen', 'pos-screen', 'admin-screen'];
+    screens.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // 3. Den gewünschten Bildschirm anzeigen
+    const targetId = view + '-screen';
+    const target = document.getElementById(targetId);
+    
+    if (target) {
+        target.style.display = 'block';
+        console.log("Erfolg: " + targetId + " wird angezeigt.");
+    } else {
+        console.error("KRITISCH: Das Element " + targetId + " fehlt im HTML!");
+        // Falls 'pos' nicht geht, versuche wenigstens den Login zu zeigen
+        if(view !== 'login') window.updateAppView('login');
+    }
+};
 
     window.openLoginModal = function(){ window.updateAppView('login'); }
     window.openRegistrationModal = function(){ closeModal('login-modal'); document.getElementById('registration-modal').style.display='flex'; }
