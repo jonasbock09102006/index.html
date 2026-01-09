@@ -2,35 +2,37 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Kassensystem Pro (Modern)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Kassensystem Pro (Final)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    
-    body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #1e293b; }
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden; height: 100vh; width: 100vw; }
     
     /* Scrollbar Styling */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
     
+    /* FIX: Zoom bei Inputs auf Mobile verhindern */
+    input, button, select, textarea { font-size: 16px !important; touch-action: manipulation; }
+    
     .product-btn:active { transform: scale(0.97); transition: transform 0.1s; }
     .force-hidden { display: none !important; }
 
+    /* FIX: Safari Tab-Bar Überdeckung verhindern */
+    #product-grid { padding-bottom: 120px; }
+    
     #receipt-content-interactive { overflow-y: auto; max-height: 50vh; scrollbar-width: thin; }
     
     .numpad-btn { 
-        height: 55px; 
-        display:flex; justify-content:center; align-items:center; 
+        height: 55px; display:flex; justify-content:center; align-items:center; 
         font-weight: 700; border-radius: 0.75rem; font-size: 1.25rem; 
-        transition: all 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     .numpad-btn:active { background-color: #e2e8f0; transform: translateY(1px); }
     
     /* Modern Card Style */
-    .glass-panel { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #f1f5f9; }
+    .glass-panel { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f1f5f9; }
     
     /* Spinner */
     #async-loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.9); z-index:5000; display:none; justify-content:center; align-items:center; backdrop-filter: blur(2px); }
@@ -45,7 +47,7 @@
     .toast-error { background: #dc2626; } 
     .toast-info { background: #2563eb; }
     
-    /* --- DRUCK STYLES --- */
+    /* --- DRUCK STYLES (80mm Optimiert) --- */
     #print-receipt-container { display: none; visibility: hidden; } 
     
     @media print {
@@ -54,8 +56,8 @@
         visibility: visible !important; display: block !important; 
         position: absolute !important; left: 0 !important; top: 0 !important; width: 72mm !important;
         font-family: 'Courier New', Courier, monospace !important; 
-        font-size: 12px !important;
-        color: #000 !important; padding: 0 !important; margin: 0 !important; line-height: 1.2 !important;
+        font-size: 12px !important; color: #000 !important; 
+        padding: 0 !important; margin: 0 !important; line-height: 1.2 !important;
       }
       #print-receipt-container * { visibility: visible !important; }
       
@@ -71,31 +73,28 @@
     }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden select-none text-slate-800">
+<body class="select-none text-slate-800">
 
   <div id="toast-container"></div>
   <div id="async-loading-overlay"><div class="spinner"></div></div>
 
   <div id="setup-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[2000] flex items-center justify-center p-4" style="display:none;">
     <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-4xl text-center border border-slate-200">
-      <h1 class="text-4xl font-extrabold text-slate-800 mb-2">Willkommen</h1>
+      <h1 class="text-4xl font-extrabold text-slate-800 mb-2">Einrichtung</h1>
       <p class="text-slate-500 mb-10 text-lg">Wählen Sie Ihren Betriebsmodus.</p>
       
       <div class="grid md:grid-cols-3 gap-6 mb-8">
-        <button onclick="window.selectSystemType('simple')" class="p-6 border-2 border-slate-100 hover:border-green-500 bg-slate-50 hover:bg-green-50 rounded-2xl transition group text-left relative overflow-hidden">
-           <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg></div>
+        <button onclick="window.selectSystemType('simple')" class="p-6 border-2 border-slate-100 hover:border-green-500 bg-slate-50 hover:bg-green-50 rounded-2xl transition group text-left">
            <div class="text-2xl font-bold mb-2 text-slate-800">⚡ Einfach</div>
-          <p class="text-sm text-slate-600">Schnell-Kasse. Keine Bestände. Sofort-Buchung (Bar/Karte) ohne Rückgeld-Rechner.</p>
+          <p class="text-sm text-slate-600">Schnell-Kasse. Keine Bestände. Sofort-Buchung (Bar/Karte).</p>
         </button>
 
-        <button onclick="window.selectSystemType('complex')" class="p-6 border-2 border-slate-100 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 rounded-2xl transition text-left relative overflow-hidden group">
-          <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"></path></svg></div>
+        <button onclick="window.selectSystemType('complex')" class="p-6 border-2 border-slate-100 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 rounded-2xl transition text-left">
           <div class="text-2xl font-bold mb-2 text-slate-800">🏢 Komplett</div>
-          <p class="text-sm text-slate-600">Vollfunktion. Bestand, MwSt, Code, Rückgeld-Rechner, Belegdruck.</p>
+          <p class="text-sm text-slate-600">Vollfunktion. Bestand, MwSt, Code, Rückgeld-Rechner.</p>
         </button>
 
-        <button onclick="window.toggleCustomSetup()" class="p-6 border-2 border-slate-100 hover:border-purple-500 bg-slate-50 hover:bg-purple-50 rounded-2xl transition text-left relative overflow-hidden group">
-           <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg></div>
+        <button onclick="window.toggleCustomSetup()" class="p-6 border-2 border-slate-100 hover:border-purple-500 bg-slate-50 hover:bg-purple-50 rounded-2xl transition text-left">
           <div class="text-2xl font-bold mb-2 text-slate-800">⚙️ Individuell</div>
           <p class="text-sm text-slate-600">Konfigurieren Sie die Module selbst.</p>
         </button>
@@ -109,7 +108,7 @@
             <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50"><input type="checkbox" id="mod-check-security" class="w-5 h-5 accent-blue-600"> <span>Sicherheitscode</span></label>
             <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50"><input type="checkbox" id="mod-check-cardfee" class="w-5 h-5 accent-blue-600"> <span>Kartengebühr</span></label>
             <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50"><input type="checkbox" id="mod-check-receipts" class="w-5 h-5 accent-blue-600"> <span>Beleg-Dialog</span></label>
-            <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50 border-blue-200"><input type="checkbox" id="mod-check-simple-pay" class="w-5 h-5 accent-green-600"> <span class="font-bold text-green-700">Vereinfachte Zahlung (Schnell)</span></label>
+            <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50 border-blue-200"><input type="checkbox" id="mod-check-simple-pay" class="w-5 h-5 accent-green-600"> <span class="font-bold text-green-700">Einfaches System (Schnell)</span></label>
         </div>
          <button onclick="window.selectSystemType('custom')" class="mt-6 w-full bg-slate-800 hover:bg-slate-900 text-white p-4 rounded-xl font-bold shadow-lg transition">Speichern & Starten</button>
       </div>
@@ -121,17 +120,17 @@
       <h2 id="pin-modal-title" class="text-xl font-bold text-center text-slate-700 mb-4">Code erforderlich</h2>
       <div id="pin-input-display" class="w-full h-12 flex items-center justify-center text-3xl font-extrabold text-slate-800 bg-slate-100 rounded-xl mb-6 tracking-[0.5em] shadow-inner"></div>
       <div id="pin-numpad-container" class="grid grid-cols-3 gap-3">
-        <button onclick="handlePinInput('7')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">7</button>
-        <button onclick="handlePinInput('8')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">8</button>
-        <button onclick="handlePinInput('9')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">9</button>
-        <button onclick="handlePinInput('4')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">4</button>
-        <button onclick="handlePinInput('5')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">5</button>
-        <button onclick="handlePinInput('6')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">6</button>
-        <button onclick="handlePinInput('1')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">1</button>
-        <button onclick="handlePinInput('2')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">2</button>
-        <button onclick="handlePinInput('3')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">3</button>
-        <button onclick="handlePinInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
-        <button onclick="handlePinInput('0')" class="numpad-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50">0</button>
+        <button onclick="handlePinInput('7')" class="numpad-btn bg-white border border-slate-200 text-slate-700">7</button>
+        <button onclick="handlePinInput('8')" class="numpad-btn bg-white border border-slate-200 text-slate-700">8</button>
+        <button onclick="handlePinInput('9')" class="numpad-btn bg-white border border-slate-200 text-slate-700">9</button>
+        <button onclick="handlePinInput('4')" class="numpad-btn bg-white border border-slate-200 text-slate-700">4</button>
+        <button onclick="handlePinInput('5')" class="numpad-btn bg-white border border-slate-200 text-slate-700">5</button>
+        <button onclick="handlePinInput('6')" class="numpad-btn bg-white border border-slate-200 text-slate-700">6</button>
+        <button onclick="handlePinInput('1')" class="numpad-btn bg-white border border-slate-200 text-slate-700">1</button>
+        <button onclick="handlePinInput('2')" class="numpad-btn bg-white border border-slate-200 text-slate-700">2</button>
+        <button onclick="handlePinInput('3')" class="numpad-btn bg-white border border-slate-200 text-slate-700">3</button>
+        <button onclick="handlePinInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100">C</button>
+        <button onclick="handlePinInput('0')" class="numpad-btn bg-white border border-slate-200 text-slate-700">0</button>
         <button onclick="handlePinInput('enter')" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600" id="pin-enter-btn">OK</button>
       </div>
       <button onclick="closeModal('pin-modal')" class="mt-6 w-full py-2 font-bold text-slate-400 hover:text-slate-600">Abbrechen</button>
@@ -140,27 +139,21 @@
 
   <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
-      <div class="text-center mb-6">
-          <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-          </div>
-          <h1 class="text-2xl font-bold text-slate-800">Anmelden</h1>
-          <p class="text-sm text-slate-500">Kassensystem Zugriff</p>
-      </div>
+      <h1 class="text-2xl font-bold text-slate-800 text-center mb-6">Anmelden</h1>
       <form id="login-form">
         <div class="mb-4">
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
-          <input type="email" id="login-email" required class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+          <input type="email" id="login-email" required class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
         <div class="mb-6">
           <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Passwort</label>
-          <input type="password" id="login-password" required class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+          <input type="password" id="login-password" required class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
-        <button type="submit" class="w-full py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg transition transform hover:-translate-y-0.5">Einloggen</button>
+        <button type="submit" class="w-full py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg">Einloggen</button>
       </form>
       <div class="mt-6 text-center space-y-3">
-        <button onclick="openRegistrationModal()" class="text-sm font-semibold text-slate-600 hover:text-blue-600 block w-full">Neues Konto erstellen</button>
-        <button onclick="openForgotPasswordModal()" class="text-xs text-slate-400 hover:text-slate-600">Passwort vergessen?</button>
+        <button onclick="openRegistrationModal()" class="text-sm font-semibold text-slate-600 block w-full">Neues Konto erstellen</button>
+        <button onclick="openForgotPasswordModal()" class="text-xs text-slate-400">Passwort vergessen?</button>
       </div>
     </div>
   </div>
@@ -262,11 +255,9 @@
           </div>
           <div class="space-y-4">
               <button onclick="handleFinalizeAction('BAR', 'none')" class="w-full p-6 bg-green-600 hover:bg-green-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
-                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                  <span class="text-2xl font-bold">BAR (Passend)</span>
               </button>
-              <button onclick="handleFinalizeAction('KARTE', 'none')" class="w-full p-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
-                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+              <button onclick="checkSimpleCardPay()" class="w-full p-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
                   <span class="text-2xl font-bold">KARTE</span>
               </button>
           </div>
@@ -445,10 +436,7 @@
 
   <div id="report-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col border border-slate-200">
-        <h2 class="text-xl font-bold mb-4 text-blue-700 flex items-center gap-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            Tagesbericht
-        </h2>
+        <h2 class="text-xl font-bold mb-4 text-blue-700 flex items-center gap-2">Tagesbericht</h2>
         <div class="flex gap-2 mb-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
             <input type="date" id="report-date" class="p-2 border border-slate-300 rounded-lg flex-grow outline-none focus:border-blue-500">
             <button onclick="window.runDailyReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-lg font-bold shadow transition">Laden</button>
@@ -468,10 +456,7 @@
         <div class="flex-grow overflow-hidden">
           <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
         </div>
-        <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-            Logout
-        </button>
+        <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
       </div>
       
       <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
@@ -506,15 +491,13 @@
     <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full">
       <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
-        
         <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
             <span>Aktueller Bon</span>
-            <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">0</span></span>
+            <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
         </h2>
         
         <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
           <div class="flex flex-col items-center justify-center h-40 text-slate-300">
-              <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
               <p class="text-sm font-medium">Warenkorb leer</p>
           </div>
         </div>
@@ -529,23 +512,20 @@
       </div>
 
       <div class="glass-panel p-4 space-y-3">
-        <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">
-            ABRECHNEN <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-        </button>
+        <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
         <div class="grid grid-cols-2 gap-3">
             <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
             <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
         </div>
       </div>
     </div>
-    
     <div id="print-receipt-container"></div> 
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, increment } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
     // --- GLOBALE ZUSTÄNDE ---
     let currentUser = null;
@@ -557,7 +537,8 @@
     // Eingabe Variablen
     let currentQuantity = 1;
     let quantityInputString = '1';
-    let isQtyDirty = false; // Fix für 11-19 Problem: Wurde die Zahl schon bearbeitet?
+    let isQtyDirty = false;
+    let activeCategoryFilter = null; // Fix: Punkt 1 (Produkte immer anzeigen)
     
     let isRemovalMode = false;
     let cashReceivedInput = '0';
@@ -570,9 +551,9 @@
     // Globale Settings
     let userSettings = {
         companyName: '', address: '', taxId: '', taxRate: 19.0,
-        reversalCode: '', cashBoxBalance: 0.00, cardFeeRate: 0.00,
+        reversalCode: '', cashBoxBalance: 0.00, cardFeeRate: 0.00, receiptCounter: 1,
         mode: null, stock: true, tax: true, security: true, cardFee: true, receipts: true, 
-        simplePayment: false // NEU: Vereinfachte Zahlung
+        simplePayment: false // Fix: Punkt 2
     };
 
     // Firebase Init
@@ -590,7 +571,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     
-    // DB Refs Helper
+    // DB Refs
     const productsCollectionRef = (uid) => collection(db, `users/${uid}/products`);
     const categoriesCollectionRef = (uid) => collection(db, `users/${uid}/categories`);
     const transactionsCollectionRef = (uid) => collection(db, `users/${uid}/transactions`);
@@ -623,6 +604,7 @@
         toggle('mod-receipts', userSettings.receipts);
     }
 
+    // Fix: Setup Freeze (Sicherstellen, dass Objekt komplett ist)
     window.selectSystemType = async function(type) {
         userSettings.mode = type;
         if(type === 'simple') {
@@ -643,12 +625,17 @@
         }
         
         window.showLoading(true);
-        await updateDoc(settingsDocRef(currentUser.uid), userSettings);
-        
-        document.getElementById('setup-modal').style.display = 'none';
-        window.loadProductsAndCategories();
-        window.updateAppView('kasse');
-        window.showLoading(false);
+        try {
+            await updateDoc(settingsDocRef(currentUser.uid), userSettings);
+            document.getElementById('setup-modal').style.display = 'none';
+            window.loadProductsAndCategories();
+            window.updateAppView('kasse');
+        } catch(e) {
+            console.error(e);
+            window.showToast("Fehler beim Speichern: " + e.message, 'error');
+        } finally {
+            window.showLoading(false);
+        }
     }
     
     window.toggleCustomSetup = function() { document.getElementById('custom-setup-options').classList.remove('hidden'); }
@@ -690,6 +677,8 @@
     window.openProductModal = function(){
       document.getElementById('product-modal').style.display='flex';
       window.resetProductForm();
+      // FIX: Kategorien auch laden/rendern, wenn noch keine da sind
+      window.renderCategoryManagement();
       window.renderProductManagement();
       window.updateVisibility();
     }
@@ -700,7 +689,6 @@
         document.getElementById('new-product-price').value = '';
         document.getElementById('new-product-stock').value = '100';
         document.getElementById('new-product-category').value = '';
-        
         document.getElementById('prod-form-title').innerText = "Neues Produkt anlegen";
         document.getElementById('btn-save-product').innerText = "Hinzufügen";
         document.getElementById('btn-save-product').classList.remove('bg-blue-600', 'hover:bg-blue-700');
@@ -717,13 +705,11 @@
         document.getElementById('new-product-stock').value = p.stock;
         document.getElementById('new-product-category').value = p.categoryId;
         if(p.taxRate !== undefined) document.getElementById('new-product-tax-rate').value = p.taxRate;
-
         document.getElementById('prod-form-title').innerText = "Produkt Bearbeiten";
         document.getElementById('btn-save-product').innerText = "Speichern";
         document.getElementById('btn-save-product').classList.remove('bg-green-600', 'hover:bg-green-700');
         document.getElementById('btn-save-product').classList.add('bg-blue-600', 'hover:bg-blue-700');
         document.getElementById('btn-cancel-edit').style.display = 'block';
-        document.getElementById('product-modal').children[0].scrollTop = 0;
     }
 
     window.saveProduct = async function(){
@@ -742,17 +728,13 @@
         taxRate: userSettings.tax ? tax : 19.0
       };
 
-      if(id) {
-          await updateDoc(doc(productsCollectionRef(currentUser.uid), id), data);
-          window.showToast('Produkt aktualisiert', 'success');
-      } else {
-          await setDoc(doc(productsCollectionRef(currentUser.uid)), data);
-          window.showToast('Produkt erstellt', 'success');
-      }
+      if(id) await updateDoc(doc(productsCollectionRef(currentUser.uid), id), data);
+      else await setDoc(doc(productsCollectionRef(currentUser.uid)), data);
       
       window.resetProductForm();
       await window.loadProductsAndCategories();
       window.renderProductManagement();
+      window.showToast('Gespeichert', 'success');
     }
     
     // --- SETTINGS NAVIGATION ---
@@ -791,7 +773,7 @@
     }
     window.closeModal = function(id){ document.getElementById(id).style.display='none'; }
 
-    // --- AUTH ---
+    // --- AUTH & RESET ---
     window.handleRegisterSubmit = function(){
       const email = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
@@ -804,9 +786,10 @@
     window.handlePasswordReset = function(){
       const email = document.getElementById('reset-email').value;
       window.showLoading(true);
+      // FIX: Passwort Reset korrekt aufrufen
       sendPasswordResetEmail(auth, email)
-        .then(() => { window.showToast('Link gesendet!', 'success'); closeModal('forgot-password-modal'); openLoginModal(); })
-        .catch((e) => window.showToast(e.message, 'error'))
+        .then(() => { window.showToast('E-Mail gesendet! Spam prüfen.', 'success'); closeModal('forgot-password-modal'); openLoginModal(); })
+        .catch((e) => window.showToast("Fehler: " + e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
     window.handleLoginSubmit = function(){
@@ -833,6 +816,7 @@
           document.getElementById('tax-rate').value = userSettings.taxRate || 19.0;
           reversalCode = userSettings.reversalCode || '';
           cashBoxBalance = userSettings.cashBoxBalance || 0.00; 
+          document.getElementById('receipt-count').innerText = userSettings.receiptCounter || 1;
 
           if(!userSettings.mode) {
              document.getElementById('setup-modal').style.display = 'flex';
@@ -913,6 +897,8 @@
           products[doc.id] = { id: doc.id, ...d, price: parseFloat(d.price)||0 }; 
       });
       window.renderCategoryTabs();
+      // FIX: activeCategoryFilter auf null setzen beim Start
+      activeCategoryFilter = null;
       window.renderProductGrid(null);
     }
     
@@ -926,7 +912,7 @@
     }
 
     window.deleteProduct = async (id) => {
-        if(confirm('Produkt unwiderruflich löschen?')) {
+        if(confirm('Löschen?')) {
             await deleteDoc(doc(productsCollectionRef(currentUser.uid), id));
             await window.loadProductsAndCategories(); 
             window.renderProductManagement();
@@ -943,30 +929,43 @@
 
     window.renderCategoryTabs = function(){
       const c = document.getElementById('category-tabs');
-      c.innerHTML = `<button onclick="window.renderProductGrid(null)" id="tab-all" class="product-btn p-3 px-5 text-sm bg-slate-800 text-white rounded-xl whitespace-nowrap shadow-md font-bold transition">Alle Produkte</button>`;
+      c.innerHTML = '';
+      
+      // FIX: Button "Alle Produkte"
+      const allBtn = document.createElement('button');
+      const isAllActive = activeCategoryFilter === null;
+      allBtn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${isAllActive ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
+      allBtn.innerText = "Alle Produkte";
+      allBtn.onclick = () => { activeCategoryFilter = null; window.renderProductGrid(null); window.renderCategoryTabs(); };
+      c.appendChild(allBtn);
+
       Object.values(categories).sort((a,b)=>a.order-b.order).forEach(cat => {
-        c.innerHTML += `<button onclick="window.renderProductGrid('${cat.id}')" id="tab-${cat.id}" class="product-btn p-3 px-5 text-sm bg-white text-slate-600 hover:bg-white rounded-xl whitespace-nowrap shadow-sm font-semibold transition border border-slate-200">${cat.name}</button>`;
+        const btn = document.createElement('button');
+        const isActive = activeCategoryFilter === cat.id;
+        btn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${isActive ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
+        btn.innerText = cat.name;
+        btn.onclick = () => { 
+            activeCategoryFilter = (activeCategoryFilter === cat.id) ? null : cat.id; 
+            window.renderProductGrid(null); 
+            window.renderCategoryTabs(); 
+        };
+        c.appendChild(btn);
       });
     }
 
-    window.renderProductGrid = function(categoryId){
+    // FIX: Render Logic + Filter Logic (Punkt 1)
+    window.renderProductGrid = function(dummy){
       const grid = document.getElementById('product-grid');
       grid.innerHTML = '';
       
-      document.querySelectorAll('#category-tabs button').forEach(b => {
-          b.classList.remove('bg-slate-800', 'text-white', 'shadow-md'); 
-          b.classList.add('bg-white', 'text-slate-600', 'shadow-sm', 'border', 'border-slate-200');
+      // Filter Logic: Wenn Filter aktiv, nur diese Kat. Sonst Alle.
+      const filtered = Object.values(products).filter(p => {
+          if(activeCategoryFilter === null) return true;
+          return p.categoryId === activeCategoryFilter;
       });
-      const activeBtn = categoryId ? document.getElementById(`tab-${categoryId}`) : document.getElementById('tab-all');
-      if(activeBtn) { 
-          activeBtn.classList.add('bg-slate-800', 'text-white', 'shadow-md'); 
-          activeBtn.classList.remove('bg-white', 'text-slate-600', 'shadow-sm', 'border', 'border-slate-200'); 
-      }
-
-      const filtered = categoryId ? Object.values(products).filter(p => p.categoryId === categoryId) : Object.values(products);
       
       if(filtered.length === 0) {
-          grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center text-slate-300 py-10"><svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>Keine Produkte</div>';
+          grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center text-slate-300 py-10"><p>Keine Produkte.</p></div>';
           return;
       }
       
@@ -975,14 +974,16 @@
             ? `<div class="absolute top-2 right-2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded shadow font-bold tracking-wide">${p.stock}</div>` 
             : '';
             
-        grid.innerHTML += `
-          <button onclick="window.addToBestellung('${p.id}')" class="product-btn group bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:border-blue-300 hover:shadow-md flex flex-col items-center justify-center relative overflow-hidden h-32 transition-all">
+        const btn = document.createElement('button');
+        btn.className = "product-btn group bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:border-blue-300 hover:shadow-md flex flex-col items-center justify-center relative overflow-hidden h-32 transition-all";
+        btn.onclick = () => window.addToBestellung(p.id);
+        btn.innerHTML = `
             <div class="absolute inset-0 bg-gradient-to-br from-white to-slate-50 opacity-50"></div>
             ${stockDisplay}
             <div class="font-bold text-sm text-slate-700 text-center leading-tight line-clamp-2 w-full z-10 group-hover:text-blue-700 transition-colors">${p.name}</div>
             <div class="text-lg font-black text-slate-900 mt-1 z-10">${p.price.toFixed(2).replace('.', ',')} €</div>
-          </button>
         `;
+        grid.appendChild(btn);
       });
     }
     
@@ -1018,7 +1019,7 @@
         });
     }
 
-    // --- CART & INPUT LOGIC (FIXED 11-19) ---
+    // --- CART & INPUT LOGIC ---
     window.updateQuantityDisplay = function(){ 
         document.getElementById('quantity-display').innerText = quantityInputString; 
         currentQuantity = parseInt(quantityInputString); 
@@ -1039,18 +1040,15 @@
       window.updateQuantityDisplay();
     }
 
-    // BUGFIX: Eingabe Logik überarbeitet
     window.handleQuantityInput = function(key){
       if(key === 'clear') {
           quantityInputString = '1';
           isQtyDirty = false;
       } else if (key.match(/^\d$/)){
         if (!isQtyDirty) {
-            // Erste Eingabe ersetzt die Standard "1"
             quantityInputString = key;
             isQtyDirty = true;
         } else {
-            // Weitere Eingaben werden angehängt
             if (quantityInputString.length < 3) quantityInputString += key;
         }
       }
@@ -1087,10 +1085,9 @@
               });
           }
       }
-      window.renderProductGrid(p.categoryId || null);
+      // Re-Render Grid für Stock Updates
+      window.renderProductGrid(null);
       window.updateReceipt();
-      
-      // Reset Input
       quantityInputString = '1'; isQtyDirty = false; window.updateQuantityDisplay();
     }
 
@@ -1107,10 +1104,10 @@
     window.updateReceipt = function(){
       const c = document.getElementById('receipt-content-interactive');
       totalBrutto = currentBestellung.reduce((s, i) => s + i.totalBrutto, 0);
-      document.getElementById('receipt-count').innerText = currentBestellung.reduce((s,i)=>s+i.quantity, 0);
+      document.getElementById('receipt-count').innerText = userSettings.receiptCounter || '-';
       
       if(currentBestellung.length === 0){
-        c.innerHTML = '<div class="flex flex-col items-center justify-center h-40 text-slate-300"><svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg><p class="text-sm font-medium">Warenkorb leer</p></div>';
+        c.innerHTML = '<div class="flex flex-col items-center justify-center h-40 text-slate-300"><p class="text-sm font-medium">Warenkorb leer</p></div>';
         document.getElementById('btn-finalize').disabled = true;
       } else {
         c.innerHTML = '';
@@ -1126,6 +1123,7 @@
         document.getElementById('btn-finalize').disabled = false;
       }
       document.getElementById('total-display').innerText = `${totalBrutto.toFixed(2).replace('.', ',')} €`;
+      document.getElementById('finalize-total').innerText = `${totalBrutto.toFixed(2).replace('.', ',')} €`;
     }
     
     window.removeFromBestellungByIndex = (idx) => {
@@ -1134,7 +1132,7 @@
             if(userSettings.stock && products[item.id]) products[item.id].stock += item.quantity;
             currentBestellung.splice(idx, 1);
             window.updateReceipt();
-            window.renderProductGrid(item.categoryId || null);
+            window.renderProductGrid(null);
         }
     }
 
@@ -1142,7 +1140,6 @@
     window.openFinalizeModal = function(){
       document.getElementById('finalize-modal').style.display='flex';
       
-      // Entscheiden welche Ansicht gezeigt wird
       const simpleDiv = document.getElementById('simple-payment-ui');
       const complexDiv = document.getElementById('complex-payment-ui');
       const modalContent = document.getElementById('finalize-modal-content');
@@ -1151,17 +1148,29 @@
           simpleDiv.style.display = 'block';
           complexDiv.style.display = 'none';
           modalContent.style.maxWidth = '400px';
-          // Update Simple Total
-          const total = calculateTotalWithFee('BAR'); // Standard Bar
-          document.getElementById('finalize-total-simple').innerText = total.toFixed(2).replace('.', ',') + ' €';
+          // Fix: Punkt 2 - Betrag im Einfachen Modus anzeigen
+          document.getElementById('finalize-total-simple').innerText = calculateTotalWithFee('BAR').toFixed(2).replace('.', ',') + ' €';
       } else {
           simpleDiv.style.display = 'none';
           complexDiv.style.display = 'block';
           modalContent.style.maxWidth = '450px';
           setPaymentMethod('BAR');
       }
-      
       window.updateVisibility(); 
+    }
+
+    // FIX: Punkt 8 - Bestätigung für Kartengebühr im Einfachen Modus
+    window.checkSimpleCardPay = function() {
+        let total = totalBrutto;
+        if(userSettings.cardFee && userSettings.cardFeeRate > 0) {
+            const fee = total * (userSettings.cardFeeRate / 100);
+            const newTotal = total + fee;
+            if(confirm(`Kartengebühr (${userSettings.cardFeeRate}%) hinzufügen?\n\nAlter Betrag: ${total.toFixed(2)}€\nGebühr: ${fee.toFixed(2)}€\n\nNEU: ${newTotal.toFixed(2)}€`)) {
+                window.handleFinalizeAction('KARTE', 'none');
+            }
+        } else {
+            window.handleFinalizeAction('KARTE', 'none');
+        }
     }
 
     window.setPaymentMethod = function(method){
@@ -1190,10 +1199,6 @@
     
     function calculateTotalWithFee(method) {
         let t = totalBrutto;
-        // Gebühr nur wenn Karte UND complex mode (im simple mode ist der betrag fix)
-        // ODER Simple Mode + Karte + Gebühr aktiv? 
-        // User wollte "einfach klicken", daher im Simple Mode meist keine Gebühr anzeigen um Verwirrung zu vermeiden,
-        // oder automatisch draufrechnen. Hier: Draufrechnen wenn Setting an.
         if(method === 'KARTE' && userSettings.cardFee && userSettings.cardFeeRate > 0) {
             t += totalBrutto * (userSettings.cardFeeRate / 100);
         }
@@ -1229,7 +1234,6 @@
     }
 
     window.handleFinalizeAction = async function(method, receiptType){
-        // Wenn Simple Mode, ist "Gegeben" = "Total"
         const isSimple = userSettings.simplePayment;
         const finalTotal = calculateTotalWithFee(method);
         const given = (method === 'BAR' && !isSimple) ? parseFloat(cashReceivedInput)/100 : finalTotal;
@@ -1240,15 +1244,16 @@
             const items = [...currentBestellung];
             if(fee > 0) items.push({ id:'FEE', name:`Kartengebühr`, price:fee, quantity:1, totalBrutto:fee, taxRate:0, isFee:true });
             
+            // FIX: Bon-Nummer hochzählen
+            const nextReceiptId = (userSettings.receiptCounter || 0) + 1;
+            
             const batch = writeBatch(db);
-            // Stock Update
             if(userSettings.stock) {
                 currentBestellung.forEach(i => {
                    if(products[i.id]) batch.update(doc(productsCollectionRef(currentUser.uid), i.id), { stock: products[i.id].stock });
                 });
             }
             
-            // Transaction
             const tData = {
                 items: items,
                 totalBrutto: finalTotal,
@@ -1256,20 +1261,25 @@
                 paymentMethod: method,
                 status: 'completed',
                 received: given,
-                change: given - finalTotal
+                change: given - finalTotal,
+                receiptId: nextReceiptId
             };
             batch.set(doc(transactionsCollectionRef(currentUser.uid)), tData);
             
-            // Balance
             if(method === 'BAR') {
                 const newBal = cashBoxBalance + finalTotal;
-                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal });
+                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal, receiptCounter: nextReceiptId });
                 cashBoxBalance = newBal;
+            } else {
+                batch.update(settingsDocRef(currentUser.uid), { receiptCounter: nextReceiptId });
             }
+            
+            userSettings.receiptCounter = nextReceiptId;
             
             await batch.commit();
             
-            if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType);
+            // FIX: Drucken OHNE Timeout
+            if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType, nextReceiptId);
             
             currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null);
             closeModal('finalize-modal'); 
@@ -1313,6 +1323,14 @@
         document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
     }
     
+    // FIX: Report Button Funktion
+    window.openReportModal = function(){
+        window.setReportDateToday();
+        document.getElementById('report-modal').style.display='flex';
+        window.runDailyReport();
+    }
+    window.openReportModalWithPin = function(){ window.openPinModal('Tagesbericht', window.openReportModal); }
+    
     window.runDailyReport = async function() {
         const dateStr = document.getElementById('report-date').value;
         if(!dateStr) return;
@@ -1353,7 +1371,7 @@
                             if(feeItem) fee += feeItem.totalBrutto;
                         }
                         
-                        txt += `${time} | ${val.toFixed(2)}€ (${t.paymentMethod})\n`;
+                        txt += `${time} | #${t.receiptId || '-'} | ${val.toFixed(2)}€ (${t.paymentMethod})\n`;
                     } else if (t.status === 'cancelled') {
                         txt += `${time} | STORNIERT | ${(t.totalBrutto||0).toFixed(2)}€\n`;
                     }
@@ -1384,13 +1402,35 @@
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
-    // --- DRUCK ---
-    window.printReceipt = function(items, total, type){
+    // --- DRUCK (FIX: MwSt und Zähler) ---
+    window.printReceipt = function(items, total, type, receiptId){
        const container = document.getElementById('print-receipt-container');
        const time = new Date().toLocaleString('de-DE');
        const company = userSettings.companyName || 'Kasse';
        const addr = userSettings.address || '';
        const taxId = userSettings.taxId || '';
+       
+       // FIX: MwSt Berechnung Gruppiert
+       let taxGroups = {};
+       items.forEach(item => {
+           if(item.isFee) return; 
+           let rate = item.taxRate !== undefined ? item.taxRate : 19;
+           let key = rate.toString();
+           if(!taxGroups[key]) taxGroups[key] = { gross: 0, net: 0, tax: 0 };
+           
+           let itemTotal = item.totalBrutto;
+           let itemNet = itemTotal / (1 + (rate/100));
+           let itemTax = itemTotal - itemNet;
+           
+           taxGroups[key].gross += itemTotal;
+           taxGroups[key].net += itemNet;
+           taxGroups[key].tax += itemTax;
+       });
+
+       let taxHtml = '';
+       for(const [rate, data] of Object.entries(taxGroups)) {
+           taxHtml += `<div class="line" style="font-size:10px;"><span>MwSt ${rate}% (Netto ${data.net.toFixed(2)}):</span><span>${data.tax.toFixed(2)}</span></div>`;
+       }
        
        let html = `
          <div class="receipt-print">
@@ -1399,7 +1439,7 @@
            ${taxId ? `<div class="center">St-Nr: ${taxId}</div>` : ''}
            
            <div class="separator"></div>
-           <div class="center bold">QUITTUNG</div>
+           <div class="center bold">BON NR. #${receiptId}</div>
            <div class="separator"></div>
            
            ${items.map(i => `
@@ -1415,9 +1455,9 @@
              <span>${total.toFixed(2).replace('.', ',')} €</span>
            </div>
            <div class="separator"></div>
-           
+           ${taxHtml}
            <div class="center" style="margin-top:5px; font-size:10px;">${time}</div>
-           <div class="center" style="font-size:10px;">Vielen Dank für Ihren Einkauf!</div>
+           <div class="center" style="font-size:10px;">Vielen Dank!</div>
          </div>
        `;
        
