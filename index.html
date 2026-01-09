@@ -1759,12 +1759,30 @@ window.updateAppView = function(view) {
        window.print();
     }
     
-    // --- STARTUP ---
+   // --- STARTUP ---
     document.addEventListener('DOMContentLoaded', () => {
-        window.updateAppView('login');
-        document.getElementById('login-form').addEventListener('submit', (e)=>{ e.preventDefault(); window.handleLoginSubmit(); });
-    });
+        // 1. Zuerst zum Lock-Screen (PIN-Eingabe) oder Login-Screen
+        // Je nachdem, was dein HTML als erstes zeigen soll:
+        if(document.getElementById('lock-screen')) {
+            window.updateAppView('lock');
+        } else {
+            window.updateAppView('login');
+        }
 
+        // 2. Den Login-Button direkt über seine ID ansprechen
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Rufe die Login-Funktion auf
+                if (typeof handleLoginSubmit === 'function') {
+                    handleLoginSubmit();
+                }
+            });
+        } else {
+            console.error("Login-Button mit ID 'login-btn' nicht gefunden!");
+        }
+    });
   </script>
 </body>
 </html>
