@@ -1763,28 +1763,24 @@ window.updateAppView = function(view) {
     
   // --- STARTUP ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Kurze Verzögerung, damit Firebase Zeit hat, den Login-Status zu prüfen
-        setTimeout(() => {
-            const loginBtn = document.getElementById('login-btn');
-            
-            // Nur binden, wenn der Button auch wirklich da ist
-            if (loginBtn) {
-                loginBtn.onclick = (e) => {
-                    e.preventDefault();
-                    if (typeof handleLoginSubmit === 'function') {
-                        handleLoginSubmit();
-                    }
-                };
-            }
+        // Wir erzwingen NICHT window.updateAppView('login'), 
+        // da Firebase (onAuthStateChanged) das oben bereits automatisch steuert.
 
-            // Prüfen, ob wir zur Kasse geschickt wurden
-            // Wenn der Bildschirm noch grau ist, erzwingen wir das Ausblenden des Overlays
-            const overlay = document.getElementById('async-loading-overlay');
-            if (overlay && (document.getElementById('kasse-screen').style.display === 'block' || 
-                            document.getElementById('lock-screen').style.display === 'block')) {
-                overlay.style.display = 'none';
-            }
-        }, 1000); 
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            loginBtn.onclick = (e) => {
+                e.preventDefault();
+                console.log("Login-Button geklickt!");
+                // Prüfen, ob die Funktion existiert und aufrufen
+                if (typeof handleLoginSubmit === 'function') {
+                    handleLoginSubmit();
+                } else {
+                    console.error("Funktion handleLoginSubmit nicht gefunden!");
+                }
+            };
+        } else {
+            console.warn("Login-Button 'login-btn' nicht gefunden. Evtl. bereits eingeloggt?");
+        }
     });
     </script>
 </body>
