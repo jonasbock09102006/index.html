@@ -79,11 +79,17 @@
       <p class="text-slate-500 mb-6" id="lock-msg">Bitte PIN eingeben</p>
       <div class="flex gap-2 mb-4">
           <div id="lock-dots" class="text-4xl tracking-widest font-bold text-slate-800"></div>
-
-<div id="pos-screen" style="display:none;">
+<div id="kasse-screen" style="display:none;" class="p-4">
+    <div id="pos-interface">
+        <h2 class="text-2xl font-bold mb-4">Kasse aktiv</h2>
+        <div id="products-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </div>
+</div>
 
-<div id="admin-screen" style="display:none;">
+<div id="admin-screen" style="display:none;" class="p-4">
+    <h2 class="text-2xl font-bold mb-4">Verwaltung & Berichte</h2>
+    <div id="admin-content"></div>
+</div>
     </div>
       <div class="grid grid-cols-3 gap-3 w-64">
           <button onclick="handleLockInput('7')" class="numpad-btn bg-white border">7</button>
