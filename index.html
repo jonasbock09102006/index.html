@@ -1761,28 +1761,26 @@ window.updateAppView = function(view) {
     
    // --- STARTUP ---
     document.addEventListener('DOMContentLoaded', () => {
-        // 1. Zuerst zum Lock-Screen (PIN-Eingabe) oder Login-Screen
-        // Je nachdem, was dein HTML als erstes zeigen soll:
-        if(document.getElementById('lock-screen')) {
-            window.updateAppView('lock');
-        } else {
-            window.updateAppView('login');
-        }
+        // Verzögerung um sicherzugehen, dass Firebase & DOM bereit sind
+        setTimeout(() => {
+            const loginBtn = document.getElementById('login-btn');
+            
+            if (loginBtn) {
+                loginBtn.onclick = (e) => {
+                    e.preventDefault();
+                    if (typeof handleLoginSubmit === 'function') {
+                        handleLoginSubmit();
+                    }
+                };
+                console.log("Login-Button erfolgreich verknüpft.");
+            } else {
+                // Wenn wir schon in der Kasse sind, brauchen wir den Button nicht
+                console.warn("Login-Button nicht gefunden - evtl. bereits eingeloggt?");
+            }
 
-        // 2. Den Login-Button direkt über seine ID ansprechen
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            loginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                // Rufe die Login-Funktion auf
-                if (typeof handleLoginSubmit === 'function') {
-                    handleLoginSubmit();
-                }
-            });
-        } else {
-            console.error("Login-Button mit ID 'login-btn' nicht gefunden!");
-        }
+            // Start-Ansicht festlegen
+            if(document.getElementById('lock-screen')) {
+                window.updateAppView('lock');
+            }
+        }, 500); 
     });
-  </script>
-</body>
-</html>
