@@ -646,19 +646,28 @@
     const transactionsCollectionRef = (uid) => collection(db, `users/${uid}/transactions`);
     const settingsDocRef = (uid) => doc(db, `users/${uid}/settings/config`);
 
-    // --- AUTH OBSERVER ---
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        window.showLoading(true);
-        window.loadSettings().then(() => {
-            window.lockScreen(); // Always lock on load
-        });
-      } else {
-        currentUser = null;
+    firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        // User ist bei Firebase eingeloggt
+        console.log("Firebase: Eingeloggt als", user.email);
+        
+        // JETZT ENTSCHEIDEN: Kasse oder PIN?
+        // Wenn die Kasse "gesperrt" ist (Standard beim Start), geh zum Lock-Screen
+        if (typeof isAppLocked !== 'undefined' && isAppLocked) {
+            window.updateAppView('lock');
+        } else {
+            window.updateAppView('kasse');
+        }
+    } else {
+        // User ist nicht eingeloggt -> Immer zum Login
+        console.log("Firebase: Nicht eingeloggt.");
         window.updateAppView('login');
-      }
-    });
+    }
+    
+    // WICHTIG: Overlay weg, sobald die Entscheidung gefallen ist
+    const overlay = document.getElementById('async-loading-overlay');
+    if (overlay) overlay.style.display = 'none';
+});
 
     // --- OFFLINE LOGIC ---
     window.addEventListener('online', () => { isOffline = false; updateOfflineUI(); syncOfflineTransactions(); });
