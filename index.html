@@ -41,7 +41,7 @@
     #offline-banner { display: none; background: #dc2626; color: white; text-align: center; font-size: 0.8rem; font-weight: bold; padding: 2px; }
 
     /* Lock Screen */
-    #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+    #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
 
     /* Customer Display Mode */
     #customer-display-view { display: none; height: 100dvh; background: #1e293b; color: white; padding: 2rem; flex-direction: column; }
@@ -77,20 +77,11 @@
   <div id="lock-screen">
       <h1 class="text-3xl font-bold mb-2 text-slate-800">Kasse gesperrt</h1>
       <p class="text-slate-500 mb-6" id="lock-msg">Bitte PIN eingeben</p>
-      <div class="flex gap-2 mb-4">
-          <div id="lock-dots" class="text-4xl tracking-widest font-bold text-slate-800"></div>
-<div id="kasse-screen" style="display:none;" class="p-4">
-    <div id="pos-interface">
-        <h2 class="text-2xl font-bold mb-4">Kasse aktiv</h2>
-        <div id="products-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    </div>
-</div>
-
-<div id="admin-screen" style="display:none;" class="p-4">
-    <h2 class="text-2xl font-bold mb-4">Verwaltung & Berichte</h2>
-    <div id="admin-content"></div>
-</div>
-    </div>
+      
+      <div class="mb-8 h-8 flex items-center justify-center">
+          <div id="lock-dots" class="text-4xl tracking-widest font-bold text-slate-800 h-8"></div>
+      </div>
+      
       <div class="grid grid-cols-3 gap-3 w-64">
           <button onclick="handleLockInput('7')" class="numpad-btn bg-white border">7</button>
           <button onclick="handleLockInput('8')" class="numpad-btn bg-white border">8</button>
@@ -106,6 +97,90 @@
           <button onclick="handleLockInput('enter')" class="numpad-btn bg-green-600 text-white">→</button>
       </div>
       <button onclick="window.location.reload()" class="mt-8 text-sm text-slate-400">Neu laden</button>
+  </div>
+
+  <div id="kasse-screen" style="display:none;" class="h-full">
+      <div id="kasse-content" class="grid md:grid-cols-3 gap-6 h-full max-w-7xl mx-auto py-2 md:py-6 px-2">
+        
+        <div class="md:col-span-2 flex flex-col space-y-4 h-full">
+          <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
+            <div class="flex-grow overflow-hidden">
+              <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
+            </div>
+            <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
+                <span class="mr-1">🔒</span> Sperren
+            </button>
+            <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
+                Kunden-Screen
+            </button>
+            <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
+          </div>
+          
+          <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
+            <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
+          </div>
+
+          <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
+            <div class="col-span-1 flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
+                    <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
+                </div>
+                <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
+            </div>
+            <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
+              <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
+              <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
+              <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
+              <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
+              <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
+              <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
+              <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
+              <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
+              <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
+              <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
+              <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
+              <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
+            </div>
+          </div>
+        </div>
+
+        <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
+          <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
+            <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
+                <span>Aktueller Bon</span>
+                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
+            </h2>
+            <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
+              <div class="flex flex-col items-center justify-center h-40 text-slate-300">
+                  <p class="text-sm font-medium">Warenkorb leer</p>
+              </div>
+            </div>
+            <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
+              <div class="flex justify-between items-end mb-4">
+                  <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
+                  <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
+              </div>
+              <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
+            </div>
+          </div>
+
+          <div class="glass-panel p-4 space-y-3">
+            <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
+                <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
+            </div>
+          </div>
+        </div>
+      </div>
+  </div>
+
+  <div id="admin-screen" style="display:none;" class="p-4">
+      <h2 class="text-2xl font-bold mb-4">Verwaltung & Berichte</h2>
+      <div id="admin-content"></div>
+      <button onclick="window.updateAppView('kasse')" class="bg-gray-200 p-2 rounded">Zurück zur Kasse</button>
   </div>
 
   <div id="customer-display-view">
@@ -172,7 +247,7 @@
       <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h1 class="text-2xl font-bold text-slate-800 text-center mb-6">Anmelden</h1>
-          <form id="login-form">
+          <form id="login-form" onsubmit="event.preventDefault(); window.handleLoginSubmit();">
             <div class="mb-4">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
               <input type="email" id="login-email" required class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
@@ -193,7 +268,7 @@
       <div id="registration-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Konto erstellen</h2>
-          <form id="register-form">
+          <form id="register-form" onsubmit="event.preventDefault(); window.handleRegisterSubmit();">
             <div class="mb-4">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
               <input type="email" id="register-email" required class="w-full p-3 border border-slate-300 rounded-xl">
@@ -240,6 +315,28 @@
           </form>
           <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full text-sm text-slate-500 font-bold">Zurück</button>
         </div>
+      </div>
+      
+      <div id="pin-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[4000] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs flex flex-col items-center">
+              <h3 id="pin-modal-title" class="text-lg font-bold mb-4 text-center">Admin Code erforderlich</h3>
+              <div id="pin-input-display" class="w-full h-12 bg-slate-100 rounded-xl flex items-center justify-center text-3xl font-black tracking-widest mb-6 border border-slate-300"></div>
+              <div class="grid grid-cols-3 gap-3 w-full">
+                  <button onclick="handlePinInput('7')" class="numpad-btn bg-white border">7</button>
+                  <button onclick="handlePinInput('8')" class="numpad-btn bg-white border">8</button>
+                  <button onclick="handlePinInput('9')" class="numpad-btn bg-white border">9</button>
+                  <button onclick="handlePinInput('4')" class="numpad-btn bg-white border">4</button>
+                  <button onclick="handlePinInput('5')" class="numpad-btn bg-white border">5</button>
+                  <button onclick="handlePinInput('6')" class="numpad-btn bg-white border">6</button>
+                  <button onclick="handlePinInput('1')" class="numpad-btn bg-white border">1</button>
+                  <button onclick="handlePinInput('2')" class="numpad-btn bg-white border">2</button>
+                  <button onclick="handlePinInput('3')" class="numpad-btn bg-white border">3</button>
+                  <button onclick="handlePinInput('clear')" class="numpad-btn bg-red-100 text-red-600">C</button>
+                  <button onclick="handlePinInput('0')" class="numpad-btn bg-white border">0</button>
+                  <button onclick="handlePinInput('enter')" class="numpad-btn bg-blue-600 text-white">→</button>
+              </div>
+              <button onclick="closeModal('pin-modal')" class="mt-4 text-slate-400 font-bold">Abbrechen</button>
+          </div>
       </div>
 
       <div id="product-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -502,81 +599,7 @@
             </div>
         </div>
       </div>
-
-      <div id="kasse-content" style="display:none;" class="grid md:grid-cols-3 gap-6 h-full max-w-7xl mx-auto py-2 md:py-6 px-2">
-        <div class="md:col-span-2 flex flex-col space-y-4 h-full">
-          <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
-            <div class="flex-grow overflow-hidden">
-              <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
-            </div>
-            <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
-                <span class="mr-1">🔒</span> Sperren
-            </button>
-            <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
-                Kunden-Screen
-            </button>
-            <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
-          </div>
-          
-          <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
-            <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
-          </div>
-
-          <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
-            <div class="col-span-1 flex flex-col justify-between">
-                <div>
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
-                    <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
-                </div>
-                <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
-            </div>
-            <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
-              <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
-              <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
-              <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
-              <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
-              <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
-              <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
-              <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
-              <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
-              <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
-              <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
-              <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
-              <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
-            </div>
-          </div>
-        </div>
-
-        <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
-          <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
-            <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
-                <span>Aktueller Bon</span>
-                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
-            </h2>
-            <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
-              <div class="flex flex-col items-center justify-center h-40 text-slate-300">
-                  <p class="text-sm font-medium">Warenkorb leer</p>
-              </div>
-            </div>
-            <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
-              <div class="flex justify-between items-end mb-4">
-                  <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
-                  <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
-              </div>
-              <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
-            </div>
-          </div>
-
-          <div class="glass-panel p-4 space-y-3">
-            <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
-                <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      
       <div id="print-receipt-container"></div> 
   </div>
 
@@ -650,11 +673,13 @@
 onAuthStateChanged(auth, (user) => {
     if (user) {
         console.log("Eingeloggt als:", user.email);
+        currentUser = user;
         // Wir laden die Einstellungen und gehen dann zur Kasse
         loadSettings();
-        window.updateAppView('kasse'); 
+        // window.updateAppView('kasse'); // Wird in loadSettings aufgerufen
     } else {
         console.log("Nicht eingeloggt");
+        currentUser = null;
         window.updateAppView('login');
     }
     
@@ -778,27 +803,30 @@ window.updateAppView = function(view) {
     const overlay = document.getElementById('async-loading-overlay');
     if (overlay) overlay.style.display = 'none';
 
-    // Hier müssen EXAKT die Namen stehen, die vor dem "-screen" in deiner HTML-ID kommen
-    // Wenn dein HTML <div id="lock-screen"> hat, muss hier 'lock' stehen.
-    const screens = ['lock', 'pos', 'admin', 'login', 'kasse']; 
-
+    // Alle Screens verstecken
+    const screens = ['lock', 'kasse', 'admin', 'login', 'pos-app']; 
     screens.forEach(s => {
+        // Sonderfall für pos-app (Container für Modals)
+        if(s === 'pos-app') { 
+            // document.getElementById('pos-app-container').style.display = 'block'; 
+            return;
+        }
+        
         const el = document.getElementById(s + '-screen');
         if (el) el.style.display = 'none';
     });
 
-    // Versuch den Ziel-Screen anzuzeigen
-    const targetId = view + '-screen';
-    const target = document.getElementById(targetId);
-    
-    if (target) {
-        target.style.display = 'block';
+    // Ziel-Screen anzeigen
+    if(view === 'login') {
+         // Login ist ein Modal, kein Screen
+         document.getElementById('login-modal').style.display = 'flex';
     } else {
-        // Falls 'login' aufgerufen wird, dein HTML aber 'lock' heißt:
-        if(view === 'login' && document.getElementById('lock-screen')) {
-            document.getElementById('lock-screen').style.display = 'block';
-        } else {
-            console.error("KRITISCH: Das Element " + targetId + " fehlt im HTML!");
+        document.getElementById('login-modal').style.display = 'none';
+        const targetId = view + '-screen';
+        const target = document.getElementById(targetId);
+        if (target) {
+            target.style.display = 'block';
+            // Wenn Kasse geladen wird und gesperrt sein soll (noch nicht implementiert, aber als Vorbereitung)
         }
     }
 };
@@ -806,6 +834,7 @@ window.updateAppView = function(view) {
     window.openLoginModal = function(){ window.updateAppView('login'); }
     window.openRegistrationModal = function(){ closeModal('login-modal'); document.getElementById('registration-modal').style.display='flex'; }
     window.openForgotPasswordModal = function(){ closeModal('login-modal'); document.getElementById('forgot-password-modal').style.display='flex'; }
+    window.openAGB = function() { document.getElementById('agb-modal').style.display = 'flex'; }
     
     // --- PRODUCT MANAGEMENT ---
     window.openProductModal = function(){
@@ -919,7 +948,10 @@ window.updateAppView = function(view) {
       const password = document.getElementById('register-password').value;
       window.showLoading(true);
       createUserWithEmailAndPassword(auth, email, password)
-        .then(() => window.showToast('Registrierung erfolgreich!', 'success'))
+        .then(() => {
+             window.showToast('Registrierung erfolgreich!', 'success');
+             closeModal('registration-modal');
+        })
         .catch((e) => window.showToast(e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
@@ -936,7 +968,10 @@ window.updateAppView = function(view) {
       const password = document.getElementById('login-password').value;
       window.showLoading(true);
       signInWithEmailAndPassword(auth, email, password)
-        .catch((e) => window.showToast('Login fehlgeschlagen', 'error'))
+        .then(() => {
+            // Success logic is handled by onAuthStateChanged
+        })
+        .catch((e) => window.showToast('Login fehlgeschlagen: ' + e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
     window.handleLogout = function(){ signOut(auth).then(() => window.location.reload()); }
@@ -964,7 +999,7 @@ window.updateAppView = function(view) {
              window.showLoading(false);
              return; 
           }
-          window.loadProductsAndCategories();
+          await window.loadProductsAndCategories();
           window.updateAppView('kasse');
           window.showLoading(false);
 
@@ -1760,28 +1795,6 @@ window.updateAppView = function(view) {
        container.innerHTML = html;
        window.print();
     }
-    
-  // --- STARTUP ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Wir erzwingen NICHT window.updateAppView('login'), 
-        // da Firebase (onAuthStateChanged) das oben bereits automatisch steuert.
-
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            loginBtn.onclick = (e) => {
-                e.preventDefault();
-                console.log("Login-Button geklickt!");
-                // Prüfen, ob die Funktion existiert und aufrufen
-                if (typeof handleLoginSubmit === 'function') {
-                    handleLoginSubmit();
-                } else {
-                    console.error("Funktion handleLoginSubmit nicht gefunden!");
-                }
-            };
-        } else {
-            console.warn("Login-Button 'login-btn' nicht gefunden. Evtl. bereits eingeloggt?");
-        }
-    });
-    </script>
+  </script>
 </body>
 </html>
