@@ -6,6 +6,8 @@
   <title>Kassensystem Enterprise</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden; height: 100dvh; width: 100vw; }
     
@@ -44,8 +46,12 @@
     #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
 
     /* Customer Display Mode */
-    #customer-display-view { display: none; height: 100dvh; background: #1e293b; color: white; padding: 2rem; flex-direction: column; }
+    #customer-display-view { display: none; height: 100dvh; background: #1e293b; color: white; padding: 2rem; flex-direction: column; width: 100vw; position: fixed; top:0; left:0; z-index: 9000; }
     
+    /* Receipt Viewer Mode (Public) */
+    #public-receipt-view { display: none; height: 100dvh; background: #e2e8f0; width: 100vw; position: fixed; top:0; left:0; z-index: 9000; overflow-y: auto; padding: 20px; align-items: flex-start; justify-content: center; }
+    .paper-receipt { background: white; width: 100%; max-width: 380px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); font-family: 'Courier New', Courier, monospace; margin-bottom: 20px; }
+
     #print-receipt-container { display: none; visibility: hidden; } 
     @media print {
       @page { size: auto; margin: 0mm; }
@@ -184,7 +190,7 @@
   </div>
 
   <div id="customer-display-view">
-      <div class="flex-grow flex items-center justify-center">
+      <div class="flex-grow flex items-center justify-center h-full flex-col">
           <div id="cd-welcome" class="text-center">
               <h1 class="text-6xl font-bold mb-4">Willkommen</h1>
               <p class="text-2xl text-slate-400">Wir freuen uns auf Sie!</p>
@@ -194,10 +200,17 @@
               <div id="cd-items" class="text-xl space-y-4 max-h-[60vh] overflow-y-auto"></div>
           </div>
       </div>
-      <div class="border-t border-slate-700 pt-6 flex justify-between items-end">
+      <div class="border-t border-slate-700 pt-6 flex justify-between items-end w-full pb-10 px-10">
           <div class="text-2xl text-slate-400">Gesamtsumme</div>
           <div id="cd-total" class="text-8xl font-black text-green-400">0,00 €</div>
       </div>
+  </div>
+
+  <div id="public-receipt-view" class="flex flex-col">
+      <div class="paper-receipt" id="receipt-paper-content">
+          <div id="receipt-viewer-body">Lade Beleg...</div>
+      </div>
+      <button onclick="window.downloadPDF()" class="mb-10 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-xl">Als PDF herunterladen</button>
   </div>
 
   <div id="pos-app-container">
@@ -238,8 +251,8 @@
       <div id="qr-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[3000] flex items-center justify-center p-4 backdrop-blur-sm">
           <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
               <h2 class="text-xl font-bold mb-4">Digitaler Beleg</h2>
-              <div id="qrcode" class="mb-6"></div>
-              <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code, um den Beleg zu speichern.</p>
+              <div id="qrcode" class="mb-6 bg-white p-2"></div>
+              <p class="text-xs text-slate-500 text-center mb-4">Kunde kann diesen Code scannen, um den Beleg als PDF zu sehen.</p>
               <button onclick="closeModal('qr-modal')" class="w-full p-3 bg-slate-200 font-bold rounded-xl">Schließen</button>
           </div>
       </div>
@@ -447,7 +460,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <button onclick="handleFinalizeAction('BAR','none')" disabled id="btn-cash-none" class="py-3 rounded-xl font-bold text-white bg-slate-400 shadow transition">Ohne Beleg</button>
                     <button onclick="handleFinalizeAction('BAR','standard')" disabled id="btn-cash-standard" class="mod-receipts py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow transition">Bon Drucken</button>
-                    <button onclick="window.showQRReceipt()" disabled id="btn-cash-qr" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR)</button>
+                    <button onclick="handleFinalizeAction('BAR','qr')" disabled id="btn-cash-qr" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR)</button>
                     <button onclick="handleFinalizeAction('BAR','bewirtung')" disabled id="btn-cash-bewirtung" class="mod-receipts col-span-2 py-2 rounded-xl font-bold text-white bg-slate-800 hover:bg-slate-900 shadow text-sm">Bewirtungsbeleg</button>
                   </div>
                 </div>
@@ -455,7 +468,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <button onclick="handleFinalizeAction('KARTE','none')" class="py-3 rounded-xl font-bold text-white bg-slate-400 hover:bg-slate-500 shadow transition">Ohne Beleg</button>
                     <button onclick="handleFinalizeAction('KARTE','standard')" class="mod-receipts py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow transition">Bon Drucken</button>
-                    <button onclick="window.showQRReceipt()" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR)</button>
+                    <button onclick="handleFinalizeAction('KARTE','qr')" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR)</button>
                     <button onclick="handleFinalizeAction('KARTE','bewirtung')" class="mod-receipts col-span-2 py-2 rounded-xl font-bold text-white bg-slate-800 hover:bg-slate-900 shadow text-sm">Bewirtungsbeleg</button>
                   </div>
                 </div>
@@ -606,7 +619,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, increment, addDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
     // --- GLOBALE ZUSTÄNDE ---
     let currentUser = null;
@@ -647,14 +660,14 @@
         simplePayment: false, employees: []
     };
 
+    // --- FIREBASE CONFIGURATION (HIER DEINE DATEN) ---
     const firebaseConfig = {
-      apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
-      authDomain: "kassensystem-85412.firebaseapp.com",
-      databaseURL: "https://kassensystem-85412-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "kassensystem-85412",
-      storageBucket: "kassensystem-85412.firebasestorage.app",
-      messagingSenderId: "916536785810",
-      appId: "1:916536785810:web:0d0319ef565af65d279f4b"
+      apiKey: "DEIN_API_KEY",
+      authDomain: "DEINE_DOMAIN.firebaseapp.com",
+      projectId: "DEIN_PROJECT_ID",
+      storageBucket: "DEIN_BUCKET.appspot.com",
+      messagingSenderId: "DEINE_ID",
+      appId: "DEINE_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -669,17 +682,41 @@
     const transactionsCollectionRef = (uid) => collection(db, `users/${uid}/transactions`);
     const settingsDocRef = (uid) => doc(db, `users/${uid}/settings/config`);
 
-// --- AUTH STATE LISTENER (Korrekt für Module) ---
+// --- AUTH STATE LISTENER (FIXED LOGIC) ---
 onAuthStateChanged(auth, (user) => {
+    // Check URL Mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+
     if (user) {
         console.log("Eingeloggt als:", user.email);
         currentUser = user;
-        // Wir laden die Einstellungen und gehen dann zur Kasse
-        loadSettings();
-        // window.updateAppView('kasse'); // Wird in loadSettings aufgerufen
+        loadSettings().then(() => {
+            // WEICHE: Je nach Modus (Link) eine andere Ansicht zeigen
+            if (mode === 'display') {
+                // Kundenscreen-Modus
+                initCustomerDisplayListener();
+                document.getElementById('customer-display-view').style.display = 'flex';
+                // Verstecke die Login/Kassen Screens
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('kasse-screen').style.display = 'none';
+            } else if (mode === 'receipt') {
+                // Digitaler Beleg Modus
+                document.getElementById('public-receipt-view').style.display = 'flex';
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('kasse-screen').style.display = 'none';
+                const receiptId = urlParams.get('id');
+                loadPublicReceipt(receiptId);
+            } else {
+                // Normaler Kassen-Modus
+                window.updateAppView('kasse');
+            }
+        });
     } else {
         console.log("Nicht eingeloggt");
         currentUser = null;
+        // Auch wenn nicht eingeloggt, Login zeigen. 
+        // Für Kundenscreen/Beleg muss man sich theoretisch auch einloggen, um Datenbank zu lesen (Firebase Rules)
         window.updateAppView('login');
     }
     
@@ -687,6 +724,7 @@ onAuthStateChanged(auth, (user) => {
     const overlay = document.getElementById('async-loading-overlay');
     if (overlay) overlay.style.display = 'none';
 });
+
     // --- OFFLINE LOGIC ---
     window.addEventListener('online', () => { isOffline = false; updateOfflineUI(); syncOfflineTransactions(); });
     window.addEventListener('offline', () => { isOffline = true; updateOfflineUI(); });
@@ -701,29 +739,24 @@ onAuthStateChanged(auth, (user) => {
         if(localTransactionQueue.length === 0) return;
         window.showToast(`Synchronisiere ${localTransactionQueue.length} Transaktionen...`, 'info');
         const batch = writeBatch(db);
-        let count = 0;
         
-        // Clone and clear local to prevent loops if error
         const queue = [...localTransactionQueue];
         localTransactionQueue = [];
         localStorage.setItem('pos_queue', '[]');
 
         for(const tData of queue) {
-            // Convert simple object back to proper date if needed, but Firestore handles string/date
             tData.timestamp = new Date(tData.timestamp); 
             const newRef = doc(transactionsCollectionRef(currentUser.uid));
             batch.set(newRef, tData);
-            count++;
         }
         try {
             await batch.commit();
             window.showToast("Synchronisation erfolgreich!", "success");
         } catch(e) {
             console.error("Sync Error", e);
-            // Restore queue on error
             localTransactionQueue = [...queue, ...localTransactionQueue];
             localStorage.setItem('pos_queue', JSON.stringify(localTransactionQueue));
-            window.showToast("Sync fehlgeschlagen - versuche es später", "error");
+            window.showToast("Sync fehlgeschlagen", "error");
         }
     }
 
@@ -797,37 +830,31 @@ onAuthStateChanged(auth, (user) => {
     }
 
 window.updateAppView = function(view) {
-    console.log("Wechsle Ansicht zu:", view);
-    
-    // Overlay ausblenden
     const overlay = document.getElementById('async-loading-overlay');
     if (overlay) overlay.style.display = 'none';
 
     // Alle Screens verstecken
-    const screens = ['lock', 'kasse', 'admin', 'login', 'pos-app']; 
+    const screens = ['lock', 'kasse', 'admin', 'login', 'pos-app', 'customer-display', 'public-receipt']; 
     screens.forEach(s => {
-        // Sonderfall für pos-app (Container für Modals)
-        if(s === 'pos-app') { 
-            // document.getElementById('pos-app-container').style.display = 'block'; 
-            return;
-        }
+        if(s === 'pos-app') return;
         
-        const el = document.getElementById(s + '-screen');
-        if (el) el.style.display = 'none';
+        // Sonderbehandlung für die speziellen Views
+        if (s === 'customer-display') document.getElementById('customer-display-view').style.display = 'none';
+        else if (s === 'public-receipt') document.getElementById('public-receipt-view').style.display = 'none';
+        else {
+            const el = document.getElementById(s + '-screen');
+            if (el) el.style.display = 'none';
+        }
     });
 
     // Ziel-Screen anzeigen
     if(view === 'login') {
-         // Login ist ein Modal, kein Screen
          document.getElementById('login-modal').style.display = 'flex';
     } else {
         document.getElementById('login-modal').style.display = 'none';
         const targetId = view + '-screen';
         const target = document.getElementById(targetId);
-        if (target) {
-            target.style.display = 'block';
-            // Wenn Kasse geladen wird und gesperrt sein soll (noch nicht implementiert, aber als Vorbereitung)
-        }
+        if (target) target.style.display = 'block';
     }
 };
 
@@ -968,13 +995,13 @@ window.updateAppView = function(view) {
       const password = document.getElementById('login-password').value;
       window.showLoading(true);
       signInWithEmailAndPassword(auth, email, password)
-        .then(() => {
-            // Success logic is handled by onAuthStateChanged
-        })
         .catch((e) => window.showToast('Login fehlgeschlagen: ' + e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
-    window.handleLogout = function(){ signOut(auth).then(() => window.location.reload()); }
+    window.handleLogout = function(){ signOut(auth).then(() => {
+        // Reload to clean URL
+        window.location.href = window.location.pathname; 
+    }); }
 
     // --- LOAD SETTINGS & EMPLOYEES ---
     window.loadSettings = async function(){
@@ -983,7 +1010,6 @@ window.updateAppView = function(view) {
         const docSnap = await getDoc(settingsDocRef(currentUser.uid));
         if (docSnap.exists()) {
           userSettings = { ...userSettings, ...docSnap.data() };
-          // Migrations-Helper für Employees
           if(!userSettings.employees) userSettings.employees = [];
           
           document.getElementById('company-name').value = userSettings.companyName || '';
@@ -996,20 +1022,14 @@ window.updateAppView = function(view) {
 
           if(!userSettings.mode) {
              document.getElementById('setup-modal').style.display = 'flex';
-             window.showLoading(false);
              return; 
           }
           await window.loadProductsAndCategories();
-          window.updateAppView('kasse');
-          window.showLoading(false);
-
         } else {
             document.getElementById('setup-modal').style.display = 'flex';
-            window.showLoading(false);
         }
       } catch(err){
         console.error(err);
-        window.showLoading(false);
       }
     }
 
@@ -1127,7 +1147,6 @@ window.updateAppView = function(view) {
       window.updatePinInputDisplay();
     }
     window.openPinModal = function(title, callback){
-      // Staff Check: If staff, block sensitive actions
       if(currentEmployee) {
           window.showToast("Zugriff verweigert (Nur Admin)", "error");
           return;
@@ -1334,7 +1353,6 @@ window.updateAppView = function(view) {
               });
           }
       }
-      // Re-Render Grid für Stock Updates
       window.renderProductGrid(null);
       window.updateReceipt();
       quantityInputString = '1'; isQtyDirty = false; window.updateQuantityDisplay();
@@ -1361,12 +1379,14 @@ window.updateAppView = function(view) {
     }
     
     window.openCustomerDisplay = function() {
+        // Link zur App mit Parameter mode=display
         const url = new URL(window.location.href);
         url.searchParams.set('mode', 'display');
         window.open(url.toString(), '_blank', 'width=800,height=600');
     }
     
     function initCustomerDisplayListener() {
+        // Init listener for broadcast
         customerChannel.onmessage = (event) => {
             const data = event.data;
             const itemsContainer = document.getElementById('cd-items');
@@ -1519,22 +1539,75 @@ window.updateAppView = function(view) {
         updateCashChangeDisplay(); 
     }
 
-    // --- DIGITAL RECEIPT (QR) ---
-    window.showQRReceipt = function() {
-        const modal = document.getElementById('qr-modal');
-        const container = document.getElementById('qrcode');
-        container.innerHTML = "";
-        modal.style.display = 'flex';
+    // --- DIGITAL RECEIPT (QR) FIX ---
+    window.showQRReceipt = async function() {
+        // QR Code muss ein Link sein, kein Text!
+        // Wir nutzen die aktuelle ID der Transaktion
+        // Aber hier in der Vorschau haben wir noch keine ID.
+        // Wir müssen die Transaktion erst speichern, dann ID holen.
+        handleFinalizeAction(cashPaymentMethod, 'qr-only');
+    }
+    
+    // --- LOAD PUBLIC RECEIPT (VIEWER) ---
+    async function loadPublicReceipt(receiptId) {
+        // Hole Transaktion aus Firestore
+        if(!receiptId) return;
+        const q = query(transactionsCollectionRef(currentUser.uid), where('receiptId', '==', parseInt(receiptId)));
+        const snap = await getDocs(q);
         
-        // Simple Receipt Data Summary for QR
-        const date = new Date().toLocaleString();
-        let txt = `Beleg ${userSettings.companyName}\n${date}\nSumme: ${calculateTotalWithFee(cashPaymentMethod).toFixed(2)} EUR\n\n`;
-        currentBestellung.forEach(i => txt += `${i.quantity}x ${i.name} ${i.totalBrutto.toFixed(2)}\n`);
+        const container = document.getElementById('receipt-viewer-body');
+        if(snap.empty) {
+            container.innerText = "Beleg nicht gefunden.";
+            return;
+        }
         
-        new QRCode(container, {
-            text: txt,
-            width: 200,
-            height: 200
+        const data = snap.docs[0].data();
+        // Render HTML for PDF look
+        let html = `
+            <div style="text-align:center; font-weight:bold; margin-bottom:10px;">${userSettings.companyName}</div>
+            <div style="text-align:center; font-size:12px; margin-bottom:10px;">${userSettings.address}</div>
+            <div style="border-bottom:1px dashed #000; margin:10px 0;"></div>
+            <div style="text-align:center; font-weight:bold;">Beleg #${data.receiptId}</div>
+            <div style="text-align:center; font-size:12px;">${new Date(data.timestamp.seconds*1000).toLocaleString()}</div>
+            <div style="border-bottom:1px dashed #000; margin:10px 0;"></div>
+        `;
+        
+        data.items.forEach(item => {
+            html += `
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                <span>${item.quantity}x ${item.name}</span>
+                <span>${item.totalBrutto.toFixed(2)}</span>
+            </div>`;
+        });
+        
+        html += `
+            <div style="border-bottom:1px dashed #000; margin:10px 0;"></div>
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px;">
+                <span>SUMME</span>
+                <span>${data.totalBrutto.toFixed(2)} EUR</span>
+            </div>
+            <div style="text-align:center; font-size:10px; margin-top:20px;">Vielen Dank für Ihren Einkauf!</div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    window.downloadPDF = function() {
+        const element = document.getElementById('receipt-paper-content');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            unit: 'mm',
+            format: [80, 200] // Kassenbon Format ungefähr
+        });
+        
+        doc.html(element, {
+            callback: function(doc) {
+                doc.save('beleg.pdf');
+            },
+            x: 0,
+            y: 0,
+            width: 80,
+            windowWidth: 380 
         });
     }
 
@@ -1555,7 +1628,7 @@ window.updateAppView = function(view) {
             const tData = {
                 items: items,
                 totalBrutto: finalTotal,
-                timestamp: new Date().toISOString(),
+                timestamp: new Date(),
                 paymentMethod: method,
                 status: 'completed',
                 received: given,
@@ -1563,42 +1636,41 @@ window.updateAppView = function(view) {
                 receiptId: nextReceiptId
             };
 
-            // OFFLINE HANDLING
-            if(isOffline) {
-                localTransactionQueue.push(tData);
-                localStorage.setItem('pos_queue', JSON.stringify(localTransactionQueue));
-                
-                // Offline Local Logic
-                if(userSettings.stock) {
-                    currentBestellung.forEach(i => { if(products[i.id]) products[i.id].stock -= 0; }); // Already reduced locally in state
-                }
-                if(method === 'BAR') cashBoxBalance += finalTotal;
-                
-                userSettings.receiptCounter = nextReceiptId;
-                // Save settings locally to persist counter/cash if app reloads offline
-                localStorage.setItem('pos_settings_offline', JSON.stringify(userSettings));
-                
-                window.showToast("Offline gespeichert", "info");
+            // Speichern
+            const batch = writeBatch(db);
+            // Neue ID generieren
+            const newRef = doc(transactionsCollectionRef(currentUser.uid));
+            batch.set(newRef, tData);
+            
+            if(userSettings.stock) {
+                currentBestellung.forEach(i => {
+                   if(products[i.id]) batch.update(doc(productsCollectionRef(currentUser.uid), i.id), { stock: products[i.id].stock });
+                });
+            }
+            if(method === 'BAR') {
+                const newBal = cashBoxBalance + finalTotal;
+                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal, receiptCounter: nextReceiptId });
+                cashBoxBalance = newBal;
             } else {
-                // ONLINE LOGIC
-                const batch = writeBatch(db);
-                if(userSettings.stock) {
-                    currentBestellung.forEach(i => {
-                       if(products[i.id]) batch.update(doc(productsCollectionRef(currentUser.uid), i.id), { stock: products[i.id].stock });
-                    });
-                }
-                // Convert string date back to object for Firestore if needed, or keep ISO
-                batch.set(doc(transactionsCollectionRef(currentUser.uid)), { ...tData, timestamp: new Date() });
-                
-                if(method === 'BAR') {
-                    const newBal = cashBoxBalance + finalTotal;
-                    batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal, receiptCounter: nextReceiptId });
-                    cashBoxBalance = newBal;
-                } else {
-                    batch.update(settingsDocRef(currentUser.uid), { receiptCounter: nextReceiptId });
-                }
-                userSettings.receiptCounter = nextReceiptId;
-                await batch.commit();
+                batch.update(settingsDocRef(currentUser.uid), { receiptCounter: nextReceiptId });
+            }
+            userSettings.receiptCounter = nextReceiptId;
+            await batch.commit();
+
+            // Handling Output
+            if(receiptType === 'qr-only') {
+                // Generiere Link für QR Code
+                const url = window.location.origin + window.location.pathname + "?mode=receipt&id=" + nextReceiptId;
+                const modal = document.getElementById('qr-modal');
+                const container = document.getElementById('qrcode');
+                container.innerHTML = "";
+                new QRCode(container, { text: url, width: 200, height: 200 });
+                modal.style.display = 'flex';
+                // Modal nicht schließen, damit QR gescannt werden kann
+                window.showLoading(false);
+                // Clear Cart im Hintergrund
+                currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null);
+                return;
             }
             
             if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType, nextReceiptId);
@@ -1608,7 +1680,7 @@ window.updateAppView = function(view) {
             if(!isOffline) window.showToast('Zahlung erfolgreich!', 'success');
             
         } catch(e) { console.error(e); window.showToast('Fehler bei Zahlung', 'error'); }
-        finally { window.showLoading(false); }
+        finally { if(receiptType !== 'qr-only') window.showLoading(false); }
     }
 
     // --- CASH MANAGEMENT ---
