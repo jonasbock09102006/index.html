@@ -4,8 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Kassensystem Enterprise</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden; height: 100dvh; width: 100vw; }
     
@@ -44,7 +47,12 @@
     #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
 
     /* Customer Display Mode */
-    #customer-display-view { display: none; height: 100dvh; background: #1e293b; color: white; padding: 2rem; flex-direction: column; }
+    #customer-display-screen { 
+        position: fixed; inset:0; z-index: 9000;
+        display: none; height: 100dvh; width: 100vw; 
+        background: #0f172a; color: white; 
+        flex-direction: column; 
+    }
     
     #print-receipt-container { display: none; visibility: hidden; } 
     @media print {
@@ -74,135 +82,142 @@
   <div id="async-loading-overlay"><div class="spinner"></div></div>
   <div id="offline-banner">OFFLINE MODUS - Daten werden lokal gespeichert</div>
 
-  <div id="lock-screen">
-      <h1 class="text-3xl font-bold mb-2 text-slate-800">Kasse gesperrt</h1>
-      <p class="text-slate-500 mb-6" id="lock-msg">Bitte PIN eingeben</p>
-      
-      <div class="mb-8 h-8 flex items-center justify-center">
-          <div id="lock-dots" class="text-4xl tracking-widest font-bold text-slate-800 h-8"></div>
-      </div>
-      
-      <div class="grid grid-cols-3 gap-3 w-64">
-          <button onclick="handleLockInput('7')" class="numpad-btn bg-white border">7</button>
-          <button onclick="handleLockInput('8')" class="numpad-btn bg-white border">8</button>
-          <button onclick="handleLockInput('9')" class="numpad-btn bg-white border">9</button>
-          <button onclick="handleLockInput('4')" class="numpad-btn bg-white border">4</button>
-          <button onclick="handleLockInput('5')" class="numpad-btn bg-white border">5</button>
-          <button onclick="handleLockInput('6')" class="numpad-btn bg-white border">6</button>
-          <button onclick="handleLockInput('1')" class="numpad-btn bg-white border">1</button>
-          <button onclick="handleLockInput('2')" class="numpad-btn bg-white border">2</button>
-          <button onclick="handleLockInput('3')" class="numpad-btn bg-white border">3</button>
-          <button onclick="handleLockInput('clear')" class="numpad-btn bg-red-100 text-red-600">C</button>
-          <button onclick="handleLockInput('0')" class="numpad-btn bg-white border">0</button>
-          <button onclick="handleLockInput('enter')" class="numpad-btn bg-green-600 text-white">→</button>
-      </div>
-      <button onclick="window.location.reload()" class="mt-8 text-sm text-slate-400">Neu laden</button>
-  </div>
-
-  <div id="kasse-screen" style="display:none;" class="h-full">
-      <div id="kasse-content" class="grid md:grid-cols-3 gap-6 h-full max-w-7xl mx-auto py-2 md:py-6 px-2">
-        
-        <div class="md:col-span-2 flex flex-col space-y-4 h-full">
-          <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
-            <div class="flex-grow overflow-hidden">
-              <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
-            </div>
-            <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
-                <span class="mr-1">🔒</span> Sperren
-            </button>
-            <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
-                Kunden-Screen
-            </button>
-            <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
+  <div id="customer-display-screen">
+      <div class="flex-grow flex items-center justify-center p-8 relative">
+          <div id="cd-welcome" class="text-center">
+              <h1 class="text-6xl font-bold mb-6 tracking-tight">Willkommen</h1>
+              <p class="text-3xl text-slate-400">Wir freuen uns auf Sie!</p>
           </div>
           
-          <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
-            <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
+          <div id="cd-cart" style="display:none;" class="w-full max-w-4xl h-full flex flex-col">
+              <h2 class="text-3xl font-bold border-b border-slate-700 pb-4 mb-6 flex justify-between">
+                  <span>Ihre Bestellung</span>
+                  <span class="text-slate-400 text-xl" id="cd-item-count">0 Artikel</span>
+              </h2>
+              <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4"></div>
           </div>
-
-          <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
-            <div class="col-span-1 flex flex-col justify-between">
-                <div>
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
-                    <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
-                </div>
-                <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
-            </div>
-            <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
-              <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
-              <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
-              <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
-              <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
-              <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
-              <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
-              <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
-              <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
-              <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
-              <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
-              <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
-              <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
-            </div>
-          </div>
-        </div>
-
-        <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
-          <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
-            <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
-                <span>Aktueller Bon</span>
-                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
-            </h2>
-            <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
-              <div class="flex flex-col items-center justify-center h-40 text-slate-300">
-                  <p class="text-sm font-medium">Warenkorb leer</p>
-              </div>
-            </div>
-            <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
-              <div class="flex justify-between items-end mb-4">
-                  <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
-                  <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
-              </div>
-              <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
-            </div>
-          </div>
-
-          <div class="glass-panel p-4 space-y-3">
-            <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
-                <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
-            </div>
-          </div>
-        </div>
-      </div>
-  </div>
-
-  <div id="admin-screen" style="display:none;" class="p-4">
-      <h2 class="text-2xl font-bold mb-4">Verwaltung & Berichte</h2>
-      <div id="admin-content"></div>
-      <button onclick="window.updateAppView('kasse')" class="bg-gray-200 p-2 rounded">Zurück zur Kasse</button>
-  </div>
-
-  <div id="customer-display-view">
-      <div class="flex-grow flex items-center justify-center">
-          <div id="cd-welcome" class="text-center">
-              <h1 class="text-6xl font-bold mb-4">Willkommen</h1>
-              <p class="text-2xl text-slate-400">Wir freuen uns auf Sie!</p>
-          </div>
-          <div id="cd-cart" style="display:none;" class="w-full max-w-2xl">
-              <h2 class="text-3xl font-bold border-b border-slate-600 pb-4 mb-4">Ihre Bestellung</h2>
-              <div id="cd-items" class="text-xl space-y-4 max-h-[60vh] overflow-y-auto"></div>
+          
+          <div id="cd-qr-overlay" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
+               <h2 class="text-4xl font-bold mb-8 text-white">Vielen Dank!</h2>
+               <div class="bg-white p-6 rounded-2xl shadow-2xl">
+                   <div id="cd-qrcode"></div>
+               </div>
+               <p class="mt-6 text-xl text-slate-400">Scan für digitalen Beleg</p>
           </div>
       </div>
-      <div class="border-t border-slate-700 pt-6 flex justify-between items-end">
-          <div class="text-2xl text-slate-400">Gesamtsumme</div>
+      
+      <div class="bg-slate-800 p-8 flex justify-between items-center shadow-lg border-t border-slate-700">
+          <div class="text-3xl text-slate-400 font-medium">Gesamtsumme</div>
           <div id="cd-total" class="text-8xl font-black text-green-400">0,00 €</div>
       </div>
   </div>
 
-  <div id="pos-app-container">
-      
-      <div id="setup-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[2000] flex items-center justify-center p-4" style="display:none;">
+  <div id="pos-app-wrapper">
+
+    <div id="lock-screen">
+        <h1 class="text-3xl font-bold mb-2 text-slate-800">Kasse gesperrt</h1>
+        <p class="text-slate-500 mb-6" id="lock-msg">Bitte PIN eingeben</p>
+        
+        <div class="mb-8 h-8 flex items-center justify-center">
+            <div id="lock-dots" class="text-4xl tracking-widest font-bold text-slate-800 h-8"></div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-3 w-64">
+            <button onclick="handleLockInput('7')" class="numpad-btn bg-white border">7</button>
+            <button onclick="handleLockInput('8')" class="numpad-btn bg-white border">8</button>
+            <button onclick="handleLockInput('9')" class="numpad-btn bg-white border">9</button>
+            <button onclick="handleLockInput('4')" class="numpad-btn bg-white border">4</button>
+            <button onclick="handleLockInput('5')" class="numpad-btn bg-white border">5</button>
+            <button onclick="handleLockInput('6')" class="numpad-btn bg-white border">6</button>
+            <button onclick="handleLockInput('1')" class="numpad-btn bg-white border">1</button>
+            <button onclick="handleLockInput('2')" class="numpad-btn bg-white border">2</button>
+            <button onclick="handleLockInput('3')" class="numpad-btn bg-white border">3</button>
+            <button onclick="handleLockInput('clear')" class="numpad-btn bg-red-100 text-red-600">C</button>
+            <button onclick="handleLockInput('0')" class="numpad-btn bg-white border">0</button>
+            <button onclick="handleLockInput('enter')" class="numpad-btn bg-green-600 text-white">→</button>
+        </div>
+        <button onclick="window.location.reload()" class="mt-8 text-sm text-slate-400">Neu laden</button>
+    </div>
+
+    <div id="kasse-screen" style="display:none;" class="h-full">
+        <div id="kasse-content" class="grid md:grid-cols-3 gap-6 h-full max-w-7xl mx-auto py-2 md:py-6 px-2">
+            
+            <div class="md:col-span-2 flex flex-col space-y-4 h-full">
+            <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
+                <div class="flex-grow overflow-hidden">
+                <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
+                </div>
+                <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
+                    <span class="mr-1">🔒</span> Sperren
+                </button>
+                <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
+                    Kunden-Screen
+                </button>
+                <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
+            </div>
+            
+            <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
+                <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
+            </div>
+
+            <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
+                <div class="col-span-1 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
+                        <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
+                    </div>
+                    <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
+                </div>
+                <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
+                <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
+                <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
+                <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
+                <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
+                <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
+                <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
+                <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
+                <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
+                <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
+                <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
+                <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
+                <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
+                </div>
+            </div>
+            </div>
+
+            <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
+            <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
+                <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
+                    <span>Aktueller Bon</span>
+                    <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
+                </h2>
+                <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
+                <div class="flex flex-col items-center justify-center h-40 text-slate-300">
+                    <p class="text-sm font-medium">Warenkorb leer</p>
+                </div>
+                </div>
+                <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
+                    <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
+                </div>
+                <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 space-y-3">
+                <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
+                    <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="setup-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[2000] flex items-center justify-center p-4" style="display:none;">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-4xl text-center border border-slate-200">
           <h1 class="text-4xl font-extrabold text-slate-800 mb-2">Einrichtung</h1>
           <p class="text-slate-500 mb-10 text-lg">Wählen Sie Ihren Betriebsmodus.</p>
@@ -233,18 +248,21 @@
              <button onclick="window.selectSystemType('custom')" class="mt-6 w-full bg-slate-800 hover:bg-slate-900 text-white p-4 rounded-xl font-bold shadow-lg transition">Speichern & Starten</button>
           </div>
         </div>
-      </div>
+    </div>
 
-      <div id="qr-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[3000] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
-              <h2 class="text-xl font-bold mb-4">Digitaler Beleg</h2>
-              <div id="qrcode" class="mb-6"></div>
-              <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code, um den Beleg zu speichern.</p>
-              <button onclick="closeModal('qr-modal')" class="w-full p-3 bg-slate-200 font-bold rounded-xl">Schließen</button>
-          </div>
-      </div>
+    <div id="qr-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[3000] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
+            <h2 class="text-xl font-bold mb-4">Digitaler Beleg</h2>
+            <div id="qrcode" class="mb-6"></div>
+            <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code oder speichern Sie das PDF.</p>
+            <div class="flex gap-2 w-full">
+                <button onclick="window.downloadPDFReceipt()" class="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition">Als PDF speichern</button>
+                <button onclick="closeModal('qr-modal')" class="w-full p-3 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-slate-700">Schließen</button>
+            </div>
+        </div>
+    </div>
 
-      <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
+    <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h1 class="text-2xl font-bold text-slate-800 text-center mb-6">Anmelden</h1>
           <form id="login-form" onsubmit="event.preventDefault(); window.handleLoginSubmit();">
@@ -263,9 +281,9 @@
             <button onclick="openForgotPasswordModal()" class="text-xs text-slate-400">Passwort vergessen?</button>
           </div>
         </div>
-      </div>
+    </div>
 
-      <div id="registration-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
+    <div id="registration-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Konto erstellen</h2>
           <form id="register-form" onsubmit="event.preventDefault(); window.handleRegisterSubmit();">
@@ -289,9 +307,9 @@
           </form>
           <button onclick="closeModal('registration-modal'); openLoginModal();" class="mt-4 w-full text-sm text-slate-500 font-bold">Zurück zum Login</button>
         </div>
-      </div>
+    </div>
 
-      <div id="agb-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[1000] flex items-center justify-center p-4">
+    <div id="agb-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[1000] flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
           <h2 class="text-xl font-bold mb-4">Allgemeine Geschäftsbedingungen</h2>
           <div class="text-sm text-gray-700 space-y-4">
@@ -301,9 +319,9 @@
           </div>
           <button onclick="closeModal('agb-modal')" class="mt-6 w-full p-2 bg-indigo-600 text-white rounded-lg font-bold">Schließen</button>
         </div>
-      </div>
+    </div>
 
-      <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
+    <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h2 class="text-xl font-bold text-center text-slate-800 mb-4">Passwort zurücksetzen</h2>
           <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
@@ -315,9 +333,9 @@
           </form>
           <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full text-sm text-slate-500 font-bold">Zurück</button>
         </div>
-      </div>
+    </div>
       
-      <div id="pin-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[4000] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="pin-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-90 z-[4000] flex items-center justify-center p-4 backdrop-blur-sm">
           <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs flex flex-col items-center">
               <h3 id="pin-modal-title" class="text-lg font-bold mb-4 text-center">Admin Code erforderlich</h3>
               <div id="pin-input-display" class="w-full h-12 bg-slate-100 rounded-xl flex items-center justify-center text-3xl font-black tracking-widest mb-6 border border-slate-300"></div>
@@ -337,9 +355,9 @@
               </div>
               <button onclick="closeModal('pin-modal')" class="mt-4 text-slate-400 font-bold">Abbrechen</button>
           </div>
-      </div>
+    </div>
 
-      <div id="product-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="product-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
           <div class="flex justify-between items-center mb-6">
               <h2 class="text-2xl font-bold text-slate-800">Produktverwaltung</h2>
@@ -385,9 +403,9 @@
             </div>
           </div>
         </div>
-      </div>
+    </div>
 
-      <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div id="finalize-modal-content" class="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 transition-all duration-300">
           <h2 class="text-2xl font-bold mb-6 text-slate-800 text-center">Abrechnung</h2>
           <div id="simple-payment-ui" style="display:none;">
@@ -447,7 +465,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <button onclick="handleFinalizeAction('BAR','none')" disabled id="btn-cash-none" class="py-3 rounded-xl font-bold text-white bg-slate-400 shadow transition">Ohne Beleg</button>
                     <button onclick="handleFinalizeAction('BAR','standard')" disabled id="btn-cash-standard" class="mod-receipts py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow transition">Bon Drucken</button>
-                    <button onclick="window.showQRReceipt()" disabled id="btn-cash-qr" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR)</button>
+                    <button onclick="window.showQRReceipt()" disabled id="btn-cash-qr" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR/PDF)</button>
                     <button onclick="handleFinalizeAction('BAR','bewirtung')" disabled id="btn-cash-bewirtung" class="mod-receipts col-span-2 py-2 rounded-xl font-bold text-white bg-slate-800 hover:bg-slate-900 shadow text-sm">Bewirtungsbeleg</button>
                   </div>
                 </div>
@@ -455,7 +473,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <button onclick="handleFinalizeAction('KARTE','none')" class="py-3 rounded-xl font-bold text-white bg-slate-400 hover:bg-slate-500 shadow transition">Ohne Beleg</button>
                     <button onclick="handleFinalizeAction('KARTE','standard')" class="mod-receipts py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow transition">Bon Drucken</button>
-                    <button onclick="window.showQRReceipt()" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR)</button>
+                    <button onclick="window.showQRReceipt()" class="mod-receipts py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow transition">Digital (QR/PDF)</button>
                     <button onclick="handleFinalizeAction('KARTE','bewirtung')" class="mod-receipts col-span-2 py-2 rounded-xl font-bold text-white bg-slate-800 hover:bg-slate-900 shadow text-sm">Bewirtungsbeleg</button>
                   </div>
                 </div>
@@ -465,9 +483,9 @@
             <button onclick="closeModal('finalize-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-sm">Abbrechen</button>
           </div>
         </div>
-      </div>
+    </div>
 
-      <div id="cash-management-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="cash-management-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200">
           <h2 class="text-xl font-bold text-center text-slate-800 mb-6">Kassenbestand</h2>
           <div class="mb-6 text-center">
@@ -498,14 +516,17 @@
           </div>
           <div class="mt-4 text-center"><button onclick="closeModal('cash-management-modal')" class="text-slate-400 font-bold hover:text-slate-600">Schließen</button></div>
         </div>
-      </div>
+    </div>
 
-      <div id="settings-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="settings-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div id="settings-content-container" class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-slate-200 overflow-y-auto max-h-[85vh]">
           <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Einstellungen</h2>
           <div id="settings-menu" class="space-y-3">
             <button onclick="window.openCashManagementModal(); closeModal('settings-modal')" class="mod-stock w-full p-4 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 flex items-center justify-between group">
-                <span>Kassenverwaltung</span> <span class="text-slate-400 group-hover:text-slate-600">→</span>
+                <span>Kassenbestand</span> <span class="text-slate-400 group-hover:text-slate-600">→</span>
+            </button>
+             <button onclick="window.openTransactionHistoryModal()" class="w-full p-4 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 flex items-center justify-between group">
+                <span>Transaktionen / Storno</span> <span class="text-slate-400 group-hover:text-slate-600">→</span>
             </button>
             <button onclick="window.openSecurityCodeSettings()" class="mod-security w-full p-4 rounded-xl font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 flex items-center justify-between group">
                 <span>Sicherheitscode</span> <span class="text-slate-400 group-hover:text-slate-600">→</span>
@@ -582,9 +603,17 @@
           </div>
           <button onclick="closeModal('settings-modal')" id="btn-close-settings-modal" class="mt-6 w-full text-sm font-bold text-slate-400 hover:text-slate-600">Schließen</button>
         </div>
-      </div>
+    </div>
+    
+    <div id="transactions-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col border border-slate-200">
+            <h2 class="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">Transaktionen (Heute)</h2>
+            <div id="transaction-list" class="flex-grow bg-slate-50 border border-slate-200 rounded-xl p-2 overflow-y-auto space-y-2"></div>
+            <button onclick="closeModal('transactions-modal')" class="mt-4 w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition">Schließen</button>
+        </div>
+    </div>
 
-      <div id="report-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="report-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col border border-slate-200">
             <h2 class="text-xl font-bold mb-4 text-blue-700 flex items-center gap-2">Tagesbericht</h2>
             <div class="flex gap-2 mb-4 bg-slate-50 p-2 rounded-xl border border-slate-200">
@@ -598,9 +627,9 @@
                  <button onclick="closeModal('report-modal')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition">Schließen</button>
             </div>
         </div>
-      </div>
+    </div>
       
-      <div id="print-receipt-container"></div> 
+    <div id="print-receipt-container"></div> 
   </div>
 
   <script type="module">
@@ -614,6 +643,7 @@
     let categories = {};
     let currentBestellung = [];
     let totalBrutto = 0.00;
+    let lastReportData = []; // Für CSV Export Fix
     
     // Feature: Customer Display Broadcast Channel
     const customerChannel = new BroadcastChannel('pos_display');
@@ -634,6 +664,7 @@
     let currentPinInput = '';
     let cashBoxBalance = 0.00;
     let pinActionCallback = null;
+    let pinCallbackArgs = null;
     
     // Feature: Employee System
     let currentEmployee = null; // null = Admin, object = Staff
@@ -661,7 +692,6 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     
-    // Offline Persistence attempt
     try { enableIndexedDbPersistence(db).catch(e => console.log("Persistence error:", e)); } catch(e){}
 
     const productsCollectionRef = (uid) => collection(db, `users/${uid}/products`);
@@ -669,24 +699,31 @@
     const transactionsCollectionRef = (uid) => collection(db, `users/${uid}/transactions`);
     const settingsDocRef = (uid) => doc(db, `users/${uid}/settings/config`);
 
-// --- AUTH STATE LISTENER (Korrekt für Module) ---
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        console.log("Eingeloggt als:", user.email);
-        currentUser = user;
-        // Wir laden die Einstellungen und gehen dann zur Kasse
-        loadSettings();
-        // window.updateAppView('kasse'); // Wird in loadSettings aufgerufen
+    // --- INITIALISIERUNG / CUSTOMER DISPLAY CHECK ---
+    const urlParams = new URLSearchParams(window.location.search);
+    if(urlParams.get('mode') === 'display') {
+        document.getElementById('pos-app-wrapper').style.display = 'none';
+        document.getElementById('login-modal').style.display = 'none';
+        document.getElementById('customer-display-screen').style.display = 'flex';
+        initCustomerDisplayListener();
+        document.getElementById('async-loading-overlay').style.display = 'none';
     } else {
-        console.log("Nicht eingeloggt");
-        currentUser = null;
-        window.updateAppView('login');
+        // --- AUTH STATE LISTENER ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("Eingeloggt als:", user.email);
+                currentUser = user;
+                loadSettings();
+            } else {
+                console.log("Nicht eingeloggt");
+                currentUser = null;
+                window.updateAppView('login');
+            }
+            const overlay = document.getElementById('async-loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        });
     }
-    
-    // Lade-Overlay entfernen
-    const overlay = document.getElementById('async-loading-overlay');
-    if (overlay) overlay.style.display = 'none';
-});
+
     // --- OFFLINE LOGIC ---
     window.addEventListener('online', () => { isOffline = false; updateOfflineUI(); syncOfflineTransactions(); });
     window.addEventListener('offline', () => { isOffline = true; updateOfflineUI(); });
@@ -701,26 +738,20 @@ onAuthStateChanged(auth, (user) => {
         if(localTransactionQueue.length === 0) return;
         window.showToast(`Synchronisiere ${localTransactionQueue.length} Transaktionen...`, 'info');
         const batch = writeBatch(db);
-        let count = 0;
-        
-        // Clone and clear local to prevent loops if error
         const queue = [...localTransactionQueue];
         localTransactionQueue = [];
         localStorage.setItem('pos_queue', '[]');
 
         for(const tData of queue) {
-            // Convert simple object back to proper date if needed, but Firestore handles string/date
             tData.timestamp = new Date(tData.timestamp); 
             const newRef = doc(transactionsCollectionRef(currentUser.uid));
             batch.set(newRef, tData);
-            count++;
         }
         try {
             await batch.commit();
             window.showToast("Synchronisation erfolgreich!", "success");
         } catch(e) {
             console.error("Sync Error", e);
-            // Restore queue on error
             localTransactionQueue = [...queue, ...localTransactionQueue];
             localStorage.setItem('pos_queue', JSON.stringify(localTransactionQueue));
             window.showToast("Sync fehlgeschlagen - versuche es später", "error");
@@ -776,7 +807,6 @@ onAuthStateChanged(auth, (user) => {
     }
     
     window.toggleCustomSetup = function() { document.getElementById('custom-setup-options').classList.remove('hidden'); }
-    
     window.resetSystemWizard = function() {
         if(confirm("System-Assistent neu starten?")) {
             document.getElementById('setup-modal').style.display = 'flex';
@@ -796,40 +826,25 @@ onAuthStateChanged(auth, (user) => {
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
 
-window.updateAppView = function(view) {
-    console.log("Wechsle Ansicht zu:", view);
-    
-    // Overlay ausblenden
-    const overlay = document.getElementById('async-loading-overlay');
-    if (overlay) overlay.style.display = 'none';
+    window.updateAppView = function(view) {
+        console.log("Wechsle Ansicht zu:", view);
+        const overlay = document.getElementById('async-loading-overlay');
+        if (overlay) overlay.style.display = 'none';
 
-    // Alle Screens verstecken
-    const screens = ['lock', 'kasse', 'admin', 'login', 'pos-app']; 
-    screens.forEach(s => {
-        // Sonderfall für pos-app (Container für Modals)
-        if(s === 'pos-app') { 
-            // document.getElementById('pos-app-container').style.display = 'block'; 
-            return;
-        }
-        
-        const el = document.getElementById(s + '-screen');
-        if (el) el.style.display = 'none';
-    });
+        const screens = ['lock', 'kasse', 'admin', 'login']; 
+        screens.forEach(s => {
+            const el = document.getElementById(s + '-screen');
+            if (el) el.style.display = 'none';
+        });
 
-    // Ziel-Screen anzeigen
-    if(view === 'login') {
-         // Login ist ein Modal, kein Screen
-         document.getElementById('login-modal').style.display = 'flex';
-    } else {
-        document.getElementById('login-modal').style.display = 'none';
-        const targetId = view + '-screen';
-        const target = document.getElementById(targetId);
-        if (target) {
-            target.style.display = 'block';
-            // Wenn Kasse geladen wird und gesperrt sein soll (noch nicht implementiert, aber als Vorbereitung)
+        if(view === 'login') {
+             document.getElementById('login-modal').style.display = 'flex';
+        } else {
+            document.getElementById('login-modal').style.display = 'none';
+            const target = document.getElementById(view + '-screen');
+            if (target) target.style.display = 'block';
         }
-    }
-};
+    };
 
     window.openLoginModal = function(){ window.updateAppView('login'); }
     window.openRegistrationModal = function(){ closeModal('login-modal'); document.getElementById('registration-modal').style.display='flex'; }
@@ -853,8 +868,8 @@ window.updateAppView = function(view) {
         document.getElementById('new-product-category').value = '';
         document.getElementById('prod-form-title').innerText = "Neues Produkt anlegen";
         document.getElementById('btn-save-product').innerText = "Hinzufügen";
-        document.getElementById('btn-save-product').classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        document.getElementById('btn-save-product').classList.add('bg-green-600', 'hover:bg-green-700');
+        document.getElementById('btn-save-product').classList.replace('bg-blue-600', 'bg-green-600');
+        document.getElementById('btn-save-product').classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
         document.getElementById('btn-cancel-edit').style.display = 'none';
     }
 
@@ -869,8 +884,8 @@ window.updateAppView = function(view) {
         if(p.taxRate !== undefined) document.getElementById('new-product-tax-rate').value = p.taxRate;
         document.getElementById('prod-form-title').innerText = "Produkt Bearbeiten";
         document.getElementById('btn-save-product').innerText = "Speichern";
-        document.getElementById('btn-save-product').classList.remove('bg-green-600', 'hover:bg-green-700');
-        document.getElementById('btn-save-product').classList.add('bg-blue-600', 'hover:bg-blue-700');
+        document.getElementById('btn-save-product').classList.replace('bg-green-600', 'bg-blue-600');
+        document.getElementById('btn-save-product').classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
         document.getElementById('btn-cancel-edit').style.display = 'block';
     }
 
@@ -899,7 +914,7 @@ window.updateAppView = function(view) {
       window.showToast('Gespeichert', 'success');
     }
     
-    // --- SETTINGS NAVIGATION ---
+    // --- SETTINGS ---
     window.openSettingsModal = function(){
       document.getElementById('settings-modal').style.display='flex';
       window.showSettingsMenu();
@@ -917,41 +932,19 @@ window.updateAppView = function(view) {
       window.updateVisibility();
     }
     
-    window.openGeneralSettings = function(){
-      document.getElementById('settings-menu').style.display = 'none';
-      document.getElementById('general-settings-form-container').style.display = 'block';
-      document.getElementById('btn-close-settings-modal').style.display = 'none';
-    }
-    window.openSecurityCodeSettings = function(){
-      document.getElementById('settings-menu').style.display = 'none';
-      document.getElementById('security-code-settings-container').style.display = 'block';
-      document.getElementById('reversal-code-separate').value = reversalCode;
-      document.getElementById('btn-close-settings-modal').style.display = 'none';
-    }
-    window.openCardFeeSettings = function(){
-      document.getElementById('settings-menu').style.display = 'none';
-      document.getElementById('card-fee-settings-container').style.display = 'block';
-      document.getElementById('card-fee-rate').value = userSettings.cardFeeRate || 0.00;
-      document.getElementById('btn-close-settings-modal').style.display = 'none';
-    }
-    window.openEmployeeSettings = function(){
-        document.getElementById('settings-menu').style.display = 'none';
-        document.getElementById('employee-settings-container').style.display = 'block';
-        document.getElementById('btn-close-settings-modal').style.display = 'none';
-        renderEmployeeList();
-    }
+    window.openGeneralSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('general-settings-form-container').style.display = 'block'; document.getElementById('btn-close-settings-modal').style.display = 'none'; }
+    window.openSecurityCodeSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('security-code-settings-container').style.display = 'block'; document.getElementById('reversal-code-separate').value = reversalCode; document.getElementById('btn-close-settings-modal').style.display = 'none'; }
+    window.openCardFeeSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('card-fee-settings-container').style.display = 'block'; document.getElementById('card-fee-rate').value = userSettings.cardFeeRate || 0.00; document.getElementById('btn-close-settings-modal').style.display = 'none'; }
+    window.openEmployeeSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('employee-settings-container').style.display = 'block'; document.getElementById('btn-close-settings-modal').style.display = 'none'; renderEmployeeList(); }
     window.closeModal = function(id){ document.getElementById(id).style.display='none'; }
 
-    // --- AUTH & RESET ---
+    // --- AUTH LOGIC ---
     window.handleRegisterSubmit = function(){
       const email = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
       window.showLoading(true);
       createUserWithEmailAndPassword(auth, email, password)
-        .then(() => {
-             window.showToast('Registrierung erfolgreich!', 'success');
-             closeModal('registration-modal');
-        })
+        .then(() => { window.showToast('Registrierung erfolgreich!', 'success'); closeModal('registration-modal'); })
         .catch((e) => window.showToast(e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
@@ -968,9 +961,6 @@ window.updateAppView = function(view) {
       const password = document.getElementById('login-password').value;
       window.showLoading(true);
       signInWithEmailAndPassword(auth, email, password)
-        .then(() => {
-            // Success logic is handled by onAuthStateChanged
-        })
         .catch((e) => window.showToast('Login fehlgeschlagen: ' + e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
@@ -983,7 +973,6 @@ window.updateAppView = function(view) {
         const docSnap = await getDoc(settingsDocRef(currentUser.uid));
         if (docSnap.exists()) {
           userSettings = { ...userSettings, ...docSnap.data() };
-          // Migrations-Helper für Employees
           if(!userSettings.employees) userSettings.employees = [];
           
           document.getElementById('company-name').value = userSettings.companyName || '';
@@ -1007,10 +996,7 @@ window.updateAppView = function(view) {
             document.getElementById('setup-modal').style.display = 'flex';
             window.showLoading(false);
         }
-      } catch(err){
-        console.error(err);
-        window.showLoading(false);
-      }
+      } catch(err){ console.error(err); window.showLoading(false); }
     }
 
     // --- EMPLOYEE MANAGEMENT ---
@@ -1043,48 +1029,24 @@ window.updateAppView = function(view) {
     }
 
     // --- LOCK SCREEN LOGIC ---
-    window.lockScreen = function() {
-        document.getElementById('lock-screen').style.display = 'flex';
-        currentEmployee = null;
-        lockInput = "";
-        updateLockDots();
-    }
+    window.lockScreen = function() { document.getElementById('lock-screen').style.display = 'flex'; currentEmployee = null; lockInput = ""; updateLockDots(); }
     window.handleLockInput = function(key) {
         if(key === 'clear') lockInput = "";
         else if(key === 'enter') checkLockPin();
         else if(lockInput.length < 4) lockInput += key;
         updateLockDots();
-        if(lockInput.length === 4) setTimeout(checkLockPin, 200); // Auto-check
+        if(lockInput.length === 4) setTimeout(checkLockPin, 200);
     }
-    function updateLockDots() {
-        document.getElementById('lock-dots').innerText = "•".repeat(lockInput.length);
-    }
+    function updateLockDots() { document.getElementById('lock-dots').innerText = "•".repeat(lockInput.length); }
     function checkLockPin() {
-        // 1. Check Admin
-        if(lockInput === (reversalCode || '0000')) {
-            currentEmployee = null; // Admin
-            unlock();
-            return;
-        }
-        // 2. Check Staff
+        if(lockInput === (reversalCode || '0000')) { currentEmployee = null; unlock(); return; }
         const staff = userSettings.employees.find(e => e.pin === lockInput);
-        if(staff) {
-            currentEmployee = staff;
-            unlock();
-            return;
-        }
-        // Fail
-        lockInput = "";
-        updateLockDots();
-        const msg = document.getElementById('lock-msg');
-        msg.innerText = "Falscher Code!";
-        msg.classList.add('text-red-500');
+        if(staff) { currentEmployee = staff; unlock(); return; }
+        lockInput = ""; updateLockDots();
+        const msg = document.getElementById('lock-msg'); msg.innerText = "Falscher Code!"; msg.classList.add('text-red-500');
         setTimeout(() => { msg.innerText = "Bitte PIN eingeben"; msg.classList.remove('text-red-500'); }, 1500);
     }
-    function unlock() {
-        document.getElementById('lock-screen').style.display = 'none';
-        window.showToast(`Willkommen ${currentEmployee ? currentEmployee.name : 'Admin'}`, 'success');
-    }
+    function unlock() { document.getElementById('lock-screen').style.display = 'none'; window.showToast(`Willkommen ${currentEmployee ? currentEmployee.name : 'Admin'}`, 'success'); }
 
     window.saveSecurityCode = async function(){
         const newCode = document.getElementById('reversal-code-separate').value.trim();
@@ -1116,43 +1078,31 @@ window.updateAppView = function(view) {
         window.showToast('Gespeichert.', 'success'); closeModal('settings-modal');
     }
 
-    // --- PIN LOGIC (Auth Protected Actions) ---
+    // --- PIN LOGIC (Admin Action) ---
     window.updatePinInputDisplay = function(){ document.getElementById('pin-input-display').innerText = '*'.repeat(currentPinInput.length); }
     window.handlePinInput = function(key){
       if(key === 'clear'){ currentPinInput = ''; } 
       else if (key === 'enter'){
-        if(currentPinInput === reversalCode || (!reversalCode && pinActionCallback)){ closeModal('pin-modal'); pinActionCallback(); } 
+        if(currentPinInput === reversalCode || (!reversalCode && pinActionCallback)){ closeModal('pin-modal'); if(pinActionCallback) pinActionCallback(pinCallbackArgs); } 
         else { window.showToast('Falscher Code.', 'error'); currentPinInput = ''; }
       } else if (currentPinInput.length < 4){ currentPinInput += key; }
       window.updatePinInputDisplay();
     }
-    window.openPinModal = function(title, callback){
-      // Staff Check: If staff, block sensitive actions
-      if(currentEmployee) {
-          window.showToast("Zugriff verweigert (Nur Admin)", "error");
-          return;
-      }
-      if(!userSettings.security || !reversalCode){ callback(); return; }
+    window.openPinModal = function(title, callback, args){
+      if(currentEmployee) { window.showToast("Zugriff verweigert (Nur Admin)", "error"); return; }
+      if(!userSettings.security || !reversalCode){ callback(args); return; }
       document.getElementById('pin-modal-title').innerText = title;
-      currentPinInput = ''; pinActionCallback = callback; window.updatePinInputDisplay();
+      currentPinInput = ''; pinActionCallback = callback; pinCallbackArgs = args; window.updatePinInputDisplay();
       document.getElementById('pin-modal').style.display='flex';
     }
 
     // --- PRODUCTS & GRID ---
     window.loadProductsAndCategories = async function(){
       const catSnapshot = await getDocs(query(categoriesCollectionRef(currentUser.uid), orderBy('order', 'asc')));
-      categories = {};
-      catSnapshot.forEach(doc => { categories[doc.id] = { id: doc.id, ...doc.data() }; });
-      
+      categories = {}; catSnapshot.forEach(doc => { categories[doc.id] = { id: doc.id, ...doc.data() }; });
       const prodSnapshot = await getDocs(productsCollectionRef(currentUser.uid));
-      products = {};
-      prodSnapshot.forEach(doc => { 
-          const d = doc.data();
-          products[doc.id] = { id: doc.id, ...d, price: parseFloat(d.price)||0 }; 
-      });
-      window.renderCategoryTabs();
-      activeCategoryFilter = null;
-      window.renderProductGrid(null);
+      products = {}; prodSnapshot.forEach(doc => { const d = doc.data(); products[doc.id] = { id: doc.id, ...d, price: parseFloat(d.price)||0 }; });
+      window.renderCategoryTabs(); activeCategoryFilter = null; window.renderProductGrid(null);
     }
     
     window.addCategory = async function(){
@@ -1160,235 +1110,144 @@ window.updateAppView = function(view) {
       if(!name) return;
       await setDoc(doc(categoriesCollectionRef(currentUser.uid)), { name: name, order: Date.now() });
       document.getElementById('new-category-name').value = '';
-      await window.loadProductsAndCategories();
-      window.renderCategoryManagement();
+      await window.loadProductsAndCategories(); window.renderCategoryManagement();
     }
 
-    window.deleteProduct = async (id) => {
-        if(confirm('Löschen?')) {
-            await deleteDoc(doc(productsCollectionRef(currentUser.uid), id));
-            await window.loadProductsAndCategories(); 
-            window.renderProductManagement();
-        }
-    }
-    
-    window.deleteCategory = async (id) => {
-        if(confirm('Kategorie löschen?')) {
-            await deleteDoc(doc(categoriesCollectionRef(currentUser.uid), id));
-            await window.loadProductsAndCategories(); 
-            window.renderCategoryManagement();
-        }
-    }
+    window.deleteProduct = async (id) => { if(confirm('Löschen?')) { await deleteDoc(doc(productsCollectionRef(currentUser.uid), id)); await window.loadProductsAndCategories(); window.renderProductManagement(); } }
+    window.deleteCategory = async (id) => { if(confirm('Kategorie löschen?')) { await deleteDoc(doc(categoriesCollectionRef(currentUser.uid), id)); await window.loadProductsAndCategories(); window.renderCategoryManagement(); } }
 
     window.renderCategoryTabs = function(){
-      const c = document.getElementById('category-tabs');
-      c.innerHTML = '';
+      const c = document.getElementById('category-tabs'); c.innerHTML = '';
       const allBtn = document.createElement('button');
-      const isAllActive = activeCategoryFilter === null;
-      allBtn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${isAllActive ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
-      allBtn.innerText = "Alle Produkte";
-      allBtn.onclick = () => { activeCategoryFilter = null; window.renderProductGrid(null); window.renderCategoryTabs(); };
+      allBtn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${activeCategoryFilter === null ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
+      allBtn.innerText = "Alle Produkte"; allBtn.onclick = () => { activeCategoryFilter = null; window.renderProductGrid(null); window.renderCategoryTabs(); };
       c.appendChild(allBtn);
 
       Object.values(categories).sort((a,b)=>a.order-b.order).forEach(cat => {
         const btn = document.createElement('button');
-        const isActive = activeCategoryFilter === cat.id;
-        btn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${isActive ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
-        btn.innerText = cat.name;
-        btn.onclick = () => { 
-            activeCategoryFilter = (activeCategoryFilter === cat.id) ? null : cat.id; 
-            window.renderProductGrid(null); 
-            window.renderCategoryTabs(); 
-        };
+        btn.className = `product-btn p-3 px-5 text-sm rounded-xl whitespace-nowrap shadow-sm font-bold transition border ${activeCategoryFilter === cat.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`;
+        btn.innerText = cat.name; btn.onclick = () => { activeCategoryFilter = (activeCategoryFilter === cat.id) ? null : cat.id; window.renderProductGrid(null); window.renderCategoryTabs(); };
         c.appendChild(btn);
       });
     }
 
     window.renderProductGrid = function(dummy){
-      const grid = document.getElementById('product-grid');
-      grid.innerHTML = '';
-      
-      const filtered = Object.values(products).filter(p => {
-          if(activeCategoryFilter === null) return true;
-          return p.categoryId === activeCategoryFilter;
-      });
-      
-      if(filtered.length === 0) {
-          grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center text-slate-300 py-10"><p>Keine Produkte.</p></div>';
-          return;
-      }
-      
+      const grid = document.getElementById('product-grid'); grid.innerHTML = '';
+      const filtered = Object.values(products).filter(p => activeCategoryFilter === null || p.categoryId === activeCategoryFilter);
+      if(filtered.length === 0) { grid.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center text-slate-300 py-10"><p>Keine Produkte.</p></div>'; return; }
       filtered.sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
-        const stockDisplay = userSettings.stock 
-            ? `<div class="absolute top-2 right-2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded shadow font-bold tracking-wide">${p.stock}</div>` 
-            : '';
-            
+        const stockDisplay = userSettings.stock ? `<div class="absolute top-2 right-2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded shadow font-bold tracking-wide">${p.stock}</div>` : '';
         const btn = document.createElement('button');
         btn.className = "product-btn group bg-white p-3 rounded-2xl shadow-sm border border-slate-100 hover:border-blue-300 hover:shadow-md flex flex-col items-center justify-center relative overflow-hidden h-32 transition-all";
         btn.onclick = () => window.addToBestellung(p.id);
-        btn.innerHTML = `
-            <div class="absolute inset-0 bg-gradient-to-br from-white to-slate-50 opacity-50"></div>
-            ${stockDisplay}
-            <div class="font-bold text-sm text-slate-700 text-center leading-tight line-clamp-2 w-full z-10 group-hover:text-blue-700 transition-colors">${p.name}</div>
-            <div class="text-lg font-black text-slate-900 mt-1 z-10">${p.price.toFixed(2).replace('.', ',')} €</div>
-        `;
+        btn.innerHTML = `<div class="absolute inset-0 bg-gradient-to-br from-white to-slate-50 opacity-50"></div>${stockDisplay}<div class="font-bold text-sm text-slate-700 text-center leading-tight line-clamp-2 w-full z-10 group-hover:text-blue-700 transition-colors">${p.name}</div><div class="text-lg font-black text-slate-900 mt-1 z-10">${p.price.toFixed(2).replace('.', ',')} €</div>`;
         grid.appendChild(btn);
       });
     }
     
     window.renderCategoryManagement = function(){
-      const list = document.getElementById('category-list');
-      const select = document.getElementById('new-product-category');
+      const list = document.getElementById('category-list'); const select = document.getElementById('new-product-category');
       list.innerHTML = ''; select.innerHTML = '<option value="">Kategorie wählen...</option>';
       Object.values(categories).forEach(c => {
-          list.innerHTML += `
-            <div class="flex justify-between items-center p-3 border border-slate-100 bg-slate-50 rounded-xl mb-2">
-                <span class="font-bold text-sm text-slate-700">${c.name}</span>
-                <button onclick="window.deleteCategory('${c.id}')" class="text-red-400 hover:text-red-600 font-bold px-2">✕</button>
-            </div>`;
+          list.innerHTML += `<div class="flex justify-between items-center p-3 border border-slate-100 bg-slate-50 rounded-xl mb-2"><span class="font-bold text-sm text-slate-700">${c.name}</span><button onclick="window.deleteCategory('${c.id}')" class="text-red-400 hover:text-red-600 font-bold px-2">✕</button></div>`;
           select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
       });
     }
 
     window.renderProductManagement = function(){
-        const list = document.getElementById('product-list');
-        list.innerHTML = '';
+        const list = document.getElementById('product-list'); list.innerHTML = '';
         Object.values(products).sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
-            list.innerHTML += `
-                <div class="p-3 border border-slate-100 rounded-xl bg-white shadow-sm flex justify-between items-center mb-2">
-                    <div class="overflow-hidden">
-                        <div class="font-bold text-slate-800 truncate">${p.name}</div>
-                        <div class="text-xs text-slate-500 font-mono">${p.price.toFixed(2)}€ | Bestand: ${p.stock}</div>
-                    </div>
-                    <div class="flex gap-2 flex-shrink-0">
-                        <button onclick="window.editProduct('${p.id}')" class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 transition">Bearbeiten</button>
-                        <button onclick="window.deleteProduct('${p.id}')" class="px-3 py-1 bg-red-50 text-red-500 rounded-lg font-bold text-xs hover:bg-red-100 transition">✕</button>
-                    </div>
-                </div>`;
+            list.innerHTML += `<div class="p-3 border border-slate-100 rounded-xl bg-white shadow-sm flex justify-between items-center mb-2"><div class="overflow-hidden"><div class="font-bold text-slate-800 truncate">${p.name}</div><div class="text-xs text-slate-500 font-mono">${p.price.toFixed(2)}€ | Bestand: ${p.stock}</div></div><div class="flex gap-2 flex-shrink-0"><button onclick="window.editProduct('${p.id}')" class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 transition">Bearbeiten</button><button onclick="window.deleteProduct('${p.id}')" class="px-3 py-1 bg-red-50 text-red-500 rounded-lg font-bold text-xs hover:bg-red-100 transition">✕</button></div></div>`;
         });
     }
 
-    // --- CART & INPUT LOGIC ---
-    window.updateQuantityDisplay = function(){ 
-        document.getElementById('quantity-display').innerText = quantityInputString; 
-        currentQuantity = parseInt(quantityInputString); 
-    }
-    
+    // --- CART LOGIC ---
+    window.updateQuantityDisplay = function(){ document.getElementById('quantity-display').innerText = quantityInputString; currentQuantity = parseInt(quantityInputString); }
     window.toggleQuantityMode = function(){
-      isRemovalMode = !isRemovalMode;
-      quantityInputString = '1'; isQtyDirty = false;
-      const btn = document.getElementById('btn-quantity-mode');
-      const disp = document.getElementById('quantity-mode-display');
-      if(isRemovalMode) { 
-          btn.classList.replace('bg-green-500','bg-red-500'); btn.classList.replace('hover:bg-green-600','hover:bg-red-600');
-          btn.innerText='DEL'; disp.innerText='DELETE MODE'; disp.className = 'text-center text-xs font-bold text-red-600 bg-red-50 rounded-lg py-1 mt-1 border border-red-100';
-      } else { 
-          btn.classList.replace('bg-red-500','bg-green-500'); btn.classList.replace('hover:bg-red-600','hover:bg-green-600');
-          btn.innerText='ADD'; disp.innerText='ADD MODE'; disp.className = 'text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100';
-      }
+      isRemovalMode = !isRemovalMode; quantityInputString = '1'; isQtyDirty = false;
+      const btn = document.getElementById('btn-quantity-mode'); const disp = document.getElementById('quantity-mode-display');
+      if(isRemovalMode) { btn.classList.replace('bg-green-500','bg-red-500'); btn.classList.replace('hover:bg-green-600','hover:bg-red-600'); btn.innerText='DEL'; disp.innerText='DELETE MODE'; disp.className = 'text-center text-xs font-bold text-red-600 bg-red-50 rounded-lg py-1 mt-1 border border-red-100'; } 
+      else { btn.classList.replace('bg-red-500','bg-green-500'); btn.classList.replace('hover:bg-red-600','hover:bg-green-600'); btn.innerText='ADD'; disp.innerText='ADD MODE'; disp.className = 'text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100'; }
       window.updateQuantityDisplay();
     }
-
     window.handleQuantityInput = function(key){
-      if(key === 'clear') {
-          quantityInputString = '1';
-          isQtyDirty = false;
-      } else if (key.match(/^\d$/)){
-        if (!isQtyDirty) {
-            quantityInputString = key;
-            isQtyDirty = true;
-        } else {
-            if (quantityInputString.length < 3) quantityInputString += key;
-        }
-      }
-      window.updateQuantityDisplay();
+      if(key === 'clear') { quantityInputString = '1'; isQtyDirty = false; } else if (key.match(/^\d$/)){
+        if (!isQtyDirty) { quantityInputString = key; isQtyDirty = true; } else { if (quantityInputString.length < 3) quantityInputString += key; }
+      } window.updateQuantityDisplay();
     }
-
     window.addToBestellung = function(id){
-      const p = products[id];
-      const qty = currentQuantity;
-      if (!p) return;
-
+      const p = products[id]; const qty = currentQuantity; if (!p) return;
       if (isRemovalMode) {
           const idx = currentBestellung.findIndex(i => i.id === id);
           if(idx > -1) {
-              const item = currentBestellung[idx];
-              const remove = Math.min(qty, item.quantity);
-              item.quantity -= remove;
-              item.totalBrutto = item.quantity * p.price;
+              const item = currentBestellung[idx]; const remove = Math.min(qty, item.quantity); item.quantity -= remove; item.totalBrutto = item.quantity * p.price;
               if(userSettings.stock) p.stock += remove;
               if(item.quantity <= 0) currentBestellung.splice(idx, 1);
           }
       } else {
           if(userSettings.stock && p.stock < qty) return window.showToast(`Nur noch ${p.stock} verfügbar!`, 'error');
-          
           if(userSettings.stock) p.stock -= qty;
           const existing = currentBestellung.find(i => i.id === id);
-          if(existing){
-              existing.quantity += qty;
-              existing.totalBrutto = existing.quantity * p.price;
-          } else {
-              currentBestellung.push({
-                  id: p.id, name: p.name, price: p.price, quantity: qty,
-                  totalBrutto: qty * p.price, taxRate: p.taxRate || userSettings.taxRate
-              });
-          }
+          if(existing){ existing.quantity += qty; existing.totalBrutto = existing.quantity * p.price; } 
+          else { currentBestellung.push({ id: p.id, name: p.name, price: p.price, quantity: qty, totalBrutto: qty * p.price, taxRate: p.taxRate || userSettings.taxRate }); }
       }
-      // Re-Render Grid für Stock Updates
-      window.renderProductGrid(null);
-      window.updateReceipt();
-      quantityInputString = '1'; isQtyDirty = false; window.updateQuantityDisplay();
+      window.renderProductGrid(null); window.updateReceipt(); quantityInputString = '1'; isQtyDirty = false; window.updateQuantityDisplay();
     }
-
     window.clearBestellung = function(){
       if(currentBestellung.length === 0) return;
-      if(userSettings.stock) {
-          currentBestellung.forEach(i => { if(products[i.id]) products[i.id].stock += i.quantity; });
-      }
-      currentBestellung = [];
-      window.updateReceipt();
-      window.renderProductGrid(null);
+      if(userSettings.stock) currentBestellung.forEach(i => { if(products[i.id]) products[i.id].stock += i.quantity; });
+      currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null);
+    }
+    window.removeFromBestellungByIndex = (idx) => {
+        const item = currentBestellung[idx];
+        if(item) { if(userSettings.stock && products[item.id]) products[item.id].stock += item.quantity; currentBestellung.splice(idx, 1); window.updateReceipt(); window.renderProductGrid(null); }
     }
 
     // --- CUSTOMER DISPLAY LOGIC ---
-    function updateCustomerDisplay() {
+    function updateCustomerDisplay(qrData = null) {
         if(customerChannel) {
             customerChannel.postMessage({
+                type: qrData ? 'qr' : 'update',
                 cart: currentBestellung,
-                total: totalBrutto
+                total: totalBrutto,
+                qrData: qrData
             });
         }
     }
-    
     window.openCustomerDisplay = function() {
-        const url = new URL(window.location.href);
-        url.searchParams.set('mode', 'display');
+        const url = new URL(window.location.href); url.searchParams.set('mode', 'display');
         window.open(url.toString(), '_blank', 'width=800,height=600');
     }
-    
     function initCustomerDisplayListener() {
         customerChannel.onmessage = (event) => {
             const data = event.data;
             const itemsContainer = document.getElementById('cd-items');
             const cartDiv = document.getElementById('cd-cart');
             const welcomeDiv = document.getElementById('cd-welcome');
+            const qrOverlay = document.getElementById('cd-qr-overlay');
+            const qrTarget = document.getElementById('cd-qrcode');
             
-            document.getElementById('cd-total').innerText = data.total.toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('cd-total').innerText = (data.total || 0).toFixed(2).replace('.', ',') + ' €';
             
-            if(data.cart.length > 0) {
-                welcomeDiv.style.display = 'none';
-                cartDiv.style.display = 'block';
-                itemsContainer.innerHTML = '';
-                data.cart.forEach(item => {
-                    itemsContainer.innerHTML += `
-                    <div class="flex justify-between border-b border-slate-700 pb-2">
-                        <span>${item.quantity}x ${item.name}</span>
-                        <span>${item.totalBrutto.toFixed(2).replace('.',',')} €</span>
-                    </div>`;
-                });
+            // QR Modus
+            if(data.type === 'qr' && data.qrData) {
+                qrOverlay.style.display = 'flex';
+                qrTarget.innerHTML = "";
+                new QRCode(qrTarget, { text: data.qrData, width: 256, height: 256 });
             } else {
-                welcomeDiv.style.display = 'block';
-                cartDiv.style.display = 'none';
+                qrOverlay.style.display = 'none';
+                
+                // Normaler Cart Modus
+                if(data.cart && data.cart.length > 0) {
+                    welcomeDiv.style.display = 'none'; cartDiv.style.display = 'flex';
+                    document.getElementById('cd-item-count').innerText = data.cart.reduce((a,b)=>a+b.quantity,0) + " Artikel";
+                    itemsContainer.innerHTML = '';
+                    data.cart.forEach(item => {
+                        itemsContainer.innerHTML += `<div class="flex justify-between border-b border-slate-700 pb-2 mb-2"><span><span class="font-bold text-slate-400 mr-2">${item.quantity}x</span> ${item.name}</span><span>${item.totalBrutto.toFixed(2).replace('.',',')} €</span></div>`;
+                    });
+                } else {
+                    welcomeDiv.style.display = 'block'; cartDiv.style.display = 'none';
+                }
             }
         };
     }
@@ -1404,322 +1263,290 @@ window.updateAppView = function(view) {
       } else {
         c.innerHTML = '';
         currentBestellung.forEach((item, index) => {
-          c.innerHTML += `
-            <div class="flex justify-between items-center p-3 border-b border-dashed border-slate-200 hover:bg-slate-50 transition group">
-              <span class="font-bold w-8 text-slate-400">${item.quantity}x</span>
-              <span class="flex-grow font-medium text-slate-700 leading-tight">${item.name}</span>
-              <span class="font-bold text-slate-900">${item.totalBrutto.toFixed(2).replace('.', ',')}</span>
-              <button onclick="window.removeFromBestellungByIndex(${index})" class="text-slate-300 hover:text-red-500 ml-2 font-bold px-2 opacity-0 group-hover:opacity-100 transition">✕</button>
-            </div>`;
+          c.innerHTML += `<div class="flex justify-between items-center p-3 border-b border-dashed border-slate-200 hover:bg-slate-50 transition group"><span class="font-bold w-8 text-slate-400">${item.quantity}x</span><span class="flex-grow font-medium text-slate-700 leading-tight">${item.name}</span><span class="font-bold text-slate-900">${item.totalBrutto.toFixed(2).replace('.', ',')}</span><button onclick="window.removeFromBestellungByIndex(${index})" class="text-slate-300 hover:text-red-500 ml-2 font-bold px-2 opacity-0 group-hover:opacity-100 transition">✕</button></div>`;
         });
         document.getElementById('btn-finalize').disabled = false;
       }
       document.getElementById('total-display').innerText = `${totalBrutto.toFixed(2).replace('.', ',')} €`;
       document.getElementById('finalize-total').innerText = `${totalBrutto.toFixed(2).replace('.', ',')} €`;
-      
-      updateCustomerDisplay(); // TRIGGER BROADCAST
-    }
-    
-    window.removeFromBestellungByIndex = (idx) => {
-        const item = currentBestellung[idx];
-        if(item) {
-            if(userSettings.stock && products[item.id]) products[item.id].stock += item.quantity;
-            currentBestellung.splice(idx, 1);
-            window.updateReceipt();
-            window.renderProductGrid(null);
-        }
+      updateCustomerDisplay(); 
     }
 
     // --- FINALIZE ---
     window.openFinalizeModal = function(){
       document.getElementById('finalize-modal').style.display='flex';
-      
-      const simpleDiv = document.getElementById('simple-payment-ui');
-      const complexDiv = document.getElementById('complex-payment-ui');
-      const modalContent = document.getElementById('finalize-modal-content');
-
+      const simpleDiv = document.getElementById('simple-payment-ui'); const complexDiv = document.getElementById('complex-payment-ui'); const modalContent = document.getElementById('finalize-modal-content');
       if(userSettings.simplePayment) {
-          simpleDiv.style.display = 'block';
-          complexDiv.style.display = 'none';
-          modalContent.style.maxWidth = '400px';
+          simpleDiv.style.display = 'block'; complexDiv.style.display = 'none'; modalContent.style.maxWidth = '400px';
           const simpleTotal = calculateTotalWithFee('BAR');
           document.getElementById('finalize-total-simple').innerText = simpleTotal.toFixed(2).replace('.', ',') + ' €';
-          let cardTotal = simpleTotal;
-          if (userSettings.cardFee && userSettings.cardFeeRate > 0) {
-             cardTotal = simpleTotal * (1 + userSettings.cardFeeRate / 100);
-          }
+          let cardTotal = simpleTotal; if (userSettings.cardFee && userSettings.cardFeeRate > 0) cardTotal = simpleTotal * (1 + userSettings.cardFeeRate / 100);
           document.getElementById('btn-simple-card-text').innerText = `KARTE (${cardTotal.toFixed(2).replace('.',',')} €)`;
       } else {
-          simpleDiv.style.display = 'none';
-          complexDiv.style.display = 'block';
-          modalContent.style.maxWidth = '450px';
-          setPaymentMethod('BAR');
+          simpleDiv.style.display = 'none'; complexDiv.style.display = 'block'; modalContent.style.maxWidth = '450px'; setPaymentMethod('BAR');
       }
       window.updateVisibility(); 
     }
-
     window.setPaymentMethod = function(method){
       cashPaymentMethod = method;
       const total = calculateTotalWithFee(method);
       document.getElementById('finalize-total').innerText = total.toFixed(2).replace('.', ',') + ' €';
-
-      const cashArea = document.getElementById('cash-payment-area');
-      const cashBtns = document.getElementById('cash-finalize-buttons');
-      const cardBtns = document.getElementById('card-finalize-buttons');
-      
-      const btnBar = document.getElementById('btn-bar-select');
-      const btnKarte = document.getElementById('btn-karte-select');
-
-      if(method === 'BAR'){
-         cashArea.style.display = 'block'; cashBtns.style.display = 'block'; cardBtns.style.display = 'none';
-         btnBar.className = "p-3 rounded-xl font-bold bg-green-600 text-white shadow-md transition";
-         btnKarte.className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition";
-         cashReceivedInput = '0'; updateCashChangeDisplay();
-      } else {
-         cashArea.style.display = 'none'; cashBtns.style.display = 'none'; cardBtns.style.display = 'block';
-         btnKarte.className = "p-3 rounded-xl font-bold bg-indigo-600 text-white shadow-md transition";
-         btnBar.className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition";
-      }
+      const cashArea = document.getElementById('cash-payment-area'); const cashBtns = document.getElementById('cash-finalize-buttons'); const cardBtns = document.getElementById('card-finalize-buttons');
+      if(method === 'BAR'){ cashArea.style.display = 'block'; cashBtns.style.display = 'block'; cardBtns.style.display = 'none'; document.getElementById('btn-bar-select').className = "p-3 rounded-xl font-bold bg-green-600 text-white shadow-md transition"; document.getElementById('btn-karte-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition"; cashReceivedInput = '0'; updateCashChangeDisplay(); } 
+      else { cashArea.style.display = 'none'; cashBtns.style.display = 'none'; cardBtns.style.display = 'block'; document.getElementById('btn-karte-select').className = "p-3 rounded-xl font-bold bg-indigo-600 text-white shadow-md transition"; document.getElementById('btn-bar-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition"; }
     }
-    
-    function calculateTotalWithFee(method) {
-        let t = totalBrutto;
-        if(method === 'KARTE' && userSettings.cardFee && userSettings.cardFeeRate > 0) {
-            t += totalBrutto * (userSettings.cardFeeRate / 100);
-        }
-        return t;
-    }
-
+    function calculateTotalWithFee(method) { let t = totalBrutto; if(method === 'KARTE' && userSettings.cardFee && userSettings.cardFeeRate > 0) t += totalBrutto * (userSettings.cardFeeRate / 100); return t; }
     window.updateCashChangeDisplay = function(){
-      const total = calculateTotalWithFee(cashPaymentMethod);
-      const given = parseFloat(cashReceivedInput) / 100;
+      const total = calculateTotalWithFee(cashPaymentMethod); const given = parseFloat(cashReceivedInput) / 100;
       document.getElementById('cash-received-display').innerText = given.toFixed(2).replace('.', ',');
       document.getElementById('change-display').innerText = (given - total).toFixed(2).replace('.', ',') + ' €';
-      
       const enough = given >= total - 0.009; 
-      document.getElementById('btn-cash-none').disabled = !enough;
-      document.getElementById('btn-cash-standard').disabled = !enough;
-      document.getElementById('btn-cash-bewirtung').disabled = !enough;
-      document.getElementById('btn-cash-qr').disabled = !enough;
+      document.getElementById('btn-cash-none').disabled = !enough; document.getElementById('btn-cash-standard').disabled = !enough; document.getElementById('btn-cash-bewirtung').disabled = !enough; document.getElementById('btn-cash-qr').disabled = !enough;
     }
-
     window.handleCashInput = function(key){
-      if(key === 'clear') cashReceivedInput = '0';
-      else if (key === 'dot') { }
-      else if (key.match(/^\d$/)){
-         if(cashReceivedInput === '0') cashReceivedInput = key;
-         else if(cashReceivedInput.length < 7) cashReceivedInput += key;
-      }
-      window.updateCashChangeDisplay();
+      if(key === 'clear') cashReceivedInput = '0'; else if (key === 'dot') { } else if (key.match(/^\d$/)){ if(cashReceivedInput === '0') cashReceivedInput = key; else if(cashReceivedInput.length < 7) cashReceivedInput += key; } window.updateCashChangeDisplay();
     }
     window.setCashExact = () => { cashReceivedInput = Math.round(calculateTotalWithFee(cashPaymentMethod)*100).toString(); updateCashChangeDisplay(); }
-    window.addCashShortcut = (val) => { 
-        let curr = parseFloat(cashReceivedInput); 
-        cashReceivedInput = (curr + (val*100)).toString(); 
-        updateCashChangeDisplay(); 
+    window.addCashShortcut = (val) => { cashReceivedInput = (parseFloat(cashReceivedInput) + (val*100)).toString(); updateCashChangeDisplay(); }
+
+    // --- PDF / QR / DIGITAL RECEIPT ---
+    window.getReceiptText = function(isPDF = false) {
+        const total = calculateTotalWithFee(cashPaymentMethod);
+        const date = new Date().toLocaleString();
+        let txt = isPDF ? "" : `Beleg: ${userSettings.companyName || 'Kasse'}\n${date}\n`;
+        currentBestellung.forEach(i => txt += `${i.quantity}x ${i.name} - ${i.totalBrutto.toFixed(2)}\n`);
+        txt += `\nSUMME: ${total.toFixed(2)} EUR\n`;
+        return txt;
     }
 
-    // --- DIGITAL RECEIPT (QR) ---
     window.showQRReceipt = function() {
         const modal = document.getElementById('qr-modal');
         const container = document.getElementById('qrcode');
         container.innerHTML = "";
         modal.style.display = 'flex';
         
-        // Simple Receipt Data Summary for QR
-        const date = new Date().toLocaleString();
-        let txt = `Beleg ${userSettings.companyName}\n${date}\nSumme: ${calculateTotalWithFee(cashPaymentMethod).toFixed(2)} EUR\n\n`;
-        currentBestellung.forEach(i => txt += `${i.quantity}x ${i.name} ${i.totalBrutto.toFixed(2)}\n`);
+        // Structured Text for QR
+        const qrData = window.getReceiptText(false);
+        new QRCode(container, { text: qrData, width: 200, height: 200 });
         
-        new QRCode(container, {
-            text: txt,
-            width: 200,
-            height: 200
+        // Send to Customer Screen
+        updateCustomerDisplay(qrData);
+    }
+    
+    window.downloadPDFReceipt = function() {
+        if(!window.jspdf) return window.showToast("PDF Lib Error", "error");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(16);
+        doc.text(userSettings.companyName || "Kassensystem", 105, 10, {align: "center"});
+        doc.setFontSize(10);
+        doc.text(new Date().toLocaleString(), 105, 16, {align: "center"});
+        
+        let y = 30;
+        doc.text("------------------------------------------------", 10, y); y+=7;
+        
+        currentBestellung.forEach(item => {
+            doc.text(`${item.quantity}x ${item.name}`, 10, y);
+            doc.text(`${item.totalBrutto.toFixed(2)}`, 200, y, {align: "right"});
+            y += 7;
         });
+        
+        y += 5;
+        doc.text("------------------------------------------------", 10, y); y+=10;
+        doc.setFontSize(14);
+        doc.text("SUMME:", 10, y);
+        doc.text(`${calculateTotalWithFee(cashPaymentMethod).toFixed(2)} EUR`, 200, y, {align: "right"});
+        
+        doc.save(`Beleg_${Date.now()}.pdf`);
+        window.showToast("PDF gespeichert", "success");
     }
 
+    // --- FINALIZE TRANSACTION ---
     window.handleFinalizeAction = async function(method, receiptType){
-        const isSimple = userSettings.simplePayment;
         const finalTotal = calculateTotalWithFee(method);
-        const given = (method === 'BAR' && !isSimple) ? parseFloat(cashReceivedInput)/100 : finalTotal;
-        
+        const given = (method === 'BAR' && !userSettings.simplePayment) ? parseFloat(cashReceivedInput)/100 : finalTotal;
         if(!isOffline) window.showLoading(true);
-        
         try {
             const fee = finalTotal - totalBrutto;
             const items = [...currentBestellung];
             if(fee > 0) items.push({ id:'FEE', name:`Kartengebühr`, price:fee, quantity:1, totalBrutto:fee, taxRate:0, isFee:true });
-            
             const nextReceiptId = (userSettings.receiptCounter || 0) + 1;
-            
-            const tData = {
-                items: items,
-                totalBrutto: finalTotal,
-                timestamp: new Date().toISOString(),
-                paymentMethod: method,
-                status: 'completed',
-                received: given,
-                change: given - finalTotal,
-                receiptId: nextReceiptId
-            };
+            const tData = { items: items, totalBrutto: finalTotal, timestamp: new Date().toISOString(), paymentMethod: method, status: 'completed', received: given, change: given - finalTotal, receiptId: nextReceiptId };
 
-            // OFFLINE HANDLING
             if(isOffline) {
                 localTransactionQueue.push(tData);
                 localStorage.setItem('pos_queue', JSON.stringify(localTransactionQueue));
-                
-                // Offline Local Logic
-                if(userSettings.stock) {
-                    currentBestellung.forEach(i => { if(products[i.id]) products[i.id].stock -= 0; }); // Already reduced locally in state
-                }
+                if(userSettings.stock) currentBestellung.forEach(i => { if(products[i.id]) products[i.id].stock -= 0; }); 
                 if(method === 'BAR') cashBoxBalance += finalTotal;
-                
                 userSettings.receiptCounter = nextReceiptId;
-                // Save settings locally to persist counter/cash if app reloads offline
                 localStorage.setItem('pos_settings_offline', JSON.stringify(userSettings));
-                
                 window.showToast("Offline gespeichert", "info");
             } else {
-                // ONLINE LOGIC
                 const batch = writeBatch(db);
-                if(userSettings.stock) {
-                    currentBestellung.forEach(i => {
-                       if(products[i.id]) batch.update(doc(productsCollectionRef(currentUser.uid), i.id), { stock: products[i.id].stock });
-                    });
-                }
-                // Convert string date back to object for Firestore if needed, or keep ISO
+                if(userSettings.stock) currentBestellung.forEach(i => { if(products[i.id]) batch.update(doc(productsCollectionRef(currentUser.uid), i.id), { stock: products[i.id].stock }); });
                 batch.set(doc(transactionsCollectionRef(currentUser.uid)), { ...tData, timestamp: new Date() });
-                
-                if(method === 'BAR') {
-                    const newBal = cashBoxBalance + finalTotal;
-                    batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal, receiptCounter: nextReceiptId });
-                    cashBoxBalance = newBal;
-                } else {
-                    batch.update(settingsDocRef(currentUser.uid), { receiptCounter: nextReceiptId });
-                }
+                if(method === 'BAR') { const newBal = cashBoxBalance + finalTotal; batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal, receiptCounter: nextReceiptId }); cashBoxBalance = newBal; } 
+                else { batch.update(settingsDocRef(currentUser.uid), { receiptCounter: nextReceiptId }); }
                 userSettings.receiptCounter = nextReceiptId;
                 await batch.commit();
             }
-            
             if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType, nextReceiptId);
-            
-            currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null);
-            closeModal('finalize-modal'); 
+            currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null); closeModal('finalize-modal'); 
             if(!isOffline) window.showToast('Zahlung erfolgreich!', 'success');
-            
         } catch(e) { console.error(e); window.showToast('Fehler bei Zahlung', 'error'); }
         finally { window.showLoading(false); }
     }
 
     // --- CASH MANAGEMENT ---
-    window.openCashManagementModal = () => {
-        document.getElementById('cash-management-modal').style.display='flex';
-        document.getElementById('cash-balance-display').innerText = cashBoxBalance.toFixed(2).replace('.', ',') + ' €';
-        cashReceivedInput = '0';
-        document.getElementById('cash-man-received-display').innerText = '0,00';
-    }
-    window.handleCashManInput = (k) => {
-        window.handleCashInput(k);
-        document.getElementById('cash-man-received-display').innerText = (parseFloat(cashReceivedInput)/100).toFixed(2).replace('.', ',');
-    }
+    window.openCashManagementModal = () => { document.getElementById('cash-management-modal').style.display='flex'; document.getElementById('cash-balance-display').innerText = cashBoxBalance.toFixed(2).replace('.', ',') + ' €'; cashReceivedInput = '0'; document.getElementById('cash-man-received-display').innerText = '0,00'; }
+    window.handleCashManInput = (k) => { window.handleCashInput(k); document.getElementById('cash-man-received-display').innerText = (parseFloat(cashReceivedInput)/100).toFixed(2).replace('.', ','); }
     window.handleCashManagement = async (type) => {
-        const amount = parseFloat(cashReceivedInput)/100;
-        if(amount <= 0) return;
-        window.showLoading(true);
-        const batch = writeBatch(db);
-        let newBal = type === 'EINLAGE' ? cashBoxBalance + amount : cashBoxBalance - amount;
-        
+        const amount = parseFloat(cashReceivedInput)/100; if(amount <= 0) return;
+        window.showLoading(true); const batch = writeBatch(db); let newBal = type === 'EINLAGE' ? cashBoxBalance + amount : cashBoxBalance - amount;
         batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: newBal });
-        batch.set(doc(transactionsCollectionRef(currentUser.uid)), {
-            type: type === 'EINLAGE' ? 'CASH-EINLAGE' : 'CASH-ENTNAHME',
-            amount: amount, timestamp: new Date(), status: 'completed'
-        });
-        
-        await batch.commit();
-        cashBoxBalance = newBal;
-        closeModal('cash-management-modal'); window.showToast('Gebucht', 'success'); window.showLoading(false);
-    }
-
-    // --- REPORT FIX ---
-    window.setReportDateToday = function(){
-        document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
+        batch.set(doc(transactionsCollectionRef(currentUser.uid)), { type: type === 'EINLAGE' ? 'CASH-EINLAGE' : 'CASH-ENTNAHME', amount: amount, timestamp: new Date(), status: 'completed' });
+        await batch.commit(); cashBoxBalance = newBal; closeModal('cash-management-modal'); window.showToast('Gebucht', 'success'); window.showLoading(false);
     }
     
-    window.openReportModal = function(){
-        window.setReportDateToday();
-        document.getElementById('report-modal').style.display='flex';
-        window.runDailyReport();
+    // --- TRANSACTION HISTORY / STORNO ---
+    window.openTransactionHistoryModal = function(){ window.openPinModal("Transaktionen", window.showTransactionHistory); }
+    window.showTransactionHistory = async function(){
+        const modal = document.getElementById('transactions-modal');
+        const list = document.getElementById('transaction-list');
+        list.innerHTML = '<div class="text-center p-4"><div class="spinner mx-auto"></div></div>';
+        modal.style.display = 'flex';
+        closeModal('settings-modal');
+        
+        try {
+            // Hole nur heutige Transaktionen für Performance
+            const today = new Date(); today.setHours(0,0,0,0);
+            const q = query(transactionsCollectionRef(currentUser.uid), where('timestamp', '>=', today), orderBy('timestamp', 'desc'));
+            const snap = await getDocs(q);
+            
+            list.innerHTML = '';
+            if(snap.empty) { list.innerHTML = '<p class="text-center text-slate-500 p-4">Keine Transaktionen heute.</p>'; return; }
+            
+            snap.forEach(d => {
+                const t = d.data();
+                const id = d.id;
+                const time = t.timestamp ? new Date(t.timestamp.seconds*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '-';
+                const isCancelled = t.status === 'cancelled';
+                const isCashOp = t.type && t.type.includes('CASH');
+                
+                let desc = isCashOp ? `${t.type} (${t.amount}€)` : `Bon #${t.receiptId || '?'} - ${t.totalBrutto ? t.totalBrutto.toFixed(2) : '0'}€ (${t.paymentMethod})`;
+                
+                const btnHtml = isCancelled ? '<span class="text-red-500 font-bold text-xs">STORNIERT</span>' 
+                                            : `<button onclick="window.initiateCancel('${id}')" class="bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg font-bold text-xs">🗑 Storno</button>`;
+
+                list.innerHTML += `
+                <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm ${isCancelled ? 'opacity-50' : ''}">
+                   <div><span class="text-xs font-mono text-slate-400 mr-2">${time}</span><span class="font-bold text-slate-700">${desc}</span></div>
+                   <div>${btnHtml}</div>
+                </div>`;
+            });
+        } catch(e){ console.error(e); list.innerHTML = `<p class="text-red-500 p-4">Fehler: ${e.message}</p>`; }
     }
+    
+    window.initiateCancel = function(id) { window.openPinModal("Storno bestätigen", window.performCancel, id); }
+    window.performCancel = async function(id) {
+        if(!confirm("Wirklich stornieren? Bestände werden zurückgebucht.")) return;
+        window.showLoading(true);
+        try {
+            const ref = doc(transactionsCollectionRef(currentUser.uid), id);
+            const snap = await getDoc(ref);
+            if(!snap.exists()) throw new Error("Nicht gefunden");
+            const t = snap.data();
+            
+            const batch = writeBatch(db);
+            batch.update(ref, { status: 'cancelled', cancelledAt: new Date() });
+            
+            // 1. Stock Restore
+            if(userSettings.stock && t.items) {
+                for(const item of t.items) {
+                    if(!item.isFee && item.id) {
+                        const prodRef = doc(productsCollectionRef(currentUser.uid), item.id);
+                        batch.update(prodRef, { stock: increment(item.quantity) });
+                    }
+                }
+            }
+            // 2. Cash Balance Restore if BAR
+            if(t.paymentMethod === 'BAR' && t.totalBrutto) {
+                cashBoxBalance -= t.totalBrutto;
+                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: cashBoxBalance });
+            }
+            // 3. Cash Ops Restore
+            if(t.type === 'CASH-EINLAGE') {
+                cashBoxBalance -= t.amount;
+                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: cashBoxBalance });
+            } else if(t.type === 'CASH-ENTNAHME') {
+                cashBoxBalance += t.amount;
+                batch.update(settingsDocRef(currentUser.uid), { cashBoxBalance: cashBoxBalance });
+            }
+            
+            await batch.commit();
+            window.showToast("Storno erfolgreich", "success");
+            window.showTransactionHistory(); // Refresh list
+        } catch(e) { console.error(e); window.showToast("Fehler bei Storno", "error"); }
+        finally { window.showLoading(false); }
+    }
+
+    // --- REPORT & CSV ---
+    window.setReportDateToday = function(){ document.getElementById('report-date').value = new Date().toISOString().split('T')[0]; }
+    window.openReportModal = function(){ window.setReportDateToday(); document.getElementById('report-modal').style.display='flex'; window.runDailyReport(); }
     window.openReportModalWithPin = function(){ window.openPinModal('Tagesbericht', window.openReportModal); }
     
     window.runDailyReport = async function() {
-        const dateStr = document.getElementById('report-date').value;
-        if(!dateStr) return;
-        
+        const dateStr = document.getElementById('report-date').value; if(!dateStr) return;
         window.showLoading(true);
         try {
-            const start = new Date(dateStr + 'T00:00:00');
-            const end = new Date(dateStr + 'T23:59:59');
-            
-            const q = query(transactionsCollectionRef(currentUser.uid), 
-                where('timestamp', '>=', start), where('timestamp', '<=', end), orderBy('timestamp', 'desc'));
-                
+            const start = new Date(dateStr + 'T00:00:00'); const end = new Date(dateStr + 'T23:59:59');
+            const q = query(transactionsCollectionRef(currentUser.uid), where('timestamp', '>=', start), where('timestamp', '<=', end), orderBy('timestamp', 'desc'));
             const snap = await getDocs(q);
+            lastReportData = []; // Clear for CSV
             
-            let total = 0, cash = 0, card = 0, fee = 0;
-            let txt = `Bericht für ${dateStr}\n------------------------\n`;
+            let total = 0, cash = 0, card = 0, fee = 0; let txt = `Bericht für ${dateStr}\n------------------------\n`;
             
-            if(snap.empty) {
-                txt += "Keine Transaktionen gefunden.";
-            } else {
+            if(snap.empty) { txt += "Keine Transaktionen gefunden."; } 
+            else {
                 snap.forEach(d => {
                     const t = d.data();
+                    lastReportData.push(t); // Store raw for CSV
                     const time = t.timestamp ? new Date(t.timestamp.seconds*1000).toLocaleTimeString() : '-';
-                    
                     if(t.status === 'completed') {
-                        if(t.type && t.type.includes('CASH')) {
-                            txt += `${time} | ${t.type} | ${t.amount.toFixed(2)}€\n`;
-                            return; 
-                        }
-                        
-                        const val = t.totalBrutto || 0;
-                        total += val;
-                        if(t.paymentMethod === 'BAR') cash += val;
-                        if(t.paymentMethod === 'KARTE') card += val;
-                        
-                        if(t.items) {
-                            const feeItem = t.items.find(i=>i.isFee);
-                            if(feeItem) fee += feeItem.totalBrutto;
-                        }
-                        
+                        if(t.type && t.type.includes('CASH')) { txt += `${time} | ${t.type} | ${t.amount.toFixed(2)}€\n`; return; }
+                        const val = t.totalBrutto || 0; total += val;
+                        if(t.paymentMethod === 'BAR') cash += val; if(t.paymentMethod === 'KARTE') card += val;
+                        if(t.items) { const feeItem = t.items.find(i=>i.isFee); if(feeItem) fee += feeItem.totalBrutto; }
                         txt += `${time} | #${t.receiptId || '-'} | ${val.toFixed(2)}€ (${t.paymentMethod})\n`;
-                    } else if (t.status === 'cancelled') {
-                        txt += `${time} | STORNIERT | ${(t.totalBrutto||0).toFixed(2)}€\n`;
-                    }
+                    } else if (t.status === 'cancelled') { txt += `${time} | STORNIERT | ${(t.totalBrutto||0).toFixed(2)}€\n`; }
                 });
             }
-            
-            const header = `GESAMT UMSATZ: ${total.toFixed(2)} €\n` + 
-                           `Bar: ${cash.toFixed(2)} €\n` + 
-                           `Karte: ${card.toFixed(2)} €\n` + 
-                           (fee > 0 ? `Darin Gebühren: ${fee.toFixed(2)} €\n` : '') + 
-                           `\n`;
-                           
+            const header = `GESAMT UMSATZ: ${total.toFixed(2)} €\n` + `Bar: ${cash.toFixed(2)} €\n` + `Karte: ${card.toFixed(2)} €\n` + (fee > 0 ? `Darin Gebühren: ${fee.toFixed(2)} €\n` : '') + `\n`;
             document.getElementById('report-content').innerText = header + txt;
-        } catch(e) {
-            console.error(e);
-            document.getElementById('report-content').innerText = "Fehler beim Laden: " + e.message;
-        } finally {
-            window.showLoading(false);
-        }
+        } catch(e) { console.error(e); document.getElementById('report-content').innerText = "Fehler: " + e.message; } finally { window.showLoading(false); }
     }
     
     window.exportCSV = function() {
-        const txt = document.getElementById('report-content').innerText;
-        const csvContent = "data:text/plain;charset=utf-8," + encodeURIComponent(txt);
+        if(!lastReportData.length) return window.showToast("Keine Daten für Export", "error");
+        
+        let csv = "Datum;Uhrzeit;Typ;ID;Betrag;Methode;Status\n";
+        lastReportData.forEach(t => {
+            const d = t.timestamp ? new Date(t.timestamp.seconds*1000) : new Date();
+            const date = d.toLocaleDateString();
+            const time = d.toLocaleTimeString();
+            let amount = 0; let type = "Verkauf"; let id = t.receiptId || "";
+            
+            if(t.type && t.type.includes("CASH")) { amount = t.amount; type = t.type; }
+            else { amount = t.totalBrutto; }
+            
+            csv += `${date};${time};${type};${id};${amount.toFixed(2)};${t.paymentMethod || '-'};${t.status}\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        link.setAttribute("href", csvContent);
-        link.setAttribute("download", `Bericht_${document.getElementById('report-date').value}.txt`);
+        link.href = URL.createObjectURL(blob);
+        link.download = `Export_${document.getElementById('report-date').value}.csv`;
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
@@ -1737,63 +1564,17 @@ window.updateAppView = function(view) {
            let rate = item.taxRate !== undefined ? item.taxRate : 19;
            let key = rate.toString();
            if(!taxGroups[key]) taxGroups[key] = { gross: 0, net: 0, tax: 0 };
-           
-           let itemTotal = item.totalBrutto;
-           let itemNet = itemTotal / (1 + (rate/100));
-           let itemTax = itemTotal - itemNet;
-           
-           taxGroups[key].gross += itemTotal;
-           taxGroups[key].net += itemNet;
-           taxGroups[key].tax += itemTax;
+           let itemTotal = item.totalBrutto; let itemNet = itemTotal / (1 + (rate/100)); let itemTax = itemTotal - itemNet;
+           taxGroups[key].gross += itemTotal; taxGroups[key].net += itemNet; taxGroups[key].tax += itemTax;
        });
 
        let taxHtml = '';
-       for(const [rate, data] of Object.entries(taxGroups)) {
-           taxHtml += `<div class="line" style="font-size:10px;"><span>MwSt ${rate}% (Netto ${data.net.toFixed(2)}):</span><span>${data.tax.toFixed(2)}</span></div>`;
-       }
+       for(const [rate, data] of Object.entries(taxGroups)) { taxHtml += `<div class="line" style="font-size:10px;"><span>MwSt ${rate}% (Netto ${data.net.toFixed(2)}):</span><span>${data.tax.toFixed(2)}</span></div>`; }
        
-       let html = `
-         <div class="receipt-print">
-           <div class="center bold" style="font-size:16px; margin-bottom:5px;">${company.toUpperCase()}</div>
-           ${addr ? `<div class="center">${addr}</div>` : ''}
-           ${taxId ? `<div class="center">St-Nr: ${taxId}</div>` : ''}
-           
-           <div class="separator"></div>
-           <div class="center bold">BON NR. #${receiptId}</div>
-           <div class="separator"></div>
-           
-           ${items.map(i => `
-             <div class="line">
-               <span class="item-name">${i.quantity}x ${i.name}</span>
-               <span class="item-price">${i.totalBrutto.toFixed(2).replace('.', ',')}</span>
-             </div>
-           `).join('')}
-           
-           <div class="separator"></div>
-           <div class="line total-line">
-             <span>SUMME</span>
-             <span>${total.toFixed(2).replace('.', ',')} €</span>
-           </div>
-           <div class="separator"></div>
-           ${taxHtml}
-           <div class="center" style="margin-top:5px; font-size:10px;">${time}</div>
-           <div class="center" style="font-size:10px;">Vielen Dank!</div>
-         </div>
-       `;
+       let html = `<div class="receipt-print"><div class="center bold" style="font-size:16px; margin-bottom:5px;">${company.toUpperCase()}</div>${addr ? `<div class="center">${addr}</div>` : ''}${taxId ? `<div class="center">St-Nr: ${taxId}</div>` : ''}<div class="separator"></div><div class="center bold">BON NR. #${receiptId}</div><div class="separator"></div>${items.map(i => `<div class="line"><span class="item-name">${i.quantity}x ${i.name}</span><span class="item-price">${i.totalBrutto.toFixed(2).replace('.', ',')}</span></div>`).join('')}<div class="separator"></div><div class="line total-line"><span>SUMME</span><span>${total.toFixed(2).replace('.', ',')} €</span></div><div class="separator"></div>${taxHtml}<div class="center" style="margin-top:5px; font-size:10px;">${time}</div><div class="center" style="font-size:10px;">Vielen Dank!</div></div>`;
        
-       if(type === 'bewirtung'){
-           html += `
-           <br><br>
-           <div class="receipt-print" style="border-top: 1px dashed black; padding-top:10px;">
-            <div class="center bold">Bewirtungsbeleg</div>
-            <div class="text-xs" style="margin-top:10px;">Bewirtende Person:</div> <div class="fill-line"></div>
-            <div class="text-xs">Anlass:</div> <div class="fill-line"></div>
-            <div class="text-xs">Teilnehmer:</div> <div class="fill-line"></div>
-            <div class="text-xs">Ort, Datum, Unterschrift:</div> <div class="fill-line"></div>
-           </div>`;
-       }
-       container.innerHTML = html;
-       window.print();
+       if(type === 'bewirtung'){ html += `<br><br><div class="receipt-print" style="border-top: 1px dashed black; padding-top:10px;"><div class="center bold">Bewirtungsbeleg</div><div class="text-xs" style="margin-top:10px;">Bewirtende Person:</div> <div class="fill-line"></div><div class="text-xs">Anlass:</div> <div class="fill-line"></div><div class="text-xs">Teilnehmer:</div> <div class="fill-line"></div><div class="text-xs">Ort, Datum, Unterschrift:</div> <div class="fill-line"></div></div>`; }
+       container.innerHTML = html; window.print();
     }
   </script>
 </body>
