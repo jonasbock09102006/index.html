@@ -46,7 +46,7 @@
     /* Lock Screen */
     #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
 
-    /* Customer Display Mode */
+    /* Customer Display Mode Styles */
     #customer-display-screen { 
         position: fixed; inset:0; z-index: 9000;
         display: none; height: 100dvh; width: 100vw; 
@@ -54,6 +54,7 @@
         flex-direction: column; 
     }
     
+    /* Print Styles */
     #print-receipt-container { display: none; visibility: hidden; } 
     @media print {
       @page { size: auto; margin: 0mm; }
@@ -94,7 +95,8 @@
                   <span>Ihre Bestellung</span>
                   <span class="text-slate-400 text-xl" id="cd-item-count">0 Artikel</span>
               </h2>
-              <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4"></div>
+              <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4">
+                 </div>
           </div>
           
           <div id="cd-qr-overlay" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
@@ -1216,7 +1218,7 @@
     }
     window.openCustomerDisplay = function() {
         const url = new URL(window.location.href); url.searchParams.set('mode', 'display');
-        window.open(url.toString(), '_blank', 'width=800,height=600');
+        window.open(url.toString(), '_blank', 'width=1024,height=768');
     }
     function initCustomerDisplayListener() {
         customerChannel.onmessage = (event) => {
@@ -1325,9 +1327,12 @@
         container.innerHTML = "";
         modal.style.display = 'flex';
         
-        // Structured Text for QR
+        // QR Code Logic: Text for Digital Receipt
         const qrData = window.getReceiptText(false);
         new QRCode(container, { text: qrData, width: 200, height: 200 });
+        
+        // Trigger auto PDF offer or logic
+        window.showToast("QR-Code generiert. PDF Download bereit.", "success");
         
         // Send to Customer Screen
         updateCustomerDisplay(qrData);
@@ -1436,8 +1441,10 @@
                 
                 let desc = isCashOp ? `${t.type} (${t.amount}€)` : `Bon #${t.receiptId || '?'} - ${t.totalBrutto ? t.totalBrutto.toFixed(2) : '0'}€ (${t.paymentMethod})`;
                 
-                const btnHtml = isCancelled ? '<span class="text-red-500 font-bold text-xs">STORNIERT</span>' 
-                                            : `<button onclick="window.initiateCancel('${id}')" class="bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg font-bold text-xs">🗑 Storno</button>`;
+                // --- STORNO BUTTON LOGIC ---
+                const btnHtml = isCancelled 
+                    ? '<span class="text-red-500 font-bold text-xs">STORNIERT</span>' 
+                    : `<button onclick="window.initiateCancel('${id}')" class="bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg font-bold text-xs">🗑 Storno</button>`;
 
                 list.innerHTML += `
                 <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm ${isCancelled ? 'opacity-50' : ''}">
@@ -1448,7 +1455,11 @@
         } catch(e){ console.error(e); list.innerHTML = `<p class="text-red-500 p-4">Fehler: ${e.message}</p>`; }
     }
     
-    window.initiateCancel = function(id) { window.openPinModal("Storno bestätigen", window.performCancel, id); }
+    // Storno Trigger with Security Check
+    window.initiateCancel = function(id) { 
+        window.openPinModal("Admin-Code für Storno", window.performCancel, id); 
+    }
+    
     window.performCancel = async function(id) {
         if(!confirm("Wirklich stornieren? Bestände werden zurückgebucht.")) return;
         window.showLoading(true);
@@ -1503,7 +1514,7 @@
             const start = new Date(dateStr + 'T00:00:00'); const end = new Date(dateStr + 'T23:59:59');
             const q = query(transactionsCollectionRef(currentUser.uid), where('timestamp', '>=', start), where('timestamp', '<=', end), orderBy('timestamp', 'desc'));
             const snap = await getDocs(q);
-            lastReportData = []; // Clear for CSV
+            lastReportData = []; // Clear for CSV Fix
             
             let total = 0, cash = 0, card = 0, fee = 0; let txt = `Bericht für ${dateStr}\n------------------------\n`;
             
@@ -1511,7 +1522,9 @@
             else {
                 snap.forEach(d => {
                     const t = d.data();
-                    lastReportData.push(t); // Store raw for CSV
+                    const cleanT = {...t, id: d.id}; // Add ID
+                    lastReportData.push(cleanT); // Store raw for CSV
+
                     const time = t.timestamp ? new Date(t.timestamp.seconds*1000).toLocaleTimeString() : '-';
                     if(t.status === 'completed') {
                         if(t.type && t.type.includes('CASH')) { txt += `${time} | ${t.type} | ${t.amount.toFixed(2)}€\n`; return; }
@@ -1535,10 +1548,10 @@
             const d = t.timestamp ? new Date(t.timestamp.seconds*1000) : new Date();
             const date = d.toLocaleDateString();
             const time = d.toLocaleTimeString();
-            let amount = 0; let type = "Verkauf"; let id = t.receiptId || "";
+            let amount = 0; let type = "Verkauf"; let id = t.receiptId || t.id || "";
             
             if(t.type && t.type.includes("CASH")) { amount = t.amount; type = t.type; }
-            else { amount = t.totalBrutto; }
+            else { amount = t.totalBrutto || 0; }
             
             csv += `${date};${time};${type};${id};${amount.toFixed(2)};${t.paymentMethod || '-'};${t.status}\n`;
         });
