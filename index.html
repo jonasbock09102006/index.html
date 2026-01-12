@@ -84,7 +84,7 @@
   <div id="offline-banner">OFFLINE MODUS - Daten werden lokal gespeichert</div>
 
   <div id="customer-display-screen">
-      <div class="flex-grow flex items-center justify-center p-8 relative">
+      <div id="cd-view-cart" class="flex-grow flex items-center justify-center p-8 relative flex-col h-full w-full">
           <div id="cd-welcome" class="text-center">
               <h1 class="text-6xl font-bold mb-6 tracking-tight">Willkommen</h1>
               <p class="text-3xl text-slate-400">Wir freuen uns auf Sie!</p>
@@ -98,17 +98,23 @@
               <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4">
                  </div>
           </div>
-          
-          <div id="cd-qr-overlay" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
-               <h2 class="text-4xl font-bold mb-8 text-white">Vielen Dank!</h2>
-               <div class="bg-white p-6 rounded-2xl shadow-2xl">
-                   <div id="cd-qrcode"></div>
-               </div>
-               <p class="mt-6 text-xl text-slate-400">Scan für digitalen Beleg</p>
-          </div>
+      </div>
+
+      <div id="cd-view-checkout" style="display:none;" class="flex-grow flex flex-col items-center justify-center p-8 bg-slate-900 absolute inset-0 z-10">
+          <h2 class="text-4xl font-bold text-slate-400 mb-8 uppercase tracking-widest">Zu zahlen</h2>
+          <div id="cd-checkout-total" class="text-[10rem] font-black text-white leading-none">0,00 €</div>
+          <div class="text-2xl text-slate-500 mt-8">Bitte wählen Sie Ihre Zahlart</div>
+      </div>
+
+      <div id="cd-view-qr" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
+           <h2 class="text-4xl font-bold mb-8 text-white">Vielen Dank!</h2>
+           <div class="bg-white p-6 rounded-2xl shadow-2xl">
+               <div id="cd-qrcode"></div>
+           </div>
+           <p class="mt-6 text-xl text-slate-400">Scan für digitalen Beleg</p>
       </div>
       
-      <div class="bg-slate-800 p-8 flex justify-between items-center shadow-lg border-t border-slate-700">
+      <div id="cd-footer" class="bg-slate-800 p-8 flex justify-between items-center shadow-lg border-t border-slate-700 z-20">
           <div class="text-3xl text-slate-400 font-medium">Gesamtsumme</div>
           <div id="cd-total" class="text-8xl font-black text-green-400">0,00 €</div>
       </div>
@@ -256,7 +262,7 @@
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
             <h2 class="text-xl font-bold mb-4">Digitaler Beleg</h2>
             <div id="qrcode" class="mb-6"></div>
-            <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code oder speichern Sie das PDF.</p>
+            <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code für eine Browser-Ansicht oder speichern Sie das PDF.</p>
             <div class="flex gap-2 w-full">
                 <button onclick="window.downloadPDFReceipt()" class="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition">Als PDF speichern</button>
                 <button onclick="closeModal('qr-modal')" class="w-full p-3 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-slate-700">Schließen</button>
@@ -938,7 +944,11 @@
     window.openSecurityCodeSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('security-code-settings-container').style.display = 'block'; document.getElementById('reversal-code-separate').value = reversalCode; document.getElementById('btn-close-settings-modal').style.display = 'none'; }
     window.openCardFeeSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('card-fee-settings-container').style.display = 'block'; document.getElementById('card-fee-rate').value = userSettings.cardFeeRate || 0.00; document.getElementById('btn-close-settings-modal').style.display = 'none'; }
     window.openEmployeeSettings = function(){ document.getElementById('settings-menu').style.display = 'none'; document.getElementById('employee-settings-container').style.display = 'block'; document.getElementById('btn-close-settings-modal').style.display = 'none'; renderEmployeeList(); }
-    window.closeModal = function(id){ document.getElementById(id).style.display='none'; }
+    window.closeModal = function(id){ 
+        // CUSTOMER SCREEN RESET ON CANCEL
+        if(id === 'finalize-modal') updateCustomerDisplay({ type: 'checkout_cancel' });
+        document.getElementById(id).style.display='none'; 
+    }
 
     // --- AUTH LOGIC ---
     window.handleRegisterSubmit = function(){
@@ -1206,50 +1216,82 @@
     }
 
     // --- CUSTOMER DISPLAY LOGIC ---
-    function updateCustomerDisplay(qrData = null) {
+    function updateCustomerDisplay(overrideData = null) {
         if(customerChannel) {
-            customerChannel.postMessage({
-                type: qrData ? 'qr' : 'update',
+            // Default payload is the current cart
+            let payload = {
+                type: 'update',
                 cart: currentBestellung,
-                total: totalBrutto,
-                qrData: qrData
-            });
+                total: totalBrutto
+            };
+            
+            // Allow overriding (e.g., for checkout mode or QR)
+            if(overrideData) {
+                payload = { ...payload, ...overrideData };
+            }
+
+            customerChannel.postMessage(payload);
         }
     }
+    
     window.openCustomerDisplay = function() {
         const url = new URL(window.location.href); url.searchParams.set('mode', 'display');
         window.open(url.toString(), '_blank', 'width=1024,height=768');
     }
+    
     function initCustomerDisplayListener() {
         customerChannel.onmessage = (event) => {
             const data = event.data;
-            const itemsContainer = document.getElementById('cd-items');
+            
+            const viewCart = document.getElementById('cd-view-cart');
+            const viewCheckout = document.getElementById('cd-view-checkout');
+            const viewQR = document.getElementById('cd-view-qr');
+            
+            // Reset Views
+            viewQR.style.display = 'none';
+            viewCheckout.style.display = 'none';
+            viewCart.style.display = 'flex';
+            
+            // 1. QR MODE
+            if(data.type === 'qr' && data.qrData) {
+                viewQR.style.display = 'flex';
+                document.getElementById('cd-qrcode').innerHTML = "";
+                // Use the data URL for QR as well
+                new QRCode(document.getElementById('cd-qrcode'), { text: data.qrData, width: 256, height: 256 });
+                return;
+            } 
+            
+            // 2. CHECKOUT MODE (BIG TOTAL)
+            if(data.type === 'checkout_start') {
+                viewCart.style.display = 'none';
+                viewCheckout.style.display = 'flex';
+                document.getElementById('cd-checkout-total').innerText = (data.total || 0).toFixed(2).replace('.', ',') + ' €';
+                return;
+            }
+
+            // 3. CART MODE (Live Input)
             const cartDiv = document.getElementById('cd-cart');
             const welcomeDiv = document.getElementById('cd-welcome');
-            const qrOverlay = document.getElementById('cd-qr-overlay');
-            const qrTarget = document.getElementById('cd-qrcode');
+            const itemsContainer = document.getElementById('cd-items');
             
             document.getElementById('cd-total').innerText = (data.total || 0).toFixed(2).replace('.', ',') + ' €';
             
-            // QR Modus
-            if(data.type === 'qr' && data.qrData) {
-                qrOverlay.style.display = 'flex';
-                qrTarget.innerHTML = "";
-                new QRCode(qrTarget, { text: data.qrData, width: 256, height: 256 });
-            } else {
-                qrOverlay.style.display = 'none';
+            if(data.cart && data.cart.length > 0) {
+                welcomeDiv.style.display = 'none'; cartDiv.style.display = 'flex';
+                document.getElementById('cd-item-count').innerText = data.cart.reduce((a,b)=>a+b.quantity,0) + " Artikel";
                 
-                // Normaler Cart Modus
-                if(data.cart && data.cart.length > 0) {
-                    welcomeDiv.style.display = 'none'; cartDiv.style.display = 'flex';
-                    document.getElementById('cd-item-count').innerText = data.cart.reduce((a,b)=>a+b.quantity,0) + " Artikel";
-                    itemsContainer.innerHTML = '';
-                    data.cart.forEach(item => {
-                        itemsContainer.innerHTML += `<div class="flex justify-between border-b border-slate-700 pb-2 mb-2"><span><span class="font-bold text-slate-400 mr-2">${item.quantity}x</span> ${item.name}</span><span>${item.totalBrutto.toFixed(2).replace('.',',')} €</span></div>`;
-                    });
-                } else {
-                    welcomeDiv.style.display = 'block'; cartDiv.style.display = 'none';
-                }
+                // Smart Diffing: Only redraw if needed or simply redraw all (simpler for this scale)
+                itemsContainer.innerHTML = '';
+                data.cart.forEach(item => {
+                    itemsContainer.innerHTML += `<div class="flex justify-between border-b border-slate-700 pb-2 mb-2 animate-pulse-short">
+                        <span><span class="font-bold text-slate-400 mr-2">${item.quantity}x</span> ${item.name}</span>
+                        <span>${item.totalBrutto.toFixed(2).replace('.',',')} €</span>
+                    </div>`;
+                });
+                // Auto scroll to bottom
+                itemsContainer.scrollTop = itemsContainer.scrollHeight;
+            } else {
+                welcomeDiv.style.display = 'block'; cartDiv.style.display = 'none';
             }
         };
     }
@@ -1277,6 +1319,11 @@
     // --- FINALIZE ---
     window.openFinalizeModal = function(){
       document.getElementById('finalize-modal').style.display='flex';
+      
+      // CUSTOMER SCREEN: Switch to Checkout Mode
+      const currentTotal = calculateTotalWithFee('BAR'); // Default assumption, updates on click
+      updateCustomerDisplay({ type: 'checkout_start', total: currentTotal });
+
       const simpleDiv = document.getElementById('simple-payment-ui'); const complexDiv = document.getElementById('complex-payment-ui'); const modalContent = document.getElementById('finalize-modal-content');
       if(userSettings.simplePayment) {
           simpleDiv.style.display = 'block'; complexDiv.style.display = 'none'; modalContent.style.maxWidth = '400px';
@@ -1289,9 +1336,14 @@
       }
       window.updateVisibility(); 
     }
+    
     window.setPaymentMethod = function(method){
       cashPaymentMethod = method;
       const total = calculateTotalWithFee(method);
+      
+      // Update Customer Screen with new total (if fees apply)
+      updateCustomerDisplay({ type: 'checkout_start', total: total });
+
       document.getElementById('finalize-total').innerText = total.toFixed(2).replace('.', ',') + ' €';
       const cashArea = document.getElementById('cash-payment-area'); const cashBtns = document.getElementById('cash-finalize-buttons'); const cardBtns = document.getElementById('card-finalize-buttons');
       if(method === 'BAR'){ cashArea.style.display = 'block'; cashBtns.style.display = 'block'; cardBtns.style.display = 'none'; document.getElementById('btn-bar-select').className = "p-3 rounded-xl font-bold bg-green-600 text-white shadow-md transition"; document.getElementById('btn-karte-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition"; cashReceivedInput = '0'; updateCashChangeDisplay(); } 
@@ -1312,13 +1364,36 @@
     window.addCashShortcut = (val) => { cashReceivedInput = (parseFloat(cashReceivedInput) + (val*100)).toString(); updateCashChangeDisplay(); }
 
     // --- PDF / QR / DIGITAL RECEIPT ---
-    window.getReceiptText = function(isPDF = false) {
-        const total = calculateTotalWithFee(cashPaymentMethod);
+    window.getReceiptHTML = function() {
+        const company = userSettings.companyName || 'Kasse';
         const date = new Date().toLocaleString();
-        let txt = isPDF ? "" : `Beleg: ${userSettings.companyName || 'Kasse'}\n${date}\n`;
-        currentBestellung.forEach(i => txt += `${i.quantity}x ${i.name} - ${i.totalBrutto.toFixed(2)}\n`);
-        txt += `\nSUMME: ${total.toFixed(2)} EUR\n`;
-        return txt;
+        const total = calculateTotalWithFee(cashPaymentMethod).toFixed(2);
+        
+        let itemsHtml = currentBestellung.map(i => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>${i.quantity}x ${i.name}</span>
+                <span>${i.totalBrutto.toFixed(2)}</span>
+            </div>
+        `).join('');
+
+        return `
+            <html>
+            <head><style>body{font-family:monospace; padding:20px; max-width:300px; margin:0 auto;} .line{border-bottom:1px dashed #000; margin:10px 0;}</style></head>
+            <body>
+                <h2 style="text-align:center">${company}</h2>
+                <div style="text-align:center; font-size:0.8em; margin-bottom:20px;">${date}</div>
+                <div class="line"></div>
+                ${itemsHtml}
+                <div class="line"></div>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2em;">
+                    <span>SUMME</span>
+                    <span>${total} EUR</span>
+                </div>
+                <div class="line"></div>
+                <div style="text-align:center; margin-top:20px;">Vielen Dank!</div>
+            </body>
+            </html>
+        `;
     }
 
     window.showQRReceipt = function() {
@@ -1327,15 +1402,17 @@
         container.innerHTML = "";
         modal.style.display = 'flex';
         
-        // QR Code Logic: Text for Digital Receipt
-        const qrData = window.getReceiptText(false);
-        new QRCode(container, { text: qrData, width: 200, height: 200 });
+        // 1. Generate HTML Representation of the Receipt
+        const htmlContent = window.getReceiptHTML();
         
-        // Trigger auto PDF offer or logic
-        window.showToast("QR-Code generiert. PDF Download bereit.", "success");
+        // 2. Create a Data URI (Client-Side "Webpage")
+        const dataUri = "data:text/html;charset=utf-8," + encodeURIComponent(htmlContent);
         
-        // Send to Customer Screen
-        updateCustomerDisplay(qrData);
+        // 3. Generate QR
+        new QRCode(container, { text: dataUri, width: 200, height: 200 });
+        
+        // 4. Send to Customer Screen (Same Data URI)
+        updateCustomerDisplay({ type: 'qr', qrData: dataUri });
     }
     
     window.downloadPDFReceipt = function() {
@@ -1398,6 +1475,8 @@
             }
             if(receiptType !== 'none') window.printReceipt(items, finalTotal, receiptType, nextReceiptId);
             currentBestellung = []; window.updateReceipt(); window.renderProductGrid(null); closeModal('finalize-modal'); 
+            // Reset Customer Screen to Welcome/Empty
+            updateCustomerDisplay({ type: 'update', cart: [], total: 0 });
             if(!isOffline) window.showToast('Zahlung erfolgreich!', 'success');
         } catch(e) { console.error(e); window.showToast('Fehler bei Zahlung', 'error'); }
         finally { window.showLoading(false); }
