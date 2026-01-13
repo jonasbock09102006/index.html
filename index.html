@@ -46,6 +46,19 @@
     /* Lock Screen */
     #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
 
+    /* QR Code Container Fix */
+    #qrcode, #cd-qrcode {
+        width: 256px;
+        height: 256px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    #qrcode img, #cd-qrcode img {
+        margin: 0 auto;
+    }
+
     /* Customer Display Mode Styles */
     #customer-display-screen { 
         position: fixed; inset:0; z-index: 9000;
@@ -108,8 +121,8 @@
 
       <div id="cd-view-qr" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
            <h2 class="text-4xl font-bold mb-8 text-white">Vielen Dank!</h2>
-           <div class="bg-white p-6 rounded-2xl shadow-2xl">
-               <div id="cd-qrcode"></div>
+           <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center">
+               <div id="cd-qrcode" style="background:white;"></div>
            </div>
            <p class="mt-6 text-xl text-slate-400">Scan für digitalen Beleg</p>
       </div>
@@ -261,7 +274,7 @@
     <div id="qr-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[3000] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
             <h2 class="text-xl font-bold mb-4">Digitaler Beleg</h2>
-            <div id="qrcode" class="mb-6"></div>
+            <div id="qrcode" class="mb-6 bg-white"></div>
             <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code für eine Browser-Ansicht oder speichern Sie das PDF.</p>
             <div class="flex gap-2 w-full">
                 <button onclick="window.downloadPDFReceipt()" class="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition">Als PDF speichern</button>
@@ -651,7 +664,7 @@
     let categories = {};
     let currentBestellung = [];
     let totalBrutto = 0.00;
-    let lastReportData = []; // Für CSV Export Fix
+    let lastReportData = []; 
     
     // Feature: Customer Display Broadcast Channel
     const customerChannel = new BroadcastChannel('pos_display');
@@ -1247,17 +1260,19 @@
             const viewCheckout = document.getElementById('cd-view-checkout');
             const viewQR = document.getElementById('cd-view-qr');
             
-            // Reset Views
+            // Reset Views - Default to Cart
             viewQR.style.display = 'none';
             viewCheckout.style.display = 'none';
-            viewCart.style.display = 'flex';
             
             // 1. QR MODE
             if(data.type === 'qr' && data.qrData) {
+                viewCart.style.display = 'none';
                 viewQR.style.display = 'flex';
                 document.getElementById('cd-qrcode').innerHTML = "";
                 // Use the data URL for QR as well
-                new QRCode(document.getElementById('cd-qrcode'), { text: data.qrData, width: 256, height: 256 });
+                try {
+                    new QRCode(document.getElementById('cd-qrcode'), { text: data.qrData, width: 256, height: 256 });
+                } catch(e) { console.error("QR Error on display:", e); }
                 return;
             } 
             
@@ -1268,8 +1283,10 @@
                 document.getElementById('cd-checkout-total').innerText = (data.total || 0).toFixed(2).replace('.', ',') + ' €';
                 return;
             }
-
+            
             // 3. CART MODE (Live Input)
+            viewCart.style.display = 'flex';
+            
             const cartDiv = document.getElementById('cd-cart');
             const welcomeDiv = document.getElementById('cd-welcome');
             const itemsContainer = document.getElementById('cd-items');
@@ -1369,30 +1386,24 @@
         const date = new Date().toLocaleString();
         const total = calculateTotalWithFee(cashPaymentMethod).toFixed(2);
         
+        // Minimal HTML to prevent QR data overload
         let itemsHtml = currentBestellung.map(i => `
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span>${i.quantity}x ${i.name}</span>
+            <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #ccc;padding:2px 0;">
+                <span>${i.quantity}x ${i.name.substring(0,20)}</span>
                 <span>${i.totalBrutto.toFixed(2)}</span>
             </div>
         `).join('');
 
         return `
-            <html>
-            <head><style>body{font-family:monospace; padding:20px; max-width:300px; margin:0 auto;} .line{border-bottom:1px dashed #000; margin:10px 0;}</style></head>
-            <body>
-                <h2 style="text-align:center">${company}</h2>
-                <div style="text-align:center; font-size:0.8em; margin-bottom:20px;">${date}</div>
-                <div class="line"></div>
+            <div style="font-family:monospace;width:280px;font-size:12px;">
+                <h3 style="text-align:center;margin:0">${company}</h3>
+                <div style="text-align:center;font-size:0.8em;margin-bottom:10px;">${date}</div>
                 ${itemsHtml}
-                <div class="line"></div>
-                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2em;">
+                <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:1.2em;margin-top:10px;border-top:1px solid #000;">
                     <span>SUMME</span>
                     <span>${total} EUR</span>
                 </div>
-                <div class="line"></div>
-                <div style="text-align:center; margin-top:20px;">Vielen Dank!</div>
-            </body>
-            </html>
+            </div>
         `;
     }
 
@@ -1402,46 +1413,96 @@
         container.innerHTML = "";
         modal.style.display = 'flex';
         
-        // 1. Generate HTML Representation of the Receipt
+        // 1. Generate Compact HTML Representation
         const htmlContent = window.getReceiptHTML();
         
-        // 2. Create a Data URI (Client-Side "Webpage")
+        // 2. Create Data URI
         const dataUri = "data:text/html;charset=utf-8," + encodeURIComponent(htmlContent);
         
-        // 3. Generate QR
-        new QRCode(container, { text: dataUri, width: 200, height: 200 });
+        // 3. Generate QR (With slight delay to ensure rendering context)
+        setTimeout(() => {
+            try {
+                new QRCode(container, { text: dataUri, width: 256, height: 256 });
+            } catch(e) {
+                console.error("QR Generation failed:", e);
+                container.innerText = "Fehler: Daten zu lang für QR.";
+            }
+        }, 100);
         
-        // 4. Send to Customer Screen (Same Data URI)
+        // 4. Send to Customer Screen
         updateCustomerDisplay({ type: 'qr', qrData: dataUri });
+        window.showToast("Digitaler Beleg bereit", "success");
     }
     
     window.downloadPDFReceipt = function() {
         if(!window.jspdf) return window.showToast("PDF Lib Error", "error");
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
         
-        doc.setFontSize(16);
-        doc.text(userSettings.companyName || "Kassensystem", 105, 10, {align: "center"});
-        doc.setFontSize(10);
-        doc.text(new Date().toLocaleString(), 105, 16, {align: "center"});
-        
-        let y = 30;
-        doc.text("------------------------------------------------", 10, y); y+=7;
-        
-        currentBestellung.forEach(item => {
-            doc.text(`${item.quantity}x ${item.name}`, 10, y);
-            doc.text(`${item.totalBrutto.toFixed(2)}`, 200, y, {align: "right"});
-            y += 7;
+        // Create PDF simulating 80mm thermal receipt paper
+        // 80mm width, roughly 200mm height (or auto, but jsPDF needs fixed usually)
+        const doc = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: [80, 200]
         });
         
-        y += 5;
-        doc.text("------------------------------------------------", 10, y); y+=10;
-        doc.setFontSize(14);
-        doc.text("SUMME:", 10, y);
-        doc.text(`${calculateTotalWithFee(cashPaymentMethod).toFixed(2)} EUR`, 200, y, {align: "right"});
+        doc.setFont("Courier"); // Monospace font like receipt
+        doc.setFontSize(10);
         
+        let y = 10;
+        const lineH = 4;
+        const rightX = 70;
+        
+        // Header
+        doc.setFontSize(12);
+        doc.text(userSettings.companyName || "Kasse", 40, y, { align: "center" });
+        doc.setFontSize(9);
+        y += 5;
+        doc.text(userSettings.address || "", 40, y, { align: "center" });
+        y += 6;
+        doc.text(new Date().toLocaleString(), 40, y, { align: "center" });
+        y += 6;
+        
+        // Separator
+        doc.setLineWidth(0.1);
+        doc.setLineDash([1, 1], 0);
+        doc.line(5, y, 75, y);
+        y += 5;
+        
+        // Items
+        doc.setFontSize(9);
+        currentBestellung.forEach(item => {
+            const txt = `${item.quantity}x ${item.name}`;
+            const price = item.totalBrutto.toFixed(2);
+            
+            // Handle long text wrapping if needed, for now truncate/wrap simple
+            if(txt.length > 25) {
+                doc.text(txt.substring(0, 25) + "...", 5, y);
+            } else {
+                doc.text(txt, 5, y);
+            }
+            doc.text(price, rightX, y, { align: "right" });
+            y += lineH;
+        });
+        
+        y += 2;
+        doc.line(5, y, 75, y);
+        y += 6;
+        
+        // Total
+        doc.setFontSize(12);
+        doc.setFont("Courier", "bold");
+        doc.text("SUMME", 5, y);
+        doc.text(calculateTotalWithFee(cashPaymentMethod).toFixed(2) + " EUR", rightX, y, { align: "right" });
+        
+        y += 10;
+        doc.setFontSize(8);
+        doc.setFont("Courier", "normal");
+        doc.text("Vielen Dank fuer Ihren Einkauf!", 40, y, { align: "center" });
+        
+        // Save
         doc.save(`Beleg_${Date.now()}.pdf`);
-        window.showToast("PDF gespeichert", "success");
+        window.showToast("PDF (Kassenbon) gespeichert", "success");
     }
 
     // --- FINALIZE TRANSACTION ---
