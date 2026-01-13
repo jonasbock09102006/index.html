@@ -238,6 +238,291 @@
         </div>
     </div>
 
+    <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="finalize-modal-content" class="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 transition-all duration-300">
+            <h2 class="text-2xl font-bold mb-6 text-slate-800 text-center">Abrechnung</h2>
+            <div id="simple-payment-ui" style="display:none;">
+                <div class="text-center mb-8">
+                    <div class="text-sm font-bold text-slate-400 uppercase tracking-wide">Zu zahlen</div>
+                    <div id="finalize-total-simple" class="text-6xl font-black text-slate-800 mt-2">0,00 €</div>
+                </div>
+                <div class="space-y-4">
+                    <button onclick="handleFinalizeAction('BAR', 'none')" class="w-full p-6 bg-green-600 hover:bg-green-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
+                        <span class="text-2xl font-bold">BAR (Passend)</span>
+                    </button>
+                    <button onclick="handleFinalizeAction('KARTE', 'none')" id="btn-simple-card" class="w-full p-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
+                        <span class="text-2xl font-bold" id="btn-simple-card-text">KARTE</span>
+                    </button>
+                </div>
+            </div>
+            <div id="complex-payment-ui" style="display:none;">
+                <div class="mb-4 p-4 border border-green-200 rounded-2xl bg-green-50 flex justify-between items-center">
+                    <span class="text-sm font-bold text-green-700 uppercase">Summe</span>
+                    <div id="finalize-total" class="text-3xl font-black text-green-700">0.00 €</div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <button onclick="setPaymentMethod('BAR')" id="btn-bar-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">BAR</button>
+                    <button onclick="setPaymentMethod('KARTE')" id="btn-karte-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">KARTE</button>
+                </div>
+                <div id="cash-payment-area" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4 transition-all">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-500 uppercase">Gegeben</span>
+                        <div id="cash-received-display" class="bg-white px-3 py-1 rounded-lg border border-slate-200 text-xl font-bold">0,00</div>
+                    </div>
+                    </div>
+                <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100 mb-6 flex justify-between items-center">
+                    <span class="text-sm font-bold text-blue-700 uppercase" id="change-label">Rückgeld</span>
+                    <div id="finalize-change" class="text-3xl font-black text-blue-700">0,00 €</div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="handleFinalizeAction(currentPaymentMethod, 'normal')" id="btn-finish-normal" class="p-4 bg-slate-800 text-white rounded-xl font-bold">Standard</button>
+                    <button onclick="handleFinalizeAction(currentPaymentMethod, 'bewirtung')" class="p-4 bg-blue-600 text-white rounded-xl font-bold">Bewirtung</button>
+                </div>
+            </div>
+            <button onclick="closeModal('finalize-modal')" class="mt-6 w-full text-slate-400 font-bold">Abbrechen</button>
+        </div>
+    </div>
+
+    <div id="print-receipt-container"></div>
+  </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Kassensystem Enterprise</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow: hidden; height: 100dvh; width: 100vw; }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    
+    input, button, select, textarea { font-size: 16px !important; touch-action: manipulation; }
+    .product-btn:active { transform: scale(0.97); transition: transform 0.1s; }
+    .force-hidden { display: none !important; }
+    #product-grid { padding-bottom: 180px; }
+    #receipt-content-interactive { overflow-y: auto; max-height: 50vh; scrollbar-width: thin; }
+    
+    .numpad-btn { 
+        height: 55px; display:flex; justify-content:center; align-items:center; 
+        font-weight: 700; border-radius: 0.75rem; font-size: 1.25rem; 
+        transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .numpad-btn:active { background-color: #e2e8f0; transform: translateY(1px); }
+    .glass-panel { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f1f5f9; }
+    
+    #async-loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(255,255,255,0.9); z-index:5000; display:none; justify-content:center; align-items:center; backdrop-filter: blur(2px); }
+    .spinner { border: 4px solid rgba(0,0,0,0.1); border-top: 4px solid #2563eb; border-radius: 50%; width:50px; height:50px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+    
+    #toast-container { position: fixed; top:1.5rem; right:1.5rem; z-index:6000; pointer-events:none; }
+    .toast { padding: 1rem 1.5rem; border-radius: 0.75rem; color: #fff; margin-bottom:0.75rem; opacity:0; transition: opacity .3s ease, transform .3s ease; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); font-weight: 600; transform: translateY(-10px); }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast-success { background: #059669; } .toast-error { background: #dc2626; } .toast-info { background: #2563eb; }
+    
+    /* Offline Banner */
+    #offline-banner { display: none; background: #dc2626; color: white; text-align: center; font-size: 0.8rem; font-weight: bold; padding: 2px; }
+
+    /* Lock Screen */
+    #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+
+    /* QR Code Container Fix */
+    #qrcode, #cd-qrcode {
+        width: 256px;
+        height: 256px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    #qrcode img, #cd-qrcode img {
+        margin: 0 auto;
+    }
+
+    /* Customer Display Mode Styles */
+    #customer-display-screen { 
+        position: fixed; inset:0; z-index: 9000;
+        display: none; height: 100dvh; width: 100vw; 
+        background: #0f172a; color: white; 
+        flex-direction: column; 
+    }
+    
+    /* Print Styles */
+    #print-receipt-container { display: none; visibility: hidden; } 
+    @media print {
+      @page { size: auto; margin: 0mm; }
+      body * { visibility: hidden !important; }
+      #print-receipt-container { 
+        visibility: visible !important; display: block !important; 
+        position: absolute !important; left: 0 !important; top: 0 !important; width: 72mm !important;
+        font-family: 'Courier New', Courier, monospace !important; font-size: 12px !important; color: #000 !important; 
+        padding: 0 !important; margin: 0 !important; line-height: 1.2 !important;
+      }
+      #print-receipt-container * { visibility: visible !important; }
+      .receipt-print { width: 100%; padding-top: 5mm; }
+      .receipt-print .line { display:flex; justify-content:space-between; margin-bottom: 2px; }
+      .receipt-print .item-name { width:65%; overflow:hidden; white-space:normal; text-align: left; } 
+      .receipt-print .item-price { width:35%; text-align:right; font-weight:bold; }
+      .receipt-print .separator { border-top: 1px dashed #000; margin: 6px 0; width: 100%; }
+      .receipt-print .total-line { font-size: 14px !important; font-weight: bold; margin-top: 5px; }
+      .fill-line { border-bottom: 1px solid #000; height: 1.5em; margin-top: 0.5em; width: 100%; }
+      .center { text-align: center; } .bold { font-weight: bold; }
+    }
+  </style>
+</head>
+<body class="select-none text-slate-800">
+
+  <div id="toast-container"></div>
+  <div id="async-loading-overlay"><div class="spinner"></div></div>
+  <div id="offline-banner">OFFLINE MODUS - Daten werden lokal gespeichert</div>
+
+  <div id="customer-display-screen">
+      <div id="cd-view-cart" class="flex-grow flex items-center justify-center p-8 relative flex-col h-full w-full">
+          <div id="cd-welcome" class="text-center">
+              <h1 class="text-6xl font-bold mb-6 tracking-tight">Willkommen</h1>
+              <p class="text-3xl text-slate-400">Wir freuen uns auf Sie!</p>
+          </div>
+          
+          <div id="cd-cart" style="display:none;" class="w-full max-w-4xl h-full flex flex-col">
+              <h2 class="text-3xl font-bold border-b border-slate-700 pb-4 mb-6 flex justify-between">
+                  <span>Ihre Bestellung</span>
+                  <span class="text-slate-400 text-xl" id="cd-item-count">0 Artikel</span>
+              </h2>
+              <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4">
+                 </div>
+          </div>
+      </div>
+
+      <div id="cd-view-checkout" style="display:none;" class="flex-grow flex flex-col items-center justify-center p-8 bg-slate-900 absolute inset-0 z-10">
+          <h2 class="text-4xl font-bold text-slate-400 mb-8 uppercase tracking-widest">Zu zahlen</h2>
+          <div id="cd-checkout-total" class="text-[10rem] font-black text-white leading-none">0,00 €</div>
+          <div class="text-2xl text-slate-500 mt-8">Bitte wählen Sie Ihre Zahlart</div>
+      </div>
+
+      <div id="cd-view-qr" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
+           <h2 class="text-4xl font-bold mb-8 text-white">Vielen Dank!</h2>
+           <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center">
+               <div id="cd-qrcode" style="background:white;"></div>
+           </div>
+           <p class="mt-6 text-xl text-slate-400">Scan für digitalen Beleg</p>
+      </div>
+      
+      <div id="cd-footer" class="bg-slate-800 p-8 flex justify-between items-center shadow-lg border-t border-slate-700 z-20">
+          <div class="text-3xl text-slate-400 font-medium">Gesamtsumme</div>
+          <div id="cd-total" class="text-8xl font-black text-green-400">0,00 €</div>
+      </div>
+  </div>
+
+  <div id="pos-app-wrapper">
+
+    <div id="lock-screen">
+        <h1 class="text-3xl font-bold mb-2 text-slate-800">Kasse gesperrt</h1>
+        <p class="text-slate-500 mb-6" id="lock-msg">Bitte PIN eingeben</p>
+        
+        <div class="mb-8 h-8 flex items-center justify-center">
+            <div id="lock-dots" class="text-4xl tracking-widest font-bold text-slate-800 h-8"></div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-3 w-64">
+            <button onclick="handleLockInput('7')" class="numpad-btn bg-white border">7</button>
+            <button onclick="handleLockInput('8')" class="numpad-btn bg-white border">8</button>
+            <button onclick="handleLockInput('9')" class="numpad-btn bg-white border">9</button>
+            <button onclick="handleLockInput('4')" class="numpad-btn bg-white border">4</button>
+            <button onclick="handleLockInput('5')" class="numpad-btn bg-white border">5</button>
+            <button onclick="handleLockInput('6')" class="numpad-btn bg-white border">6</button>
+            <button onclick="handleLockInput('1')" class="numpad-btn bg-white border">1</button>
+            <button onclick="handleLockInput('2')" class="numpad-btn bg-white border">2</button>
+            <button onclick="handleLockInput('3')" class="numpad-btn bg-white border">3</button>
+            <button onclick="handleLockInput('clear')" class="numpad-btn bg-red-100 text-red-600">C</button>
+            <button onclick="handleLockInput('0')" class="numpad-btn bg-white border">0</button>
+            <button onclick="handleLockInput('enter')" class="numpad-btn bg-green-600 text-white">→</button>
+        </div>
+        <button onclick="window.location.reload()" class="mt-8 text-sm text-slate-400">Neu laden</button>
+    </div>
+
+    <div id="kasse-screen" style="display:none;" class="h-full">
+        <div id="kasse-content" class="grid md:grid-cols-3 gap-6 h-full max-w-7xl mx-auto py-2 md:py-6 px-2">
+            
+            <div class="md:col-span-2 flex flex-col space-y-4 h-full">
+            <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
+                <div class="flex-grow overflow-hidden">
+                <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
+                </div>
+                <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
+                    <span class="mr-1">🔒</span> Sperren
+                </button>
+                <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
+                    Kunden-Screen
+                </button>
+                <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
+            </div>
+            
+            <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
+                <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
+            </div>
+
+            <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
+                <div class="col-span-1 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
+                        <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
+                    </div>
+                    <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
+                </div>
+                <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
+                <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
+                <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
+                <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
+                <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
+                <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
+                <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
+                <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
+                <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
+                <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
+                <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
+                <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
+                <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
+                </div>
+            </div>
+            </div>
+
+            <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
+            <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
+                <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
+                    <span>Aktueller Bon</span>
+                    <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
+                </h2>
+                <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
+                <div class="flex flex-col items-center justify-center h-40 text-slate-300">
+                    <p class="text-sm font-medium">Warenkorb leer</p>
+                </div>
+                </div>
+                <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
+                    <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
+                </div>
+                <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 space-y-3">
+                <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
+                    <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
     <div id="setup-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[2000] flex items-center justify-center p-4" style="display:none;">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-4xl text-center border border-slate-200">
           <h1 class="text-4xl font-extrabold text-slate-800 mb-2">Einrichtung</h1>
