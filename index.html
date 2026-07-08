@@ -115,8 +115,8 @@
 
       <div id="cd-view-checkout" style="display:none;" class="flex-grow flex flex-col items-center justify-center p-8 bg-slate-900 absolute inset-0 z-10">
           <h2 class="text-4xl font-bold text-slate-400 mb-8 uppercase tracking-widest">Zu zahlen</h2>
-          <div id="cd-checkout-total" class="text-[10rem] font-black text-white leading-none">0,00 â¬</div>
-          <div class="text-2xl text-slate-500 mt-8">Bitte wÃ¤hlen Sie Ihre Zahlart</div>
+          <div id="cd-checkout-total" class="text-[10rem] font-black text-white leading-none">0,00 €/div>
+          <div class="text-2xl text-slate-500 mt-8">Bitte wählen Sie Ihre Zahlart</div>
       </div>
 
       <div id="cd-view-qr" style="display:none;" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center backdrop-blur-sm z-50">
@@ -124,12 +124,12 @@
            <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center">
                <div id="cd-qrcode" style="background:white;"></div>
            </div>
-           <p class="mt-6 text-xl text-slate-400">Scan fÃ¼r digitalen Beleg</p>
+           <p class="mt-6 text-xl text-slate-400">Scan für digitalen Beleg</p>
       </div>
       
       <div id="cd-footer" class="bg-slate-800 p-8 flex justify-between items-center shadow-lg border-t border-slate-700 z-20">
           <div class="text-3xl text-slate-400 font-medium">Gesamtsumme</div>
-          <div id="cd-total" class="text-8xl font-black text-green-400">0,00 â¬</div>
+          <div id="cd-total" class="text-8xl font-black text-green-400">0,00 €/div>
       </div>
   </div>
 
@@ -221,7 +221,7 @@
                 <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
                 <div class="flex justify-between items-end mb-4">
                     <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
-                    <span id="total-display" class="text-4xl font-black text-slate-800">0,00 â¬</span>
+                    <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €/span>
                 </div>
                 <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
                 </div>
@@ -241,10 +241,10 @@
     <div id="setup-modal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[2000] flex items-center justify-center p-4" style="display:none;">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-4xl text-center border border-slate-200">
           <h1 class="text-4xl font-extrabold text-slate-800 mb-2">Einrichtung & Module</h1>
-          <p class="text-slate-500 mb-8 text-lg">Konfigurieren Sie Ihr Kassensystem exakt nach Ihren BedÃ¼rfnissen.</p>
+          <p class="text-slate-500 mb-8 text-lg">Konfigurieren Sie Ihr Kassensystem exakt nach Ihren Bedürfnissen.</p>
           
           <div class="text-left bg-slate-50 p-6 rounded-xl mb-6 border border-slate-200">
-            <h4 class="font-bold mb-4 text-slate-700 text-lg">VerfÃ¼gbare Module aktivieren/deaktivieren:</h4>
+            <h4 class="font-bold mb-4 text-slate-700 text-lg">Verfügbare Module aktivieren/deaktivieren:</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50 border-blue-200">
                     <input type="checkbox" id="setup-simple" onchange="window.updateSetupDependencies()" class="w-5 h-5 accent-green-600">
@@ -264,7 +264,7 @@
                 </label>
                 <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50">
                     <input type="checkbox" id="setup-cardfee" onchange="window.updateSetupDependencies()" class="w-5 h-5 accent-blue-600">
-                    <span>KartengebÃ¼hr Aufschlag</span>
+                    <span>Kartengebühr Aufschlag</span>
                 </label>
                 <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50">
                     <input type="checkbox" id="setup-security" onchange="window.updateSetupDependencies()" class="w-5 h-5 accent-blue-600">
@@ -272,7 +272,7 @@
                 </label>
                 <label class="flex items-center space-x-3 bg-white p-4 rounded-lg border shadow-sm cursor-pointer hover:bg-slate-50" id="label-employees">
                     <input type="checkbox" id="setup-employees" onchange="window.updateSetupDependencies()" class="w-5 h-5 accent-blue-600">
-                    <span>Mitarbeiter-System <span class="text-xs text-slate-400 font-normal">(benÃ¶tigt Admin-PIN)</span></span>
+                    <span>Mitarbeiter-System <span class="text-xs text-slate-400 font-normal">(bestätigt Admin-PIN)</span></span>
                 </label>
             </div>
              <button onclick="window.saveCustomSetup()" class="mt-8 w-full bg-slate-800 hover:bg-slate-900 text-white p-4 rounded-xl font-bold shadow-lg transition">Speichern & Starten</button>
@@ -284,10 +284,12 @@
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
             <h2 class="text-xl font-bold mb-4">Digitaler Beleg</h2>
             <div id="qrcode" class="mb-6 bg-white"></div>
-            <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code fÃ¼r eine Browser-Ansicht oder speichern Sie das PDF.</p>
+            <p class="text-xs text-slate-500 text-center mb-4">Scannen Sie den Code für eine Browser-Ansicht oder speichern Sie das PDF.</p>
             <div class="flex gap-2 w-full">
                 <button onclick="window.downloadPDFReceipt()" class="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition">Als PDF speichern</button>
-                <button onclick="closeModal('qr-modal')" class="w-full p-3 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-slate-700">SchlieÃen</button>
+                <button onclick="closeModal('qr-modal')" class="w-full p-3 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-slate-700">Schließen
+                  
+  </button>
             </div>
         </div>
     </div>
@@ -343,9 +345,9 @@
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
           <h2 class="text-xl font-bold mb-4">Allgemeine GeschÃ¤ftsbedingungen</h2>
           <div class="text-sm text-gray-700 space-y-4">
-            <p><strong>1. Geltungsbereich:</strong> Diese AGB gelten fÃ¼r die Nutzung der Software...</p>
-            <p><strong>2. Verantwortlichkeit:</strong> Der Nutzer ist allein fÃ¼r die Einhaltung der KassenSichV und GoBD sowie die TSE-Anbindung verantwortlich.</p>
-            <p><strong>3. Haftung:</strong> Der Anbieter haftet nicht fÃ¼r Datenverlust oder steuerrechtliche Fehler.</p>
+            <p><strong>1. Geltungsbereich:</strong> Diese AGB gelten für die Nutzung der Software...</p>
+            <p><strong>2. Verantwortlichkeit:</strong> Der Nutzer ist allein für die Einhaltung der KassenSichV und GoBD sowie die TSE-Anbindung verantwortlich.</p>
+            <p><strong>3. Haftung:</strong> Der Anbieter haftet nicht für Datenverlust oder steuerrechtliche Fehler.</p>
           </div>
           <button onclick="closeModal('agb-modal')" class="mt-6 w-full p-2 bg-indigo-600 text-white rounded-lg font-bold">SchlieÃen</button>
         </div>
@@ -353,7 +355,7 @@
 
     <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
-          <h2 class="text-xl font-bold text-center text-slate-800 mb-4">Passwort zurÃ¼cksetzen</h2>
+          <h2 class="text-xl font-bold text-center text-slate-800 mb-4">Passwort zurücksetzen</h2>
           <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
             <div class="mb-6">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
@@ -361,7 +363,7 @@
             </div>
             <button type="submit" class="w-full py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700">Link senden</button>
           </form>
-          <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full text-sm text-slate-500 font-bold">ZurÃ¼ck</button>
+          <button onclick="closeModal('forgot-password-modal'); openLoginModal();" class="mt-4 w-full text-sm text-slate-500 font-bold">Zurück</button>
         </div>
     </div>
       
@@ -392,7 +394,7 @@
           <div class="flex justify-between items-center mb-6">
               <h2 class="text-2xl font-bold text-slate-800">Produktverwaltung</h2>
               <div class="flex items-center gap-4">
-                  <button onclick="closeModal('product-modal'); window.openSettingsModal()" class="text-sm font-bold text-blue-600 hover:text-blue-800">ZurÃ¼ck zu Einstellungen</button>
+                  <button onclick="closeModal('product-modal'); window.openSettingsModal()" class="text-sm font-bold text-blue-600 hover:text-blue-800">Zurück zu Einstellungen</button>
                   <button onclick="closeModal('product-modal')" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
               </div>
           </div>
@@ -412,7 +414,7 @@
                 <input type="number" id="new-product-stock" placeholder="Menge" min="0" value="100" class="mod-stock p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-full">
               </div>
               <div class="grid grid-cols-2 gap-3 items-center mb-4">
-                <select id="new-product-category" class="p-3 border border-slate-300 rounded-xl bg-white w-full"><option value="">Kategorie wÃ¤hlen...</option></select>
+                <select id="new-product-category" class="p-3 border border-slate-300 rounded-xl bg-white w-full"><option value="">Kategorie wählen...</option></select>
                 <select type="number" id="new-product-tax-rate" class="mod-tax p-3 border border-slate-300 rounded-xl bg-white w-full">
                     <option value="19.0">19% MwSt.</option>
                     <option value="7.0">7% MwSt.</option>
@@ -420,7 +422,7 @@
                 </select>
               </div>
               <div class="flex gap-3">
-                  <button onclick="window.saveProduct()" id="btn-save-product" class="flex-grow py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-md transition">HinzufÃ¼gen</button>
+                  <button onclick="window.saveProduct()" id="btn-save-product" class="flex-grow py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-md transition">Hinzufügen</button>
                   <button onclick="window.resetProductForm()" id="btn-cancel-edit" class="px-6 bg-slate-300 text-slate-700 hover:bg-slate-400 rounded-xl font-bold transition" style="display:none;">Abbrechen</button>
               </div>
             </div>
@@ -444,8 +446,8 @@
           <div id="simple-payment-ui" style="display:none;">
               <div class="text-center mb-8">
                   <div class="text-sm font-bold text-slate-400 uppercase tracking-wide">Zu zahlen</div>
-                  <div id="finalize-total-simple" class="text-6xl font-black text-slate-800 mt-2">0,00 â¬</div>
-              </div>
+                  <div id="finalize-total-simple" class="text-6xl font-black text-slate-800 mt-2">0,00 €</div>
+              </div> 
               <div class="space-y-4">
                   <button onclick="handleFinalizeAction('BAR', 'none')" class="w-full p-6 bg-green-600 hover:bg-green-700 active:scale-95 text-white rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3">
                      <span class="text-2xl font-bold">BAR (Passend)</span>
@@ -458,7 +460,7 @@
           <div id="complex-payment-ui" style="display:none;">
               <div class="mb-4 p-4 border border-green-200 rounded-2xl bg-green-50 flex justify-between items-center">
                 <span class="text-sm font-bold text-green-700 uppercase">Summe</span>
-                <div id="finalize-total" class="text-3xl font-black text-green-700">0.00 â¬</div>
+                <div id="finalize-total" class="text-3xl font-black text-green-700">0.00 €</div>
               </div>
               <div class="grid grid-cols-2 gap-3 mb-5">
                 <button onclick="setPaymentMethod('BAR')" id="btn-bar-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">BAR</button>
@@ -470,8 +472,8 @@
                     <div id="cash-received-display" class="bg-white px-3 py-1 rounded-lg border border-slate-200 text-xl font-bold text-slate-800 min-w-[100px] text-right">0,00</div>
                 </div>
                 <div class="flex justify-between items-center pt-2 border-t border-slate-200 mb-3">
-                  <span class="text-lg font-bold text-slate-700">RÃ¼ckgeld:</span>
-                  <span id="change-display" class="text-2xl font-black text-slate-800">0,00 â¬</span>
+                  <span class="text-lg font-bold text-slate-700">Rückgeld:</span>
+                  <span id="change-display" class="text-2xl font-black text-slate-800">0,00 €</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2 mb-3">
                   <button onclick="handleCashInput('7')" class="numpad-btn bg-white shadow-sm border border-slate-200 text-slate-700">7</button>
@@ -489,8 +491,8 @@
                 </div>
                 <div class="grid grid-cols-3 gap-2">
                     <button onclick="setCashExact()" class="py-2 bg-blue-100 text-blue-700 rounded-lg font-bold text-sm">Passend</button>
-                    <button onclick="addCashShortcut(5)" class="py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm">+5 â¬</button>
-                    <button onclick="addCashShortcut(10)" class="py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm">+10 â¬</button>
+                    <button onclick="addCashShortcut(5)" class="py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm">+5 €</button>
+                    <button onclick="addCashShortcut(10)" class="py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm">+10 €</button>
                 </div>
               </div>
               <div id="finalize-button-container">
