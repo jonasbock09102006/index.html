@@ -1,4 +1,4 @@
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
@@ -24,8 +24,7 @@ html_content = """<!DOCTYPE html>
     #receipt-content-interactive { overflow-y: auto; max-height: 50vh; scrollbar-width: thin; }
     
     .numpad-btn { 
-        height: 55px;
-        display:flex; justify-content:center; align-items:center; 
+        height: 55px; display:flex; justify-content:center; align-items:center; 
         font-weight: 700; border-radius: 0.75rem; font-size: 1.25rem; 
         transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
@@ -48,12 +47,17 @@ html_content = """<!DOCTYPE html>
     #lock-screen { position: fixed; inset: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
 
     /* QR Code Container Fix */
-    #qrcode, #cd-qrcode, #payment-qrcode-display { width: 256px; height: 256px; margin: 0 auto; display: flex; justify-content: center; align-items: center; }
-    #qrcode img, #cd-qrcode img, #payment-qrcode-display img { margin: 0 auto; }
+    #qrcode, #cd-qrcode, #payment-qrcode-display {
+        width: 256px; height: 256px; margin: 0 auto; display: flex; justify-content: center; align-items: center;
+    }
+    #qrcode img, #cd-qrcode img, #payment-qrcode-display img {
+        margin: 0 auto;
+    }
 
     /* Customer Display Mode Styles */
     #customer-display-screen { 
-        position: fixed; inset:0; z-index: 9000; display: none; height: 100dvh; width: 100vw; background: #0f172a; color: white; flex-direction: column;
+        position: fixed; inset:0; z-index: 9000; display: none; height: 100dvh; width: 100vw; 
+        background: #0f172a; color: white; flex-direction: column;
     }
     
     /* Print Styles */
@@ -95,7 +99,8 @@ html_content = """<!DOCTYPE html>
                   <span>Ihre Bestellung</span>
                   <span class="text-slate-400 text-xl" id="cd-item-count">0 Artikel</span>
               </h2>
-              <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4"></div>
+              <div id="cd-items" class="text-2xl space-y-4 flex-grow overflow-y-auto pr-4">
+                 </div>
           </div>
       </div>
 
@@ -150,78 +155,77 @@ html_content = """<!DOCTYPE html>
         <div id="kasse-content" class="grid md:grid-cols-3 gap-6 h-full max-w-7xl mx-auto py-2 md:py-6 px-2">
             
             <div class="md:col-span-2 flex flex-col space-y-4 h-full">
-                <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
-                    <div class="flex-grow overflow-hidden">
-                        <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
-                    </div>
-                    <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
-                        <span class="mr-1">🔒 </span> Sperren
-                    </button>
-                    <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
-                        Kunden-Screen
-                    </button>
-                    <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
+            <div class="flex space-x-3 p-2 bg-white rounded-2xl shadow-sm border border-slate-100 items-center">
+                <div class="flex-grow overflow-hidden">
+                <div id="category-tabs" class="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide"></div>
                 </div>
-       
-                <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
-                    <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
-                </div>
+                <button onclick="window.lockScreen()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold transition flex items-center gap-1 shadow hover:bg-slate-900">
+                    <span class="mr-1">🔒 </span> Sperren
+                </button>
+                <button onclick="window.openCustomerDisplay()" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl font-bold transition flex items-center gap-1">
+                    Kunden-Screen
+                </button>
+                <button onclick="window.handleLogout()" class="px-4 py-2 bg-slate-100 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl font-bold transition flex items-center gap-1">Logout</button>
+            </div>
+            
+            <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-grow min-h-[300px] content-start overflow-y-auto p-1">
+                <p class="text-slate-400 col-span-full text-center p-10">Produkte werden geladen...</p>
+            </div>
 
-                <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
-                    <div class="col-span-1 flex flex-col justify-between">
-                        <div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
-                            <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
-                        </div>
-                        <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
+            <div class="p-5 glass-panel grid grid-cols-4 gap-4 fixed bottom-0 left-0 right-0 md:relative bg-white/90 backdrop-blur-md md:bg-white z-50 md:z-auto m-2 md:m-0 rounded-2xl shadow-2xl border-t border-slate-200">
+                <div class="col-span-1 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Menge</span> 
+                        <div id="quantity-display" class="w-full h-16 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 border border-blue-100 rounded-2xl shadow-inner">1</div>
                     </div>
-                    <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
-                        <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
-                        <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
-                        <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
-                        <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
-                        <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
-                        <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
-                        <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
-                        <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
-                        <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
-                        <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
-                        <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
-                        <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
-                    </div>
+                    <div id="quantity-mode-display" class="text-center text-xs font-bold text-green-600 bg-green-50 rounded-lg py-1 mt-1 border border-green-100">ADD MODE</div>
                 </div>
+                <div id="main-numpad-container" class="grid grid-cols-3 gap-3 col-span-3">
+                <button onclick="window.handleQuantityInput('7')" class="numpad-btn bg-white text-slate-700 border border-slate-200">7</button>
+                <button onclick="window.handleQuantityInput('8')" class="numpad-btn bg-white text-slate-700 border border-slate-200">8</button>
+                <button onclick="window.handleQuantityInput('9')" class="numpad-btn bg-white text-slate-700 border border-slate-200">9</button>
+                <button onclick="window.handleQuantityInput('4')" class="numpad-btn bg-white text-slate-700 border border-slate-200">4</button>
+                <button onclick="window.handleQuantityInput('5')" class="numpad-btn bg-white text-slate-700 border border-slate-200">5</button>
+                <button onclick="window.handleQuantityInput('6')" class="numpad-btn bg-white text-slate-700 border border-slate-200">6</button>
+                <button onclick="window.handleQuantityInput('1')" class="numpad-btn bg-white text-slate-700 border border-slate-200">1</button>
+                <button onclick="window.handleQuantityInput('2')" class="numpad-btn bg-white text-slate-700 border border-slate-200">2</button>
+                <button onclick="window.handleQuantityInput('3')" class="numpad-btn bg-white text-slate-700 border border-slate-200">3</button>
+                <button onclick="window.handleQuantityInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100 hover:bg-red-100">C</button>
+                <button onclick="window.handleQuantityInput('0')" class="numpad-btn bg-white text-slate-700 border border-slate-200">0</button>
+                <button onclick="window.toggleQuantityMode()" id="btn-quantity-mode" class="numpad-btn bg-green-500 text-white shadow-md hover:bg-green-600 border-none">ADD</button> 
+                </div>
+            </div>
             </div>
 
             <div id="receipt-column" class="md:col-span-1 flex flex-col space-y-4 h-full pb-32 md:pb-0">
-                <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
-                    <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
-                        <span>Aktueller Bon</span>
-                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
-                    </h2>
-                    <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
-                        <div class="flex flex-col items-center justify-center h-40 text-slate-300">
-                            <p class="text-sm font-medium">Warenkorb leer</p>
-                        </div>
-                    </div>
-                    <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
-                        <div class="flex justify-between items-end mb-4">
-                            <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
-                            <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
-                        </div>
-                        <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
-                    </div>
+            <div class="glass-panel p-4 flex-grow flex flex-col relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-b from-slate-200 to-white opacity-50"></div>
+                <h2 class="text-lg font-bold text-slate-800 mb-2 border-b border-dashed border-slate-300 pb-2 flex justify-between items-center">
+                    <span>Aktueller Bon</span>
+                    <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded"># <span id="receipt-count">-</span></span>
+                </h2>
+                <div id="receipt-content-interactive" class="flex-grow mb-4 space-y-1 pr-1">
+                <div class="flex flex-col items-center justify-center h-40 text-slate-300">
+                    <p class="text-sm font-medium">Warenkorb leer</p>
                 </div>
-
-                <div class="glass-panel p-4 space-y-3">
-                    <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
-                        <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
-                    </div>
+                </div>
+                <div class="border-t-2 border-slate-800 border-dashed pt-4 mt-auto">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="text-slate-500 font-bold text-sm mb-1">GESAMT</span>
+                    <span id="total-display" class="text-4xl font-black text-slate-800">0,00 €</span>
+                </div>
+                <button onclick="window.clearBestellung()" class="w-full py-2 text-xs font-bold text-red-400 hover:text-red-600 uppercase tracking-widest mb-2 border border-transparent hover:border-red-100 rounded transition">Bon leeren</button>
                 </div>
             </div>
-    
+
+            <div class="glass-panel p-4 space-y-3">
+                <button onclick="window.openFinalizeModal()" class="w-full py-5 rounded-xl font-black text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 text-2xl transition transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="btn-finalize">ABRECHNEN</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.openSettingsModalWithPin()" class="py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">Einstellungen</button>
+                    <button onclick="window.openReportModalWithPin()" class="py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 transition">Berichte</button>
+                </div>
+            </div>
+            </div>
         </div>
     </div>
 
@@ -282,7 +286,7 @@ html_content = """<!DOCTYPE html>
     <div id="login-modal" style="display:flex;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h1 class="text-2xl font-bold text-slate-800 text-center mb-6">Anmelden</h1>
-          <form id="login-form" onsubmit="event.preventDefault(); window.handleLoginSubmit();">
+          <form id="login-form" onsubmit="event.preventDefault(); window.handleLoginSubmit(); return false;">
             <div class="mb-4">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
               <input type="email" id="login-email" required class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
@@ -303,7 +307,7 @@ html_content = """<!DOCTYPE html>
     <div id="registration-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Konto erstellen</h2>
-          <form id="register-form" onsubmit="event.preventDefault(); window.handleRegisterSubmit();">
+          <form id="register-form" onsubmit="event.preventDefault(); window.handleRegisterSubmit(); return false;">
             <div class="mb-4">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
               <input type="email" id="register-email" required class="w-full p-3 border border-slate-300 rounded-xl">
@@ -341,7 +345,7 @@ html_content = """<!DOCTYPE html>
     <div id="forgot-password-modal" style="display:none;" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-[999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
           <h2 class="text-xl font-bold text-center text-slate-800 mb-4">Passwort zurücksetzen</h2>
-          <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset()">
+          <form id="reset-form" onsubmit="event.preventDefault(); handlePasswordReset(); return false;">
             <div class="mb-6">
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">E-Mail</label>
               <input type="email" id="reset-email" required class="w-full p-3 border border-slate-300 rounded-xl">
@@ -428,7 +432,6 @@ html_content = """<!DOCTYPE html>
     <div id="finalize-modal" style="display:none;" class="fixed inset-0 bg-black bg-opacity-80 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
         <div id="finalize-modal-content" class="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md border border-slate-200 transition-all duration-300">
           <h2 class="text-2xl font-bold mb-6 text-slate-800 text-center">Abrechnung</h2>
-          
           <div id="simple-payment-ui" style="display:none;">
               <div class="text-center mb-8">
                   <div class="text-sm font-bold text-slate-400 uppercase tracking-wide">Zu zahlen</div>
@@ -443,16 +446,16 @@ html_content = """<!DOCTYPE html>
                   </button>
               </div>
           </div>
-          
           <div id="complex-payment-ui" style="display:none;">
               <div class="mb-4 p-4 border border-green-200 rounded-2xl bg-green-50 flex justify-between items-center">
                 <span class="text-sm font-bold text-green-700 uppercase">Summe</span>
                 <div id="finalize-total" class="text-3xl font-black text-green-700">0.00 €</div>
               </div>
+              
               <div class="grid grid-cols-3 gap-3 mb-5">
                 <button onclick="setPaymentMethod('BAR')" id="btn-bar-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">BAR</button>
                 <button onclick="setPaymentMethod('KARTE')" id="btn-karte-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">KARTE</button>
-                <button onclick="setPaymentMethod('QR')" id="btn-qr-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">QR-CODE</button>
+                <button onclick="setPaymentMethod('QR')" id="btn-qr-select" class="p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm">QR</button>
               </div>
     
               <div id="cash-payment-area" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4 transition-all">
@@ -484,7 +487,7 @@ html_content = """<!DOCTYPE html>
                     <button onclick="addCashShortcut(10)" class="py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm">+10 €</button>
                 </div>
               </div>
-
+              
               <div id="qr-payment-area" style="display:none;" class="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4 flex flex-col items-center transition-all">
                  <span class="text-sm font-bold text-slate-500 mb-3 text-center">QR-Code scannen zum Bezahlen</span>
                  <div id="payment-qrcode-display" class="bg-white p-4 rounded-xl shadow-inner border border-slate-200 flex justify-center items-center"></div>
@@ -539,7 +542,7 @@ html_content = """<!DOCTYPE html>
               <button onclick="handleCashManInput('3')" class="numpad-btn bg-white shadow-sm border border-slate-200">3</button>
               <button onclick="handleCashManInput('clear')" class="numpad-btn bg-red-50 text-red-500 border border-red-100">C</button>
               <button onclick="handleCashManInput('0')" class="numpad-btn bg-white shadow-sm border border-slate-200">0</button>
-              <button onclick="handleCashManInput('dot')" class="numpad-btn bg-white shadow-sm border border-slate-200 animation-none">,</button>
+              <button onclick="handleCashManInput('dot')" class="numpad-btn bg-white shadow-sm border border-slate-200">,</button>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -674,12 +677,7 @@ html_content = """<!DOCTYPE html>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-    import { getFirestore as initFS } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-    
-    // Fallback alignment for clean imports mapping matching the dynamic spec
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js");
-    const { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, increment, enableIndexedDbPersistence } = firestoreModule;
+    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, orderBy, getDocs, writeBatch, increment, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
     // --- GLOBALE ZUSTÄNDE ---
     let currentUser = null;
@@ -734,7 +732,7 @@ html_content = """<!DOCTYPE html>
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = initFS(app);
+    const db = getFirestore(app);
     
     try { enableIndexedDbPersistence(db).catch(e => console.log("Persistence error:", e)); } catch(e){}
 
@@ -1007,7 +1005,7 @@ html_content = """<!DOCTYPE html>
         document.getElementById(id).style.display='none'; 
     }
 
-    // --- AUTH LOGIC ---
+    // --- AUTH LOGIC (ANGEPASST MIT FEHLER-ALERT) ---
     window.handleRegisterSubmit = function(){
       const email = document.getElementById('register-email').value;
       const password = document.getElementById('register-password').value;
@@ -1025,12 +1023,24 @@ html_content = """<!DOCTYPE html>
         .catch((e) => window.showToast("Fehler: " + e.message, 'error'))
         .finally(() => window.showLoading(false));
     }
+    
+    // ANGEPASSTE LOGIN FUNKTION
     window.handleLoginSubmit = function(){
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
       window.showLoading(true);
+      
       signInWithEmailAndPassword(auth, email, password)
-        .catch((e) => window.showToast('Login fehlgeschlagen: ' + e.message, 'error'))
+        .then(() => {
+            console.log("Firebase Login erfolgreich.");
+            // onAuthStateChanged kümmert sich um den View-Wechsel, wir zeigen nur Toast
+            window.showToast('Login erfolgreich!', 'success');
+        })
+        .catch((e) => {
+            console.error("Login Fehler Details:", e);
+            window.showToast('Login fehlgeschlagen: ' + e.message, 'error');
+            alert('Login fehlgeschlagen!\nBitte überprüfe deine E-Mail und dein Passwort.\n\nFehler: ' + e.message);
+        })
         .finally(() => window.showLoading(false));
     }
     window.handleLogout = function(){ signOut(auth).then(() => window.location.reload()); }
@@ -1374,6 +1384,7 @@ html_content = """<!DOCTYPE html>
       window.updateVisibility();
     }
     
+    // ANGEPASSTE FUNKTION FÜR QR ZAHLUNG
     window.setPaymentMethod = function(method){
       cashPaymentMethod = method;
       const total = calculateTotalWithFee(method);
@@ -1385,28 +1396,36 @@ html_content = """<!DOCTYPE html>
       const cashBtns = document.getElementById('cash-finalize-buttons'); 
       const cardBtns = document.getElementById('card-finalize-buttons');
       
-      document.getElementById('btn-bar-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition shadow-sm";
-      document.getElementById('btn-karte-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition shadow-sm";
-      document.getElementById('btn-qr-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition shadow-sm";
+      document.getElementById('btn-bar-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm";
+      document.getElementById('btn-karte-select').className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm";
+      const qrBtn = document.getElementById('btn-qr-select');
+      if(qrBtn) qrBtn.className = "p-3 rounded-xl font-bold bg-gray-100 text-gray-500 transition shadow-sm";
 
       if(method === 'BAR'){ 
-         cashArea.style.display = 'block'; qrArea.style.display = 'none'; cashBtns.style.display = 'block'; cardBtns.style.display = 'none';
+         cashArea.style.display = 'block'; 
+         if(qrArea) qrArea.style.display = 'none'; 
+         cashBtns.style.display = 'block'; cardBtns.style.display = 'none';
          document.getElementById('btn-bar-select').className = "p-3 rounded-xl font-bold bg-green-600 text-white shadow-md transition";
          cashReceivedInput = '0'; updateCashChangeDisplay(); 
       } 
       else if(method === 'KARTE') { 
-         cashArea.style.display = 'none'; qrArea.style.display = 'none'; cashBtns.style.display = 'none'; cardBtns.style.display = 'block'; 
+         cashArea.style.display = 'none'; 
+         if(qrArea) qrArea.style.display = 'none'; 
+         cashBtns.style.display = 'none'; cardBtns.style.display = 'block'; 
          document.getElementById('btn-karte-select').className = "p-3 rounded-xl font-bold bg-indigo-600 text-white shadow-md transition";
       }
       else if(method === 'QR') {
-         cashArea.style.display = 'none'; qrArea.style.display = 'flex'; cashBtns.style.display = 'none'; cardBtns.style.display = 'block';
-         document.getElementById('btn-qr-select').className = "p-3 rounded-xl font-bold bg-blue-600 text-white shadow-md transition";
+         cashArea.style.display = 'none'; 
+         if(qrArea) qrArea.style.display = 'flex'; 
+         cashBtns.style.display = 'none'; cardBtns.style.display = 'block';
+         if(qrBtn) qrBtn.className = "p-3 rounded-xl font-bold bg-blue-600 text-white shadow-md transition";
          
          const qrContainer = document.getElementById('payment-qrcode-display');
          if(qrContainer) {
              qrContainer.innerHTML = '';
+             // HIER KANNST DU DEINE PAYPAL, SUMUP ODER GIROCODE URL EINTRAGEN:
              const paymentUrl = `https://paypal.me/DeinShopName/${total.toFixed(2)}`;
-             new QRCode(qrContainer, { text: paymentUrl, width: 180, height: 180, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M });
+             new QRCode(qrContainer, { text: paymentUrl, width: 160, height: 160, colorDark : "#0f172a", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M });
          }
       }
     }
@@ -1668,9 +1687,4 @@ html_content = """<!DOCTYPE html>
     }
   </script>
 </body>
-</html>"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("File written successfully.")
+</html>
