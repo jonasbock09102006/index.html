@@ -35,6 +35,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
     <h1 id="login-title" class="text-2xl font-bold text-center mb-4">Anmelden</h1>
     <input id="login-email" type="email" required placeholder="E-Mail" class="inp mb-3">
     <input id="login-pw" type="password" required placeholder="Passwort" class="inp mb-4">
+    <p id="login-warn" class="off text-xs text-red-600 mb-3">Achtung: Die Datei wurde direkt geöffnet (file://). Firebase-Login funktioniert nur über http(s) – z. B. Firebase Hosting oder localhost.</p>
     <button class="btn w-full bg-blue-600 text-white mb-3">Einloggen</button>
     <div class="flex justify-between text-sm text-slate-500">
       <button type="button" data-act="register">Konto erstellen</button>
@@ -58,8 +59,8 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
     <div class="md:col-span-2 flex flex-col gap-3 min-h-0">
       <div class="card p-2 flex gap-2 items-center">
         <div id="tabs" class="flex-1 flex gap-2 overflow-x-auto"></div>
-        <button data-act="lock" class="btn bg-slate-800 text-white">Sperren</button>
-        <button data-act="displayLink" class="btn bg-blue-100 text-blue-700">Kunden-Screen</button>
+        <span id="who" class="off text-xs font-bold text-slate-500 px-2 whitespace-nowrap"></span><button data-act="lock" class="btn bg-slate-800 text-white">Sperren</button>
+        <button id="btn-disp" data-act="displayLink" class="btn bg-blue-100 text-blue-700">Kunden-Screen</button>
         <button data-act="logout" class="btn bg-slate-100 text-slate-500">Logout</button>
       </div>
       <div id="grid" class="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 content-start p-1"></div>
@@ -67,7 +68,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
         <div>
           <div class="text-xs font-bold text-slate-400 uppercase">Menge</div>
           <div id="qty" class="h-14 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 rounded-xl">1</div>
-          <div id="mode" class="text-center text-xs font-bold text-green-600 mt-1">ADD</div>
+          <button id="mode" data-act="toggleMode" class="btn w-full h-14 mt-1 text-xl font-black text-white bg-green-500">ADD</button>
         </div>
         <div id="qpad" class="col-span-3 grid grid-cols-3 gap-2"></div>
       </div>
@@ -111,6 +112,11 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
       <button data-act="cashAdd" data-arg="2000" class="btn bg-slate-200 !p-2">+20</button>
     </div>
   </div>
+  <div id="p-term" class="off bg-indigo-50 border border-indigo-200 p-3 rounded-xl mb-3 text-center">
+    <div id="p-term-status" class="font-bold mb-2">Bereit</div>
+    <button data-act="termPay" class="btn w-full bg-indigo-600 text-white mb-2">Zahlung am Terminal starten</button>
+    <button data-act="termManual" class="text-xs text-slate-500 underline">Manuell als bezahlt bestätigen</button>
+  </div>
   <div class="grid grid-cols-2 gap-2">
     <button id="p-done" data-act="finish" data-arg="0" class="btn bg-slate-500 text-white">Ohne Bon</button>
     <button id="p-print" data-act="finish" data-arg="1" class="btn bg-green-600 text-white">Bon drucken</button>
@@ -127,16 +133,24 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 </div></div>
 
 <!-- EINSTELLUNGEN -->
-<div id="m-set" class="modal off"><div class="box">
+<div id="m-set" class="modal off"><div class="box" style="max-width:30rem">
   <h2 class="text-xl font-bold text-center mb-3">Einstellungen</h2>
+  <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Firmendaten</h3>
   <input id="s-company" class="inp mb-2" placeholder="Firmenname">
   <input id="s-address" class="inp mb-2" placeholder="Adresse">
-  <input id="s-tax" class="inp mb-2" placeholder="Steuernummer">
-  <label class="block text-xs font-bold text-slate-500 uppercase">Kartengebühr-Aufschlag (%)</label>
+  <input id="s-tax" class="inp mb-3" placeholder="Steuernummer">
+  <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Funktionen (einzeln ein/aus)</h3>
+  <div id="s-feats" class="space-y-2 mb-3"></div>
+  <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Karte &amp; Sparkassen-POS</h3>
+  <label class="block text-xs text-slate-500">Kartengebühr-Aufschlag (%)</label>
   <input id="s-fee" type="number" step="0.01" min="0" class="inp mb-2">
-  <label class="block text-xs font-bold text-slate-500 uppercase">Admin-Code (4 Ziffern, leer = aus)</label>
-  <input id="s-pin" maxlength="4" inputmode="numeric" class="inp mb-2">
-  <label class="flex items-center gap-2 mb-3"><input id="s-stock" type="checkbox" class="w-5 h-5"> Warenbestand verwalten</label>
+  <label class="block text-xs text-slate-500">Terminal-Bridge-URL (z. B. http://localhost:8787/pay)</label>
+  <input id="s-posurl" class="inp mb-3" placeholder="leer = nur manuelle Bestätigung">
+  <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Mitarbeiter (Code erfasst, wer verkauft)</h3>
+  <div id="emp-list" class="space-y-1 mb-2"></div>
+  <div class="grid grid-cols-3 gap-2 mb-3"><input id="emp-name" class="inp" placeholder="Name"><input id="emp-pin" class="inp" maxlength="4" inputmode="numeric" placeholder="Code (4)"><button data-act="addEmp" class="btn bg-green-600 text-white !p-2">+</button></div>
+  <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Admin-Code (4 Ziffern, leer = aus)</h3>
+  <input id="s-pin" maxlength="4" inputmode="numeric" class="inp mb-3">
   <button data-act="saveSettings" class="btn w-full bg-blue-600 text-white mb-2">Speichern</button>
   <div class="grid grid-cols-3 gap-2 text-sm">
     <button data-act="products" class="btn bg-slate-100">Produkte</button>
@@ -148,7 +162,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 
 <!-- PRODUKTE -->
 <div id="m-prod" class="modal off"><div class="box" style="max-width:42rem">
-  <div class="flex justify-between mb-3"><h2 class="text-xl font-bold">Produkte &amp; Kategorien</h2><button data-act="close" data-arg="m-prod" class="text-2xl text-slate-400">&times;</button></div>
+  <div class="flex justify-between mb-3"><h2 class="text-xl font-bold">Produkte &amp; Kategorien</h2><div class="flex gap-3 items-center"><button data-act="back" data-arg="m-prod" class="text-sm font-bold text-blue-600">← Einstellungen</button><button data-act="close" data-arg="m-prod" class="text-2xl text-slate-400">&times;</button></div></div>
   <div class="bg-slate-50 p-3 rounded-xl border mb-3">
     <div class="flex gap-2 mb-3"><input id="c-name" class="inp" placeholder="Neue Kategorie"><button data-act="addCat" class="btn bg-indigo-100 text-indigo-700">+</button></div>
     <input type="hidden" id="e-id">
@@ -179,14 +193,14 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
     <button data-act="cashOp" data-arg="EINLAGE" class="btn bg-green-100 text-green-700">Einlage (+)</button>
     <button data-act="cashOp" data-arg="ENTNAHME" class="btn bg-red-100 text-red-700">Entnahme (−)</button>
   </div>
-  <button data-act="close" data-arg="m-cash" class="w-full mt-3 text-sm font-bold text-slate-400">Schließen</button>
+  <div class="grid grid-cols-2 gap-2 mt-3"><button data-act="back" data-arg="m-cash" class="btn bg-blue-100 text-blue-700 text-sm">← Einstellungen</button><button data-act="close" data-arg="m-cash" class="btn bg-slate-200 text-sm">Schließen</button></div>
 </div></div>
 
 <!-- TRANSAKTIONEN -->
 <div id="m-hist" class="modal off"><div class="box" style="max-width:40rem;height:80dvh;display:flex;flex-direction:column">
   <h2 class="text-xl font-bold mb-3">Transaktionen heute</h2>
   <div id="hlist" class="flex-1 overflow-y-auto space-y-2 bg-slate-50 p-2 rounded-xl border"></div>
-  <button data-act="close" data-arg="m-hist" class="btn bg-slate-200 mt-3">Schließen</button>
+  <div class="grid grid-cols-2 gap-2 mt-3"><button data-act="back" data-arg="m-hist" class="btn bg-blue-100 text-blue-700">← Einstellungen</button><button data-act="close" data-arg="m-hist" class="btn bg-slate-200">Schließen</button></div>
 </div></div>
 
 <!-- BERICHT -->
@@ -212,7 +226,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, orderBy, onSnapshot, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
@@ -237,30 +251,50 @@ const show = (id, on = true) => $(id).classList.toggle('off', !on);
 function toast(m, t = 'info') {
   const d = document.createElement('div'); d.className = 't'; d.textContent = m;
   d.style.background = { success: '#059669', error: '#dc2626', info: '#2563eb' }[t];
-  $('toast').prepend(d); setTimeout(() => d.remove(), 3200);
+  $('toast').prepend(d); setTimeout(() => d.remove(), t === 'error' ? 6500 : 3200);
 }
 const pad = (act, last) => ['7','8','9','4','5','6','1','2','3','C','0',last].map(k =>
   `<button class="key" data-act="${act}" data-arg="${k}">${k === 'ENTER' ? 'OK' : k}</button>`).join('');
 $('qpad').innerHTML = pad('qtyKey', '00'); $('cpad').innerHTML = pad('cashKey', '00');
 $('ppad').innerHTML = pad('pinKey', 'ENTER'); $('mpad').innerHTML = pad('manKey', '00');
+// Funktionen einzeln schaltbar: [Schlüssel, Name, Hinweis]
+const FEATS = [
+  ['cardPayment', 'Kartenzahlung', 'Button „KARTE" im Abrechnungsdialog'],
+  ['cardFee', 'Kartengebühr-Aufschlag', 'Aufschlag in % bei Kartenzahlung'],
+  ['receiptPrint', 'Bon drucken', 'Druck-Button und Bon-Funktion'],
+  ['taxReceipt', 'MwSt.-Ausweis auf dem Bon', ''],
+  ['stock', 'Warenbestand', 'Bestand prüfen und buchen'],
+  ['customerDisplay', 'Kundenbildschirm', 'Live-Anzeige auf zweitem Gerät'],
+  ['employeeSystem', 'Mitarbeiter-Code', 'Anmeldung per Code, Verkäufer wird erfasst'],
+  ['posTerminal', 'Sparkassen-POS-Terminal', 'Kartenzahlung über Terminal auslösen']
+];
+$('s-feats').innerHTML = FEATS.map(([k, n, h]) => `<label class="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border"><input type="checkbox" id="f-${k}" class="w-5 h-5"><span><b>${n}</b>${h ? `<span class="block text-xs text-slate-400">${h}</span>` : ''}</span></label>`).join('');
 
 // ---------- Zustand ----------
 const MODE = new URLSearchParams(location.search).get('mode') === 'display' ? 'display' : 'pos';
 let uid = null, unsubs = [];
 let products = {}, cats = {}, cart = [];
-let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true };
+let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true,
+  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [] };
 let filterCat = null, qtyStr = '1', qtyDirty = false, delMode = false;
-let method = 'BAR', given = '0', manAmt = '0', busy = false;
+let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null;
+const who = () => currentEmployee ? currentEmployee.name : 'Admin';
 const col = n => collection(db, `users/${uid}/${n}`);
 const settingsRef = () => doc(db, `users/${uid}/settings/config`);
 const dispRef = () => doc(db, `users/${uid}/display/current`);
 
 // ---------- Auth ----------
 $('login-title').textContent = MODE === 'display' ? 'Kundenbildschirm anmelden' : 'Anmelden';
+if (location.protocol === 'file:') show('login-warn');
 const creds = () => [$('login-email').value.trim(), $('login-pw').value];
+function authMsg(e) {
+  const m = { 'auth/operation-not-allowed': 'E-Mail/Passwort-Anmeldung ist in der Firebase-Konsole nicht aktiviert.', 'auth/email-already-in-use': 'Diese E-Mail ist bereits registriert.', 'auth/weak-password': 'Passwort zu schwach (mind. 6 Zeichen).', 'auth/invalid-email': 'Ungültige E-Mail-Adresse.', 'auth/invalid-credential': 'E-Mail oder Passwort falsch.', 'auth/user-not-found': 'Kein Konto mit dieser E-Mail.', 'auth/wrong-password': 'Passwort falsch.', 'auth/too-many-requests': 'Zu viele Versuche – bitte später erneut.', 'auth/network-request-failed': 'Netzwerkfehler – Verbindung prüfen.', 'auth/unauthorized-domain': 'Domain nicht autorisiert (Firebase → Authentication → Einstellungen → Autorisierte Domains).', 'auth/admin-restricted-operation': 'Registrierung ist in Firebase deaktiviert (Authentication → Einstellungen → Benutzeraktionen).', 'auth/invalid-api-key': 'API-Key ungültig.' };
+  const c = e.code || '';
+  return (m[c] || ('Fehler: ' + (c || e.message))) + (/referer|blocked|403/i.test(c + (e.message || '')) ? ' (API-Key-Einschränkung/Domain prüfen)' : '');
+}
 $('login-form').addEventListener('submit', async e => {
   e.preventDefault();
-  try { await signInWithEmailAndPassword(auth, ...creds()); } catch (err) { toast('Login fehlgeschlagen: ' + err.code, 'error'); }
+  try { await signInWithEmailAndPassword(auth, ...creds()); } catch (err) { toast(authMsg(err), 'error'); }
 });
 onAuthStateChanged(auth, u => {
   unsubs.forEach(f => f()); unsubs = [];
@@ -271,13 +305,20 @@ onAuthStateChanged(auth, u => {
 
 // ---------- Kundenbildschirm (Gerät 2) ----------
 let thanksTimer = null;
+let lastTs = 0;
+function applyDisplay(d) { if (d.ts && d.ts <= lastTs) return; lastTs = d.ts || lastTs; renderDisplay(d); }
 function startDisplay() {
   show('display');
   renderDisplay({ type: 'cart', items: [], total: 0 });
   unsubs.push(onSnapshot(dispRef(), { includeMetadataChanges: true }, s => {
     $('cd-dot').style.background = s.metadata.fromCache ? '#ef4444' : '#22c55e';
-    if (s.exists()) renderDisplay(s.data());
+    if (s.exists()) applyDisplay(s.data());
   }, err => { console.error(err); toast('Verbindungsfehler: ' + err.code, 'error'); }));
+  // Absicherung: Server regelmäßig abfragen (schlafende Verbindungen, Tab im Hintergrund)
+  const poll = async () => { try { const s = await getDocFromServer(dispRef()); if (s.exists()) applyDisplay(s.data()); } catch (e) {} };
+  const iv = setInterval(poll, 4000), vis = () => { if (!document.hidden) poll(); };
+  document.addEventListener('visibilitychange', vis);
+  unsubs.push(() => { clearInterval(iv); document.removeEventListener('visibilitychange', vis); });
 }
 function renderDisplay(d) {
   clearTimeout(thanksTimer);
@@ -300,15 +341,17 @@ function renderDisplay(d) {
 }
 
 // ---------- Kasse (Gerät 1) ----------
-let dispTimer = null;
+let dispTimer = null, dispPending = null, lastPushTs = 0;
 function pushDisplay(state) {
-  if (!uid || MODE !== 'pos') return;
+  if (!uid || MODE !== 'pos' || S.customerDisplay === false) return;
+  lastPushTs = Math.max(Date.now(), lastPushTs + 1);
+  dispPending = { ...state, ts: lastPushTs };
   clearTimeout(dispTimer);
-  dispTimer = setTimeout(() => setDoc(dispRef(), { ...state, ts: Date.now() }).catch(e => console.error('Display:', e)), 100);
+  dispTimer = setTimeout(() => { const d = dispPending; dispPending = null; if (d) setDoc(dispRef(), d).catch(e => console.error('Display:', e)); }, 60);
 }
 const cartState = () => ({ type: 'cart', items: cart.map(i => ({ n: i.name, q: i.qty, t: i.total })), total: cartTotal() });
 const cartTotal = () => r2(cart.reduce((s, i) => s + i.total, 0));
-const calc = m => r2(cartTotal() * (1 + (m === 'KARTE' && S.cardFeeRate > 0 ? S.cardFeeRate / 100 : 0)));
+const calc = m => r2(cartTotal() * (1 + (m === 'KARTE' && S.cardFee !== false && S.cardFeeRate > 0 ? S.cardFeeRate / 100 : 0)));
 const avail = p => S.stock ? p.stock - (cart.find(i => i.id === p.id)?.qty || 0) : Infinity;
 
 let firstSettings = true;
@@ -318,8 +361,8 @@ function startPos() {
     if (!s.exists()) { await setDoc(settingsRef(), { ...S, mode: 'custom' }); return; }
     S = { ...S, ...s.data() };
     $('rc').textContent = (S.receiptCounter || 0) + 1;
-    if (firstSettings) { firstSettings = false; pushDisplay(cartState()); }
-    renderGrid();
+    if (firstSettings) { firstSettings = false; pushDisplay(cartState()); if (S.employeeSystem) openPin('Mitarbeiter-Code eingeben', null, true); }
+    applyFeatures(); renderEmps(); renderGrid();
   }, err => toast('Einstellungen: ' + err.code, 'error')));
   unsubs.push(onSnapshot(col('products'), s => {
     products = {}; s.forEach(d => { const x = d.data(); products[d.id] = { id: d.id, ...x, price: parseFloat(x.price) || 0, stock: parseInt(x.stock) || 0 }; });
@@ -330,6 +373,16 @@ function startPos() {
     renderTabs(); renderProdMgmt();
   }, err => toast('Kategorien: ' + err.code, 'error')));
   renderAll();
+}
+function applyFeatures() {
+  show('p-card', S.cardPayment !== false); show('p-print', S.receiptPrint !== false);
+  $('p-done').textContent = S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen';
+  $('p-done').classList.toggle('col-span-2', S.receiptPrint === false);
+  show('btn-disp', S.customerDisplay !== false); updateWho();
+}
+function updateWho() { const w = $('who'); w.classList.toggle('off', !S.employeeSystem); w.textContent = 'Bediener: ' + who(); }
+function renderEmps() {
+  $('emp-list').innerHTML = (S.employees || []).map((e, i) => `<div class="flex justify-between items-center p-2 bg-slate-50 border rounded-lg"><span>${esc(e.name)} <span class="text-xs text-slate-400">(Code ••••)</span></span><button data-act="delEmp" data-arg="${i}" class="text-red-500 font-bold px-2">X</button></div>`).join('') || '<p class="text-xs text-slate-400">Noch keine Mitarbeiter.</p>';
 }
 function renderAll() { renderGrid(); renderCart(); }
 function renderTabs() {
@@ -362,7 +415,7 @@ const acts = {
   },
   add: id => {
     const p = products[id]; if (!p) return; const q = parseInt(qtyStr) || 1; const ex = cart.find(i => i.id === id);
-    if (delMode) { if (ex) { ex.qty -= Math.min(q, ex.qty); if (ex.qty <= 0) cart = cart.filter(i => i !== ex); } }
+    if (delMode) { if (!ex) return toast('Artikel ist nicht im Bon', 'info'); ex.qty -= Math.min(q, ex.qty); if (ex.qty <= 0) cart = cart.filter(i => i !== ex); }
     else {
       if (S.stock && avail(p) < q) return toast(`Nur noch ${Math.max(0, avail(p))} verfügbar`, 'error');
       if (ex) ex.qty += q; else cart.push({ id, name: p.name, price: p.price, qty: q, tax: p.taxRate ?? 19 });
@@ -375,7 +428,8 @@ const acts = {
   // Zahlung
   checkout: () => { if (!cart.length) return; show('m-pay'); acts.method('BAR'); },
   method: m => {
-    method = m; given = '0';
+    if (m === 'KARTE' && S.cardPayment === false) return;
+    method = m; given = '0'; termOk = null; termStatus('Bereit'); show('p-term', m === 'KARTE' && !!S.posTerminal);
     $('p-bar').className = 'btn ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
     $('p-card').className = 'btn ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
     show('p-cash', m === 'BAR'); $('p-total').textContent = eur(calc(m));
@@ -387,7 +441,7 @@ const acts = {
   finish: async pr => { await finish(pr === '1'); },
 
   // PIN / Sperre
-  lock: () => openPin('Kasse gesperrt', () => {}, true),
+  lock: () => { currentEmployee = null; updateWho(); openPin('Kasse gesperrt', null, true); },
   pinKey: k => pinKey(k),
   pinCancel: () => { pinCb = null; show('m-pin', false); },
   settings: () => needPin('Einstellungen', openSettings),
@@ -395,10 +449,46 @@ const acts = {
   saveSettings: async () => {
     const pin = $('s-pin').value.trim();
     if (pin && !/^\d{4}$/.test(pin)) return toast('Code muss 4 Ziffern haben', 'error');
+    const d = { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: parseFloat($('s-fee').value) || 0, reversalCode: pin, posUrl: $('s-posurl').value.trim() };
+    FEATS.forEach(([k]) => d[k] = $('f-' + k).checked);
+    if (d.employeeSystem && !pin) return toast('Für den Mitarbeiter-Code bitte zuerst einen Admin-Code vergeben', 'error');
+    try { await setDoc(settingsRef(), d, { merge: true }); toast('Gespeichert', 'success'); show('m-set', false); }
+    catch (e) { toast('Fehler: ' + e.code, 'error'); }
+  },
+  toggleMode: () => {
+    delMode = !delMode; const b = $('mode'); b.textContent = delMode ? 'DEL' : 'ADD';
+    b.className = 'btn w-full h-14 mt-1 text-xl font-black text-white ' + (delMode ? 'bg-red-500' : 'bg-green-500');
+    $('grid').classList.toggle('ring-4', delMode); $('grid').classList.toggle('ring-red-300', delMode);
+  },
+  addEmp: async () => {
+    const name = $('emp-name').value.trim(), p = $('emp-pin').value.trim();
+    if (!name || !/^\d{4}$/.test(p)) return toast('Name und 4-stelliger Code nötig', 'error');
+    if (p === (S.reversalCode || '0000') || (S.employees || []).some(e => e.pin === p)) return toast('Code bereits vergeben', 'error');
+    try { await setDoc(settingsRef(), { employees: [...(S.employees || []), { name, pin: p, role: 'staff' }] }, { merge: true }); $('emp-name').value = ''; $('emp-pin').value = ''; toast('Mitarbeiter angelegt', 'success'); }
+    catch (e) { toast('Fehler: ' + e.code, 'error'); }
+  },
+  delEmp: async i => {
+    const l = [...(S.employees || [])]; l.splice(+i, 1);
+    try { await setDoc(settingsRef(), { employees: l }, { merge: true }); } catch (e) { toast('Fehler: ' + e.code, 'error'); }
+  },
+  back: id => { show(id, false); openSettings(); },
+  termPay: async () => {
+    if (termBusy) return;
+    if (!S.posUrl) return toast('Keine Bridge-URL hinterlegt – bitte manuell bestätigen oder URL in den Einstellungen eintragen', 'error');
+    termBusy = true; termStatus('Warte auf Terminal … Karte vorhalten', 'text-indigo-700');
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 120000);
     try {
-      await setDoc(settingsRef(), { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: parseFloat($('s-fee').value) || 0, reversalCode: pin, stock: $('s-stock').checked }, { merge: true });
-      toast('Gespeichert', 'success'); show('m-set', false);
-    } catch (e) { toast('Fehler: ' + e.code, 'error'); }
+      const r = await fetch(S.posUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+        body: JSON.stringify({ action: 'payment', amount: Math.round(calc('KARTE') * 100), currency: 'EUR', receiptId: (S.receiptCounter || 0) + 1 }) });
+      const j = await r.json();
+      if (j.status === 'approved') { termOk = { mode: 'bridge', trace: j.trace || null, receipt: j.receipt || null, time: Date.now() }; termStatus('✓ Zahlung genehmigt', 'text-green-700'); updateChange(); }
+      else termStatus('✗ ' + (j.message || j.status || 'Abgelehnt'), 'text-red-600');
+    } catch (e) { termStatus('✗ Terminal nicht erreichbar (' + (e.name === 'AbortError' ? 'Zeitüberschreitung' : 'Bridge/CORS/Mixed-Content') + ')', 'text-red-600'); }
+    finally { clearTimeout(to); termBusy = false; }
+  },
+  termManual: () => {
+    if (!confirm('Wurde die Zahlung am Terminal erfolgreich abgeschlossen?')) return;
+    termOk = { mode: 'manual', time: Date.now() }; termStatus('✓ Manuell bestätigt', 'text-green-700'); updateChange();
   },
   close: id => show(id, false),
 
@@ -433,7 +523,7 @@ const acts = {
     try {
       const b = writeBatch(db);
       b.set(settingsRef(), { cashBoxBalance: increment(type === 'EINLAGE' ? amount : -amount) }, { merge: true });
-      b.set(doc(col('transactions')), { type: 'CASH-' + type, amount, timestamp: new Date(), status: 'completed', employee: 'Admin' });
+      b.set(doc(col('transactions')), { type: 'CASH-' + type, amount, timestamp: new Date(), status: 'completed', employee: who() });
       await commit(b); show('m-cash', false); toast('Gebucht', 'success');
     } catch (e) { toast('Fehler: ' + e.code, 'error'); }
   },
@@ -466,15 +556,11 @@ document.addEventListener('click', e => {
   const f = acts[b.dataset.act]; if (f) { if (b.dataset.act === 'fullscreen' && e.target.closest('button')) return; f(b.dataset.arg); }
 });
 
-// DEL/ADD-Modus: Tippen auf Modusanzeige
-$('mode').style.cursor = 'pointer';
-$('mode').addEventListener('click', () => {
-  delMode = !delMode; $('mode').textContent = delMode ? 'DEL' : 'ADD';
-  $('mode').className = 'text-center text-xs font-bold mt-1 ' + (delMode ? 'text-red-600' : 'text-green-600');
-});
+function termStatus(t, c) { $('p-term-status').textContent = t; $('p-term-status').className = 'font-bold mb-2 ' + (c || ''); }
 
 function updateChange() {
-  const tot = calc(method), g = parseInt(given) / 100, ok = method === 'KARTE' || g >= tot - 0.005;
+  const tot = calc(method), g = parseInt(given) / 100;
+  const ok = method === 'KARTE' ? (!S.posTerminal || !!termOk) : g >= tot - 0.005;
   $('p-given').textContent = g.toFixed(2).replace('.', ',');
   $('p-change').textContent = eur(Math.max(0, g - tot));
   $('p-done').disabled = $('p-print').disabled = !ok;
@@ -493,17 +579,18 @@ async function finish(print) {
     const sub = cartTotal(), tot = calc(method), fee = r2(tot - sub);
     const g = method === 'BAR' ? parseInt(given) / 100 : tot;
     if (method === 'BAR' && g < tot - 0.005) { toast('Gegebener Betrag zu niedrig', 'error'); return; }
+    if (method === 'KARTE' && S.posTerminal && !termOk) { toast('Bitte zuerst am Terminal bezahlen', 'error'); return; }
     const items = cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.qty, totalBrutto: i.total, taxRate: i.tax }));
     if (fee > 0) items.push({ id: 'FEE', name: 'Kartengebühr', price: fee, quantity: 1, totalBrutto: fee, taxRate: 0, isFee: true });
     const rid = (S.receiptCounter || 0) + 1;
     const b = writeBatch(db);
-    b.set(doc(col('transactions')), { items, totalBrutto: tot, timestamp: new Date(), paymentMethod: method, status: 'completed', received: g, change: r2(g - tot), receiptId: rid, employee: 'Admin' });
+    b.set(doc(col('transactions')), { items, totalBrutto: tot, timestamp: new Date(), paymentMethod: method, status: 'completed', received: g, change: r2(g - tot), receiptId: rid, employee: who(), ...(method === 'KARTE' && termOk ? { terminal: termOk } : {}) });
     if (S.stock) items.forEach(i => { if (!i.isFee && products[i.id]) b.update(doc(col('products'), i.id), { stock: increment(-i.quantity) }); });
     const upd = { receiptCounter: increment(1) }; if (method === 'BAR') upd.cashBoxBalance = increment(tot);
     b.set(settingsRef(), upd, { merge: true });
     await commit(b);
-    if (print) printReceipt(items, tot, rid);
-    cart = []; qtyStr = '1'; show('m-pay', false); renderAll();
+    if (print && S.receiptPrint !== false) printReceipt(items, tot, rid);
+    cart = []; qtyStr = '1'; termOk = null; show('m-pay', false); renderAll();
     pushDisplay({ type: 'thanks' });
     toast('Zahlung erfolgreich', 'success');
   } catch (e) { console.error(e); toast('Fehler bei Zahlung: ' + (e.code || e.message), 'error'); }
@@ -516,20 +603,26 @@ function openPin(title, cb, lock = false) {
   pin = ''; pinCb = cb; pinLock = lock; $('pin-title').textContent = title; $('pin-dots').textContent = '';
   show('pin-cancel', !lock); $('m-pin').style.background = lock ? '#f8fafc' : 'rgba(15,23,42,.8)'; show('m-pin');
 }
-function needPin(title, cb) { if (!S.reversalCode) cb(); else openPin(title, cb); }
+function needPin(title, cb) { if (currentEmployee) return toast('Nur für Admin', 'error'); if (!S.reversalCode) cb(); else openPin(title, cb); }
 function pinKey(k) {
   if (k === 'C') pin = ''; else if (k === 'ENTER') return checkPin(); else if (pin.length < 4) pin += k;
   $('pin-dots').textContent = '●'.repeat(pin.length); if (pin.length === 4) checkPin();
 }
 function checkPin() {
-  if (pin === (S.reversalCode || '0000')) { const cb = pinCb; pinCb = null; pin = ''; show('m-pin', false); cb && cb(); }
-  else { toast('Falscher Code', 'error'); pin = ''; $('pin-dots').textContent = ''; }
+  const adm = pin === (S.reversalCode || '0000');
+  const emp = (pinLock && !adm && S.employeeSystem) ? (S.employees || []).find(e => e.pin === pin) : null;
+  if (adm || emp) {
+    if (pinLock) { currentEmployee = adm ? null : emp; updateWho(); }
+    const cb = pinCb; pinCb = null; pin = ''; show('m-pin', false); cb && cb();
+  } else { toast('Falscher Code', 'error'); pin = ''; $('pin-dots').textContent = ''; }
 }
 
 // ---------- Einstellungen / Produkte ----------
 function openSettings() {
   $('s-company').value = S.companyName || ''; $('s-address').value = S.address || ''; $('s-tax').value = S.taxId || '';
-  $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = S.reversalCode || ''; $('s-stock').checked = !!S.stock; show('m-set');
+  $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = S.reversalCode || ''; $('s-posurl').value = S.posUrl || '';
+  FEATS.forEach(([k]) => $('f-' + k).checked = !!S[k]);
+  renderEmps(); show('m-set');
 }
 function renderProdMgmt() {
   if ($('m-prod').classList.contains('off')) return;
@@ -552,7 +645,7 @@ async function openHistory() {
       const t = s.data(), cashOp = t.type && t.type.includes('CASH'), cx = t.status === 'cancelled';
       const time = tsDate(t.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
       const desc = cashOp ? `${t.type} ${eur(t.amount)}` : `Bon #${t.receiptId || '?'} – ${eur(t.totalBrutto || 0)} (${t.paymentMethod})`;
-      return `<div class="flex justify-between items-center bg-white p-3 rounded-xl border ${cx ? 'opacity-50' : ''}"><span><span class="text-xs font-mono text-slate-400 mr-2">${time}</span><b>${esc(desc)}</b></span>${cx ? '<b class="text-red-500 text-xs">STORNIERT</b>' : `<button data-act="cancel" data-arg="${s.id}" class="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-bold">Storno</button>`}</div>`;
+      return `<div class="flex justify-between items-center bg-white p-3 rounded-xl border ${cx ? 'opacity-50' : ''}"><span><span class="text-xs font-mono text-slate-400 mr-2">${time}</span><b>${esc(desc)}</b>${S.employeeSystem && t.employee ? `<span class="text-xs text-slate-400 ml-2">${esc(t.employee)}</span>` : ''}</span>${cx ? '<b class="text-red-500 text-xs">STORNIERT</b>' : `<button data-act="cancel" data-arg="${s.id}" class="px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-bold">Storno</button>`}</div>`;
     }).join('');
   } catch (e) { $('hlist').innerHTML = `<p class="text-red-500 p-3">Fehler: ${esc(e.code || e.message)}</p>`; }
 }
@@ -579,17 +672,17 @@ async function runReport() {
   const ds = $('r-date').value; if (!ds) return; $('r-out').textContent = 'Lade…';
   try {
     const snap = await getDocs(query(col('transactions'), where('timestamp', '>=', new Date(ds + 'T00:00:00')), where('timestamp', '<=', new Date(ds + 'T23:59:59.999')), orderBy('timestamp', 'desc')));
-    reportRows = []; let total = 0, bar = 0, card = 0, fee = 0, ein = 0, ent = 0, lines = '';
+    reportRows = []; const byEmp = {}; let total = 0, bar = 0, card = 0, fee = 0, ein = 0, ent = 0, lines = '';
     snap.forEach(s => {
       const t = { ...s.data(), id: s.id }; reportRows.push(t);
       const time = tsDate(t.timestamp).toLocaleTimeString('de-DE');
       if (t.status === 'cancelled') { lines += `${time} | STORNO | ${eur(t.totalBrutto || t.amount || 0)}\n`; return; }
       if (t.type && t.type.includes('CASH')) { t.type === 'CASH-EINLAGE' ? ein += t.amount : ent += t.amount; lines += `${time} | ${t.type} | ${eur(t.amount)}\n`; return; }
-      const v = t.totalBrutto || 0; total += v; t.paymentMethod === 'BAR' ? bar += v : card += v;
+      const v = t.totalBrutto || 0; total += v; byEmp[t.employee || 'Admin'] = (byEmp[t.employee || 'Admin'] || 0) + v; t.paymentMethod === 'BAR' ? bar += v : card += v;
       const f = (t.items || []).find(i => i.isFee); if (f) fee += f.totalBrutto;
-      lines += `${time} | #${t.receiptId || '-'} | ${eur(v)} (${t.paymentMethod})\n`;
+      lines += `${time} | #${t.receiptId || '-'} | ${eur(v)} (${t.paymentMethod})${S.employeeSystem ? ' [' + (t.employee || 'Admin') + ']' : ''}\n`;
     });
-    $('r-out').textContent = `Bericht für ${new Date(ds).toLocaleDateString('de-DE')}\n------------------------\nGESAMTUMSATZ: ${eur(total)}\nBar: ${eur(bar)}\nKarte: ${eur(card)}\n` + (fee > 0 ? `Davon Gebühren: ${eur(fee)}\n` : '') + `Einlagen: ${eur(ein)} | Entnahmen: ${eur(ent)}\nKassenbestand aktuell: ${eur(S.cashBoxBalance || 0)}\n\n` + (lines || 'Keine Transaktionen.');
+    $('r-out').textContent = `Bericht für ${new Date(ds).toLocaleDateString('de-DE')}\n------------------------\nGESAMTUMSATZ: ${eur(total)}\nBar: ${eur(bar)}\nKarte: ${eur(card)}\n` + (fee > 0 ? `Davon Gebühren: ${eur(fee)}\n` : '') + (S.employeeSystem ? 'Je Mitarbeiter:\n' + Object.entries(byEmp).map(([k, v]) => '  ' + k + ': ' + eur(v)).join('\n') + '\n' : '') + `Einlagen: ${eur(ein)} | Entnahmen: ${eur(ent)}\nKassenbestand aktuell: ${eur(S.cashBoxBalance || 0)}\n\n` + (lines || 'Keine Transaktionen.');
   } catch (e) { $('r-out').textContent = 'Fehler: ' + (e.code || e.message); }
 }
 function exportCsv() {
@@ -608,7 +701,7 @@ function exportCsv() {
 function printReceipt(items, total, rid) {
   const groups = {};
   items.forEach(i => { if (i.isFee) return; const k = String(i.taxRate ?? 19); const net = i.totalBrutto / (1 + k / 100); (groups[k] ||= { g: 0, n: 0 }); groups[k].g += i.totalBrutto; groups[k].n += net; });
-  const tax = Object.entries(groups).map(([k, v]) => `<div class="l" style="font-size:10px"><span>MwSt ${esc(k)} % (netto ${eur(v.n)})</span><span>${eur(v.g - v.n)}</span></div>`).join('');
+  const tax = S.taxReceipt === false ? '' : Object.entries(groups).map(([k, v]) => `<div class="l" style="font-size:10px"><span>MwSt ${esc(k)} % (netto ${eur(v.n)})</span><span>${eur(v.g - v.n)}</span></div>`).join('');
   $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:16px">${esc((S.companyName || 'Kasse').toUpperCase())}</div>${S.address ? `<div style="text-align:center">${esc(S.address)}</div>` : ''}${S.taxId ? `<div style="text-align:center">St-Nr: ${esc(S.taxId)}</div>` : ''}<hr><div style="text-align:center;font-weight:bold">BON NR. #${rid}</div><hr>${items.map(i => `<div class="l"><span>${i.quantity}x ${esc(i.name)}</span><b>${eur(i.totalBrutto)}</b></div>`).join('')}<hr><div class="l" style="font-size:14px;font-weight:bold"><span>SUMME</span><span>${eur(total)}</span></div><hr>${tax}<div style="text-align:center;font-size:10px;margin-top:6px">${new Date().toLocaleString('de-DE')}<br>Vielen Dank!</div>`;
   setTimeout(() => window.print(), 50);
 }
