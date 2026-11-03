@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kassensystem</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;height:100dvh;overflow:hidden;color:#1e293b}
@@ -150,7 +150,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
   <div id="emp-list" class="space-y-1 mb-2"></div>
   <div class="grid grid-cols-3 gap-2 mb-3"><input id="emp-name" class="inp" placeholder="Name"><input id="emp-pin" class="inp" maxlength="4" inputmode="numeric" placeholder="Code (4)"><button data-act="addEmp" class="btn bg-green-600 text-white !p-2">+</button></div>
   <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Admin-Code (4 Ziffern, leer = aus)</h3>
-  <input id="s-pin" maxlength="4" inputmode="numeric" class="inp mb-3">
+  <div class="flex gap-2 mb-3"><input id="s-pin" maxlength="4" inputmode="numeric" class="inp"><button data-act="clearPin" class="btn bg-red-100 text-red-600 whitespace-nowrap !px-3">Entfernen</button></div>
   <button data-act="saveSettings" class="btn w-full bg-blue-600 text-white mb-2">Speichern</button>
   <div class="grid grid-cols-3 gap-2 text-sm">
     <button data-act="products" class="btn bg-slate-100">Produkte</button>
@@ -204,11 +204,21 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 </div></div>
 
 <!-- BERICHT -->
-<div id="m-rep" class="modal off"><div class="box" style="max-width:40rem;height:80dvh;display:flex;flex-direction:column">
-  <h2 class="text-xl font-bold text-blue-700 mb-3">Tagesbericht</h2>
-  <div class="flex gap-2 mb-3"><input id="r-date" type="date" class="inp"><button data-act="runReport" class="btn bg-blue-600 text-white">Laden</button></div>
-  <pre id="r-out" class="flex-1 overflow-auto bg-slate-50 border rounded-xl p-3 text-sm whitespace-pre-wrap"></pre>
-  <div class="flex justify-between mt-3"><button data-act="csv" class="btn bg-green-100 text-green-800">CSV</button><button data-act="close" data-arg="m-rep" class="btn bg-slate-200">Schließen</button></div>
+<div id="m-rep" class="modal off"><div class="box" style="max-width:56rem;height:92dvh;display:flex;flex-direction:column">
+  <div class="flex justify-between items-center mb-3"><h2 class="text-xl font-bold text-blue-700">Berichte &amp; Auswertung</h2><button data-act="close" data-arg="m-rep" class="text-2xl text-slate-400">&times;</button></div>
+  <div class="flex flex-wrap gap-2 items-center mb-3">
+    <button data-act="range" data-arg="today" class="btn bg-slate-100 !py-2 text-sm">Heute</button>
+    <button data-act="range" data-arg="yesterday" class="btn bg-slate-100 !py-2 text-sm">Gestern</button>
+    <button data-act="range" data-arg="7" class="btn bg-slate-100 !py-2 text-sm">7 Tage</button>
+    <button data-act="range" data-arg="month" class="btn bg-slate-100 !py-2 text-sm">Monat</button>
+    <input id="r-from" type="date" class="inp !w-auto !py-2"><span>–</span><input id="r-to" type="date" class="inp !w-auto !py-2">
+    <button data-act="runReport" class="btn bg-blue-600 text-white !py-2">Laden</button>
+  </div>
+  <div id="r-view" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+  <div class="flex flex-wrap justify-between gap-2 mt-3">
+    <div class="flex gap-2"><button data-act="csv" class="btn bg-green-100 text-green-800">CSV exportieren</button><button data-act="printReport" class="btn bg-slate-100">Übersicht drucken</button></div>
+    <button data-act="close" data-arg="m-rep" class="btn bg-slate-200">Schließen</button>
+  </div>
 </div></div>
 
 <!-- KUNDENSCREEN-LINK -->
@@ -226,7 +236,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, writeBatch, increment, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
@@ -266,7 +276,8 @@ const FEATS = [
   ['stock', 'Warenbestand', 'Bestand prüfen und buchen'],
   ['customerDisplay', 'Kundenbildschirm', 'Live-Anzeige auf zweitem Gerät'],
   ['employeeSystem', 'Mitarbeiter-Code', 'Anmeldung per Code, Verkäufer wird erfasst'],
-  ['posTerminal', 'Sparkassen-POS-Terminal', 'Kartenzahlung über Terminal auslösen']
+  ['posTerminal', 'Sparkassen-POS-Terminal', 'Kartenzahlung über Terminal auslösen'],
+  ['autoLock', 'Auto-Sperre', 'Sperrt die Kasse nach 5 Min. ohne Bedienung']
 ];
 $('s-feats').innerHTML = FEATS.map(([k, n, h]) => `<label class="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border"><input type="checkbox" id="f-${k}" class="w-5 h-5"><span><b>${n}</b>${h ? `<span class="block text-xs text-slate-400">${h}</span>` : ''}</span></label>`).join('');
 
@@ -275,7 +286,7 @@ const MODE = new URLSearchParams(location.search).get('mode') === 'display' ? 'd
 let uid = null, unsubs = [];
 let products = {}, cats = {}, cart = [];
 let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true,
-  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [] };
+  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false };
 let filterCat = null, qtyStr = '1', qtyDirty = false, delMode = false;
 let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null;
 const who = () => currentEmployee ? currentEmployee.name : 'Admin';
@@ -361,7 +372,7 @@ function startPos() {
     if (!s.exists()) { await setDoc(settingsRef(), { ...S, mode: 'custom' }); return; }
     S = { ...S, ...s.data() };
     $('rc').textContent = (S.receiptCounter || 0) + 1;
-    if (firstSettings) { firstSettings = false; pushDisplay(cartState()); if (S.employeeSystem) openPin('Mitarbeiter-Code eingeben', null, true); }
+    if (firstSettings) { firstSettings = false; pushDisplay(cartState()); if (S.employeeSystem) openPin('Mitarbeiter-Code eingeben', null, true); migratePins(); }
     applyFeatures(); renderEmps(); renderGrid();
   }, err => toast('Einstellungen: ' + err.code, 'error')));
   unsubs.push(onSnapshot(col('products'), s => {
@@ -378,7 +389,7 @@ function applyFeatures() {
   show('p-card', S.cardPayment !== false); show('p-print', S.receiptPrint !== false);
   $('p-done').textContent = S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen';
   $('p-done').classList.toggle('col-span-2', S.receiptPrint === false);
-  show('btn-disp', S.customerDisplay !== false); updateWho();
+  show('btn-disp', S.customerDisplay !== false); updateWho(); idleReset();
 }
 function updateWho() { const w = $('who'); w.classList.toggle('off', !S.employeeSystem); w.textContent = 'Bediener: ' + who(); }
 function renderEmps() {
@@ -445,15 +456,24 @@ const acts = {
   pinKey: k => pinKey(k),
   pinCancel: () => { pinCb = null; show('m-pin', false); },
   settings: () => needPin('Einstellungen', openSettings),
-  report: () => needPin('Berichte', () => { $('r-date').value = today(); show('m-rep'); acts.runReport(); }),
+  report: () => needPin('Berichte', () => { show('m-rep'); setRange('today'); runReport(); }),
   saveSettings: async () => {
     const pin = $('s-pin').value.trim();
     if (pin && !/^\d{4}$/.test(pin)) return toast('Code muss 4 Ziffern haben', 'error');
-    const d = { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: parseFloat($('s-fee').value) || 0, reversalCode: pin, posUrl: $('s-posurl').value.trim() };
+    const url = $('s-posurl').value.trim();
+    if (url) { try { if (!/^https?:$/.test(new URL(url).protocol)) throw 0; } catch (e) { return toast('Bridge-URL ungültig (http:// oder https://)', 'error'); } }
+    const d = { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: Math.min(100, Math.max(0, parseFloat($('s-fee').value) || 0)), posUrl: url };
     FEATS.forEach(([k]) => d[k] = $('f-' + k).checked);
-    if (d.employeeSystem && !pin) return toast('Für den Mitarbeiter-Code bitte zuerst einen Admin-Code vergeben', 'error');
-    try { await setDoc(settingsRef(), d, { merge: true }); toast('Gespeichert', 'success'); show('m-set', false); }
-    catch (e) { toast('Fehler: ' + e.code, 'error'); }
+    if (d.employeeSystem && !pin && !S.reversalHash) return toast('Für den Mitarbeiter-Code bitte zuerst einen Admin-Code vergeben', 'error');
+    try {
+      if (pin) { d.reversalHash = await hashPin(pin); d.reversalCode = deleteField(); }
+      await setDoc(settingsRef(), d, { merge: true }); toast('Gespeichert', 'success'); show('m-set', false);
+    } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
+  },
+  clearPin: async () => {
+    if (!confirm('Admin-Code wirklich entfernen? Der Mitarbeiter-Code wird dabei deaktiviert.')) return;
+    try { await setDoc(settingsRef(), { reversalHash: deleteField(), reversalCode: deleteField(), employeeSystem: false }, { merge: true }); $('f-employeeSystem').checked = false; toast('Admin-Code entfernt', 'success'); }
+    catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
   toggleMode: () => {
     delMode = !delMode; const b = $('mode'); b.textContent = delMode ? 'DEL' : 'ADD';
@@ -463,9 +483,12 @@ const acts = {
   addEmp: async () => {
     const name = $('emp-name').value.trim(), p = $('emp-pin').value.trim();
     if (!name || !/^\d{4}$/.test(p)) return toast('Name und 4-stelliger Code nötig', 'error');
-    if (p === (S.reversalCode || '0000') || (S.employees || []).some(e => e.pin === p)) return toast('Code bereits vergeben', 'error');
-    try { await setDoc(settingsRef(), { employees: [...(S.employees || []), { name, pin: p, role: 'staff' }] }, { merge: true }); $('emp-name').value = ''; $('emp-pin').value = ''; toast('Mitarbeiter angelegt', 'success'); }
-    catch (e) { toast('Fehler: ' + e.code, 'error'); }
+    try {
+      const h = await hashPin(p);
+      if (h === S.reversalHash || (!S.reversalHash && p === (S.reversalCode || '0000')) || (S.employees || []).some(e => e.pinHash === h || e.pin === p)) return toast('Code bereits vergeben', 'error');
+      await setDoc(settingsRef(), { employees: [...(S.employees || []), { name, pinHash: h, role: 'staff' }] }, { merge: true });
+      $('emp-name').value = ''; $('emp-pin').value = ''; toast('Mitarbeiter angelegt', 'success');
+    } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
   delEmp: async i => {
     const l = [...(S.employees || [])]; l.splice(+i, 1);
@@ -530,6 +553,8 @@ const acts = {
   history: () => { show('m-set', false); openHistory(); },
   cancel: id => needPin('Storno', () => cancelTx(id)),
   runReport: () => runReport(),
+  range: k => { setRange(k); runReport(); },
+  printReport: () => printReport(),
   csv: () => exportCsv(),
 
   // Kundenbildschirm / Sonstiges
@@ -603,24 +628,54 @@ function openPin(title, cb, lock = false) {
   pin = ''; pinCb = cb; pinLock = lock; $('pin-title').textContent = title; $('pin-dots').textContent = '';
   show('pin-cancel', !lock); $('m-pin').style.background = lock ? '#f8fafc' : 'rgba(15,23,42,.8)'; show('m-pin');
 }
-function needPin(title, cb) { if (currentEmployee) return toast('Nur für Admin', 'error'); if (!S.reversalCode) cb(); else openPin(title, cb); }
+function needPin(title, cb) { if (currentEmployee) return toast('Nur für Admin', 'error'); if (!S.reversalHash && !S.reversalCode) cb(); else openPin(title, cb); }
 function pinKey(k) {
   if (k === 'C') pin = ''; else if (k === 'ENTER') return checkPin(); else if (pin.length < 4) pin += k;
   $('pin-dots').textContent = '●'.repeat(pin.length); if (pin.length === 4) checkPin();
 }
-function checkPin() {
-  const adm = pin === (S.reversalCode || '0000');
-  const emp = (pinLock && !adm && S.employeeSystem) ? (S.employees || []).find(e => e.pin === pin) : null;
+let fails = 0, lockUntil = 0, idleT = null;
+async function hashPin(p) {
+  if (!window.crypto || !crypto.subtle) throw new Error('Sicherer Kontext (https) nötig');
+  const enc = new TextEncoder(), k = await crypto.subtle.importKey('raw', enc.encode(p), 'PBKDF2', false, ['deriveBits']);
+  const b = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode('pos:' + uid), iterations: 150000, hash: 'SHA-256' }, k, 256);
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function migratePins() { // alte Klartext-Codes einmalig in Hashes umwandeln
+  try {
+    const u = {};
+    if (S.reversalCode && !S.reversalHash) { u.reversalHash = await hashPin(S.reversalCode); u.reversalCode = deleteField(); }
+    const em = S.employees || [];
+    if (em.some(e => e.pin)) u.employees = await Promise.all(em.map(async e => e.pin ? { name: e.name, role: e.role || 'staff', pinHash: await hashPin(e.pin) } : e));
+    if (Object.keys(u).length) await setDoc(settingsRef(), u, { merge: true });
+  } catch (e) { console.error('Migration:', e); }
+}
+function idleReset() {
+  clearTimeout(idleT);
+  if (MODE === 'pos' && uid && S.autoLock) idleT = setTimeout(() => { if ($('m-pin').classList.contains('off')) acts.lock(); }, 300000);
+}
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, idleReset, { passive: true }));
+async function checkPin() {
+  const p = pin; pin = ''; $('pin-dots').textContent = '';
+  if (Date.now() < lockUntil) return toast(`Zu viele Fehlversuche – bitte ${Math.ceil((lockUntil - Date.now()) / 1000)} s warten`, 'error');
+  let adm = false, emp = null;
+  try {
+    const h = await hashPin(p);
+    adm = S.reversalHash ? h === S.reversalHash : (S.reversalCode ? p === S.reversalCode : p === '0000');
+    if (pinLock && !adm && S.employeeSystem) emp = (S.employees || []).find(e => e.pinHash === h || (e.pin && e.pin === p));
+  } catch (e) { return toast('Code-Prüfung nicht möglich: ' + e.message, 'error'); }
   if (adm || emp) {
-    if (pinLock) { currentEmployee = adm ? null : emp; updateWho(); }
-    const cb = pinCb; pinCb = null; pin = ''; show('m-pin', false); cb && cb();
-  } else { toast('Falscher Code', 'error'); pin = ''; $('pin-dots').textContent = ''; }
+    fails = 0; if (pinLock) { currentEmployee = adm ? null : emp; updateWho(); }
+    const cb = pinCb; pinCb = null; show('m-pin', false); cb && cb();
+  } else {
+    fails++; if (fails >= 5) lockUntil = Date.now() + Math.min(600, 30 * 2 ** (fails - 5)) * 1000;
+    toast(fails >= 5 ? 'Zu viele Fehlversuche – Eingabe vorübergehend gesperrt' : 'Falscher Code', 'error');
+  }
 }
 
 // ---------- Einstellungen / Produkte ----------
 function openSettings() {
   $('s-company').value = S.companyName || ''; $('s-address').value = S.address || ''; $('s-tax').value = S.taxId || '';
-  $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = S.reversalCode || ''; $('s-posurl').value = S.posUrl || '';
+  $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = ''; $('s-pin').placeholder = (S.reversalHash || S.reversalCode) ? '•••• gesetzt – neu eingeben zum Ändern' : '4 Ziffern'; $('s-posurl').value = S.posUrl || '';
   FEATS.forEach(([k]) => $('f-' + k).checked = !!S[k]);
   renderEmps(); show('m-set');
 }
@@ -654,7 +709,7 @@ async function cancelTx(id) {
   try {
     const ref = doc(col('transactions'), id), s = await getDoc(ref), t = s.data();
     if (!t || t.status === 'cancelled') return toast('Bereits storniert', 'info');
-    const b = writeBatch(db); b.update(ref, { status: 'cancelled', cancelledAt: new Date() });
+    const b = writeBatch(db); b.update(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: who() });
     let cash = 0;
     if (t.type === 'CASH-EINLAGE') cash = -t.amount; else if (t.type === 'CASH-ENTNAHME') cash = t.amount;
     else {
@@ -667,34 +722,106 @@ async function cancelTx(id) {
 }
 
 // ---------- Bericht / CSV ----------
-let reportRows = [];
-async function runReport() {
-  const ds = $('r-date').value; if (!ds) return; $('r-out').textContent = 'Lade…';
-  try {
-    const snap = await getDocs(query(col('transactions'), where('timestamp', '>=', new Date(ds + 'T00:00:00')), where('timestamp', '<=', new Date(ds + 'T23:59:59.999')), orderBy('timestamp', 'desc')));
-    reportRows = []; const byEmp = {}; let total = 0, bar = 0, card = 0, fee = 0, ein = 0, ent = 0, lines = '';
-    snap.forEach(s => {
-      const t = { ...s.data(), id: s.id }; reportRows.push(t);
-      const time = tsDate(t.timestamp).toLocaleTimeString('de-DE');
-      if (t.status === 'cancelled') { lines += `${time} | STORNO | ${eur(t.totalBrutto || t.amount || 0)}\n`; return; }
-      if (t.type && t.type.includes('CASH')) { t.type === 'CASH-EINLAGE' ? ein += t.amount : ent += t.amount; lines += `${time} | ${t.type} | ${eur(t.amount)}\n`; return; }
-      const v = t.totalBrutto || 0; total += v; byEmp[t.employee || 'Admin'] = (byEmp[t.employee || 'Admin'] || 0) + v; t.paymentMethod === 'BAR' ? bar += v : card += v;
-      const f = (t.items || []).find(i => i.isFee); if (f) fee += f.totalBrutto;
-      lines += `${time} | #${t.receiptId || '-'} | ${eur(v)} (${t.paymentMethod})${S.employeeSystem ? ' [' + (t.employee || 'Admin') + ']' : ''}\n`;
-    });
-    $('r-out').textContent = `Bericht für ${new Date(ds).toLocaleDateString('de-DE')}\n------------------------\nGESAMTUMSATZ: ${eur(total)}\nBar: ${eur(bar)}\nKarte: ${eur(card)}\n` + (fee > 0 ? `Davon Gebühren: ${eur(fee)}\n` : '') + (S.employeeSystem ? 'Je Mitarbeiter:\n' + Object.entries(byEmp).map(([k, v]) => '  ' + k + ': ' + eur(v)).join('\n') + '\n' : '') + `Einlagen: ${eur(ein)} | Entnahmen: ${eur(ent)}\nKassenbestand aktuell: ${eur(S.cashBoxBalance || 0)}\n\n` + (lines || 'Keine Transaktionen.');
-  } catch (e) { $('r-out').textContent = 'Fehler: ' + (e.code || e.message); }
+let rep = null;
+const dstr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dlong = k => new Date(k + 'T00:00').toLocaleDateString('de-DE');
+function setRange(k) {
+  const a = new Date(), b = new Date();
+  if (k === 'yesterday') { a.setDate(a.getDate() - 1); b.setDate(b.getDate() - 1); }
+  else if (k === '7') a.setDate(a.getDate() - 6);
+  else if (k === 'month') a.setDate(1);
+  $('r-from').value = dstr(a); $('r-to').value = dstr(b);
 }
+async function runReport() {
+  const f = $('r-from').value, t = $('r-to').value; if (!f || !t) return;
+  const a = new Date(f + 'T00:00:00'), b = new Date(t + 'T23:59:59.999');
+  if (b < a) return toast('„Bis" liegt vor „Von"', 'error');
+  if ((b - a) / 864e5 > 93) return toast('Zeitraum max. 93 Tage', 'error');
+  $('r-view').innerHTML = '<p class="text-center p-8 text-slate-400">Lade …</p>';
+  try {
+    const snap = await getDocs(query(col('transactions'), where('timestamp', '>=', a), where('timestamp', '<=', b), orderBy('timestamp', 'desc')));
+    rep = analyze(snap.docs.map(d => ({ ...d.data(), id: d.id })), f, t);
+    $('r-view').innerHTML = renderReport(rep);
+  } catch (e) { $('r-view').innerHTML = `<p class="text-red-500 p-4">Fehler: ${esc(e.code || e.message)}</p>`; }
+}
+function analyze(rows, f, t) {
+  const R = { f, t, rows, total: 0, count: 0, bar: 0, card: 0, fee: 0, ein: 0, ent: 0, cxN: 0, cxSum: 0, byHour: {}, byDay: {}, byEmp: {}, prods: {}, vat: {} };
+  rows.forEach(x => {
+    const cash = x.type && x.type.includes('CASH');
+    if (x.status === 'cancelled') { if (!cash) { R.cxN++; R.cxSum += x.totalBrutto || 0; } return; }
+    if (cash) { x.type === 'CASH-EINLAGE' ? R.ein += x.amount : R.ent += x.amount; return; }
+    const v = x.totalBrutto || 0, d = tsDate(x.timestamp), emp = x.employee || 'Admin';
+    R.total += v; R.count++; x.paymentMethod === 'BAR' ? R.bar += v : R.card += v;
+    R.byDay[dstr(d)] = (R.byDay[dstr(d)] || 0) + v; R.byHour[d.getHours()] = (R.byHour[d.getHours()] || 0) + v;
+    const e = (R.byEmp[emp] ||= { n: 0, s: 0 }); e.n++; e.s += v;
+    (x.items || []).forEach(i => {
+      if (i.isFee) { R.fee += i.totalBrutto; return; }
+      const p = (R.prods[i.name] ||= { q: 0, s: 0 }); p.q += i.quantity; p.s += i.totalBrutto;
+      const k = String(i.taxRate ?? 19), vv = (R.vat[k] ||= { g: 0, n: 0 }); vv.g += i.totalBrutto; vv.n += i.totalBrutto / (1 + k / 100);
+    });
+  });
+  return R;
+}
+function chart(R) {
+  let keys = [], map, lab;
+  if (R.f === R.t) {
+    const hs = Object.keys(R.byHour).map(Number); if (!hs.length) return '<p class="text-sm text-slate-400">Keine Umsätze.</p>';
+    for (let h = Math.min(...hs); h <= Math.max(...hs); h++) keys.push(h); map = R.byHour; lab = h => h + ' h';
+  } else {
+    for (const d = new Date(R.f + 'T00:00'); dstr(d) <= R.t; d.setDate(d.getDate() + 1)) keys.push(dstr(d)); map = R.byDay; lab = k => k.slice(8) + '.' + k.slice(5, 7) + '.';
+  }
+  const max = Math.max(1, ...keys.map(k => map[k] || 0));
+  return `<div class="flex items-end gap-1 h-40 overflow-x-auto pb-1">${keys.map(k => { const v = map[k] || 0; return `<div class="flex-1 min-w-[34px] h-full flex flex-col items-center justify-end" title="${esc(lab(k))}: ${eur(v)}"><span class="text-[9px] text-slate-400">${v ? Math.round(v) : ''}</span><div class="w-full bg-blue-500 rounded-t" style="height:${v ? Math.max(3, v / max * 78) : 0}%"></div><span class="text-[10px] text-slate-500 mt-1">${esc(lab(k))}</span></div>`; }).join('')}</div>`;
+}
+function renderReport(R) {
+  if (!R.rows.length) return '<p class="text-center text-slate-400 p-10">Keine Transaktionen im gewählten Zeitraum.</p>';
+  const kpi = (l, v, c = '', s = '') => `<div class="card p-3"><div class="text-[11px] font-bold uppercase text-slate-400">${l}</div><div class="text-xl sm:text-2xl font-black ${c}">${v}</div>${s ? `<div class="text-xs text-slate-400">${s}</div>` : ''}</div>`;
+  const sec = (t, b) => `<div class="card p-3"><h3 class="text-xs font-bold uppercase text-slate-400 mb-2">${t}</h3>${b}</div>`;
+  const row = (a, b) => `<div class="flex justify-between gap-2 py-1 border-b border-slate-100 text-sm"><span class="truncate">${a}</span><span class="whitespace-nowrap font-semibold">${b}</span></div>`;
+  const top = Object.entries(R.prods).sort((a, b) => b[1].s - a[1].s).slice(0, 10), mx = top.length ? top[0][1].s : 1;
+  const per = R.f === R.t ? dlong(R.f) : dlong(R.f) + ' – ' + dlong(R.t);
+  const prodHtml = top.map(([k, v]) => `<div class="py-1 text-sm"><div class="flex justify-between"><span class="truncate">${esc(k)} <span class="text-xs text-slate-400">${v.q}x</span></span><b>${eur(v.s)}</b></div><div class="h-1.5 bg-slate-100 rounded mt-0.5"><div class="h-1.5 bg-blue-500 rounded" style="width:${Math.round(v.s / mx * 100)}%"></div></div></div>`).join('') || '<p class="text-sm text-slate-400">–</p>';
+  const empHtml = Object.entries(R.byEmp).sort((a, b) => b[1].s - a[1].s).map(([k, v]) => row(esc(k) + ` <span class="text-xs text-slate-400">${v.n} Bons</span>`, eur(v.s))).join('');
+  const vatHtml = Object.entries(R.vat).sort((a, b) => b[0] - a[0]).map(([k, v]) => row(`${esc(k)} % (netto ${eur(v.n)})`, eur(v.g - v.n))).join('');
+  const list = R.rows.slice(0, 300).map(x => {
+    const cash = x.type && x.type.includes('CASH'), cx = x.status === 'cancelled';
+    const d = tsDate(x.timestamp).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    return `<div class="flex justify-between gap-2 py-1 border-b border-slate-100 text-sm ${cx ? 'opacity-50 line-through' : ''}"><span class="truncate"><span class="text-xs text-slate-400 mr-2">${d}</span>${esc(cash ? x.type : `Bon #${x.receiptId || '?'} · ${x.paymentMethod}`)}${S.employeeSystem ? ` <span class="text-xs text-slate-400">${esc(x.employee || 'Admin')}</span>` : ''}</span><b>${eur((cash ? x.amount : x.totalBrutto) || 0)}</b></div>`;
+  }).join('');
+  return `<div class="text-sm text-slate-500">Zeitraum: <b>${per}</b></div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    ${kpi('Umsatz', eur(R.total), 'text-green-600')}${kpi('Bons', R.count, '', 'Ø ' + eur(R.count ? R.total / R.count : 0))}
+    ${kpi('Bar', eur(R.bar))}${kpi('Karte', eur(R.card), '', R.fee ? 'inkl. Gebühren ' + eur(R.fee) : '')}
+    ${kpi('Stornos', R.cxN, R.cxN ? 'text-red-600' : '', eur(R.cxSum))}${kpi('Einlagen', eur(R.ein))}${kpi('Entnahmen', eur(R.ent))}${kpi('Kassenbestand', eur(S.cashBoxBalance || 0), '', 'aktuell')}
+  </div>
+  ${sec(R.f === R.t ? 'Umsatz nach Uhrzeit' : 'Umsatz nach Tag', chart(R))}
+  <div class="grid md:grid-cols-2 gap-3">
+    ${sec('Top-Produkte', prodHtml)}
+    <div class="space-y-3">${S.employeeSystem ? sec('Je Mitarbeiter', empHtml) : ''}${S.taxReceipt !== false && vatHtml ? sec('Enthaltene MwSt.', vatHtml) : ''}</div>
+  </div>
+  ${sec(`Transaktionen (${R.rows.length}${R.rows.length > 300 ? ', 300 angezeigt' : ''})`, `<div class="max-h-64 overflow-y-auto">${list}</div>`)}`;
+}
+const csvCell = v => { let x = String(v ?? ''); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return /[;"\n\r]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
 function exportCsv() {
-  if (!reportRows.length) return toast('Keine Daten', 'error');
-  const n = v => r2(v || 0).toFixed(2).replace('.', ',');
-  let csv = 'Datum;Uhrzeit;Typ;Bon;Betrag;Zahlart;Mitarbeiter;Status\n';
-  reportRows.forEach(t => {
+  if (!rep) return toast('Bitte zuerst laden', 'error');
+  const R = rep, n = v => r2(v || 0).toFixed(2).replace('.', ','), c = csvCell;
+  let csv = `Bericht;${R.f};${R.t}\nUmsatz gesamt;${n(R.total)}\nBons;${R.count}\nDurchschnitt Bon;${n(R.count ? R.total / R.count : 0)}\nBar;${n(R.bar)}\nKarte;${n(R.card)}\nKartengebühren;${n(R.fee)}\nStornos Anzahl;${R.cxN}\nStornos Summe;${n(R.cxSum)}\nEinlagen;${n(R.ein)}\nEntnahmen;${n(R.ent)}\n\nProdukt;Menge;Umsatz\n`;
+  Object.entries(R.prods).sort((a, b) => b[1].s - a[1].s).forEach(([k, v]) => csv += `${c(k)};${v.q};${n(v.s)}\n`);
+  csv += '\nMitarbeiter;Bons;Umsatz\n';
+  Object.entries(R.byEmp).forEach(([k, v]) => csv += `${c(k)};${v.n};${n(v.s)}\n`);
+  csv += '\nDatum;Uhrzeit;Typ;Bon;Betrag;Zahlart;Mitarbeiter;Status;Artikel\n';
+  R.rows.forEach(t => {
     const d = tsDate(t.timestamp), cash = t.type && t.type.includes('CASH');
-    csv += [d.toLocaleDateString('de-DE'), d.toLocaleTimeString('de-DE'), cash ? t.type : 'Verkauf', t.receiptId || '', n(cash ? t.amount : t.totalBrutto), t.paymentMethod || '-', t.employee || 'Admin', t.status].join(';') + '\n';
+    csv += [d.toLocaleDateString('de-DE'), d.toLocaleTimeString('de-DE'), c(cash ? t.type : 'Verkauf'), t.receiptId || '', n(cash ? t.amount : t.totalBrutto), c(t.paymentMethod || '-'), c(t.employee || 'Admin'), t.status, c((t.items || []).filter(i => !i.isFee).map(i => i.quantity + 'x ' + i.name).join(', '))].join(';') + '\n';
   });
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = `Export_${$('r-date').value}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  a.download = `Bericht_${R.f}_${R.t}.csv`; document.body.appendChild(a); a.click(); a.remove();
+}
+function printReport() {
+  if (!rep) return toast('Bitte zuerst laden', 'error');
+  const R = rep, l = (a, b) => `<div class="l"><span>${a}</span><b>${b}</b></div>`;
+  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center">Bericht ${esc(dlong(R.f))} – ${esc(dlong(R.t))}</div><hr>${l('Umsatz', eur(R.total))}${l('Bons', R.count)}${l('Bar', eur(R.bar))}${l('Karte', eur(R.card))}${R.fee ? l('Kartengebühren', eur(R.fee)) : ''}${l('Stornos', R.cxN + ' / ' + eur(R.cxSum))}${l('Einlagen', eur(R.ein))}${l('Entnahmen', eur(R.ent))}${S.employeeSystem ? '<hr>' + Object.entries(R.byEmp).map(([k, v]) => l(esc(k), eur(v.s))).join('') : ''}<hr><div style="text-align:center;font-size:10px">${new Date().toLocaleString('de-DE')}</div>`;
+  setTimeout(() => window.print(), 50);
 }
 
 // ---------- Bon drucken ----------
