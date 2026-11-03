@@ -69,6 +69,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
           <div class="text-xs font-bold text-slate-400 uppercase">Menge</div>
           <div id="qty" class="h-14 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 rounded-xl">1</div>
           <button id="mode" data-act="toggleMode" class="btn w-full h-14 mt-1 text-xl font-black text-white bg-green-500">ADD</button>
+          <button id="loss" data-act="toggleLoss" class="off btn w-full mt-1 text-xs font-black bg-amber-100 text-amber-700">VERLUST</button>
         </div>
         <div id="qpad" class="col-span-3 grid grid-cols-3 gap-2"></div>
       </div>
@@ -97,7 +98,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <div id="m-pay" class="modal off"><div class="box">
   <div class="text-center text-xs font-bold text-slate-400 uppercase">Zu zahlen</div>
   <div id="p-total" class="text-center text-5xl font-black mb-4">0,00 €</div>
-  <div class="grid grid-cols-2 gap-2 mb-3">
+  <div id="p-methods" class="grid grid-cols-2 gap-2 mb-3">
     <button id="p-bar" data-act="method" data-arg="BAR" class="btn">BAR</button>
     <button id="p-card" data-act="method" data-arg="KARTE" class="btn">KARTE</button>
   </div>
@@ -277,7 +278,8 @@ const FEATS = [
   ['customerDisplay', 'Kundenbildschirm', 'Live-Anzeige auf zweitem Gerät'],
   ['employeeSystem', 'Mitarbeiter-Code', 'Anmeldung per Code, Verkäufer wird erfasst'],
   ['posTerminal', 'Sparkassen-POS-Terminal', 'Kartenzahlung über Terminal auslösen'],
-  ['autoLock', 'Auto-Sperre', 'Sperrt die Kasse nach 5 Min. ohne Bedienung']
+  ['autoLock', 'Auto-Sperre', 'Sperrt die Kasse nach 5 Min. ohne Bedienung'],
+  ['lossBooking', 'Verlust-Buchung', 'Produkte zum Preis 0 € ausbuchen (Bruch, Schwund, Gratis)']
 ];
 $('s-feats').innerHTML = FEATS.map(([k, n, h]) => `<label class="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border"><input type="checkbox" id="f-${k}" class="w-5 h-5"><span><b>${n}</b>${h ? `<span class="block text-xs text-slate-400">${h}</span>` : ''}</span></label>`).join('');
 
@@ -286,9 +288,9 @@ const MODE = new URLSearchParams(location.search).get('mode') === 'display' ? 'd
 let uid = null, unsubs = [];
 let products = {}, cats = {}, cart = [];
 let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true,
-  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false };
+  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false };
 let filterCat = null, qtyStr = '1', qtyDirty = false, delMode = false;
-let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null;
+let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null, lossMode = false;
 const who = () => currentEmployee ? currentEmployee.name : 'Admin';
 const col = n => collection(db, `users/${uid}/${n}`);
 const settingsRef = () => doc(db, `users/${uid}/settings/config`);
@@ -363,7 +365,7 @@ function pushDisplay(state) {
 const cartState = () => ({ type: 'cart', items: cart.map(i => ({ n: i.name, q: i.qty, t: i.total })), total: cartTotal() });
 const cartTotal = () => r2(cart.reduce((s, i) => s + i.total, 0));
 const calc = m => r2(cartTotal() * (1 + (m === 'KARTE' && S.cardFee !== false && S.cardFeeRate > 0 ? S.cardFeeRate / 100 : 0)));
-const avail = p => S.stock ? p.stock - (cart.find(i => i.id === p.id)?.qty || 0) : Infinity;
+const avail = p => S.stock ? p.stock - cart.filter(i => i.id === p.id).reduce((a, i) => a + i.qty, 0) : Infinity;
 
 let firstSettings = true;
 function startPos() {
@@ -389,7 +391,11 @@ function applyFeatures() {
   show('p-card', S.cardPayment !== false); show('p-print', S.receiptPrint !== false);
   $('p-done').textContent = S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen';
   $('p-done').classList.toggle('col-span-2', S.receiptPrint === false);
-  show('btn-disp', S.customerDisplay !== false); updateWho(); idleReset();
+  show('btn-disp', S.customerDisplay !== false); show('loss', !!S.lossBooking); if (!S.lossBooking) lossMode = false; gridRing(); updateWho(); idleReset();
+}
+function gridRing() {
+  const g = $('grid'); g.classList.remove('ring-4', 'ring-red-300', 'ring-amber-300');
+  if (delMode) g.classList.add('ring-4', 'ring-red-300'); else if (lossMode && S.lossBooking) g.classList.add('ring-4', 'ring-amber-300');
 }
 function updateWho() { const w = $('who'); w.classList.toggle('off', !S.employeeSystem); w.textContent = 'Bediener: ' + who(); }
 function renderEmps() {
@@ -409,7 +415,7 @@ function renderGrid() {
 }
 function renderCart() {
   const t = cartTotal();
-  $('cart').innerHTML = cart.length ? cart.map(i => `<div class="flex items-center py-2 border-b border-dashed"><b class="w-10 text-slate-400">${i.qty}x</b><span class="flex-1 leading-tight">${esc(i.name)}</span><b>${eur(i.total)}</b><button data-act="del" data-arg="${i.id}" class="ml-2 px-2 text-slate-400">✕</button></div>`).join('') : '<p class="text-center text-slate-300 mt-10">Warenkorb leer</p>';
+  $('cart').innerHTML = cart.length ? cart.map(i => `<div class="flex items-center py-2 border-b border-dashed"><b class="w-10 text-slate-400">${i.qty}x</b><span class="flex-1 leading-tight">${esc(i.name)}${i.loss ? ' <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">VERLUST</span>' : ''}</span><b class="${i.loss ? 'text-amber-600' : ''}">${eur(i.total)}</b><button data-act="del" data-arg="${i.id}${i.loss ? ':L' : ''}" class="ml-2 px-2 text-slate-400">✕</button></div>`).join('') : '<p class="text-center text-slate-300 mt-10">Warenkorb leer</p>';
   $('total').textContent = eur(t); $('pay').disabled = !cart.length;
   pushDisplay(cartState());
 }
@@ -425,21 +431,26 @@ const acts = {
     qtyStr = String(Math.max(1, parseInt(qtyStr) || 1)); $('qty').textContent = qtyStr;
   },
   add: id => {
-    const p = products[id]; if (!p) return; const q = parseInt(qtyStr) || 1; const ex = cart.find(i => i.id === id);
+    const p = products[id]; if (!p) return; const q = parseInt(qtyStr) || 1, loss = !!(lossMode && S.lossBooking); const ex = cart.find(i => i.id === id && !!i.loss === loss);
     if (delMode) { if (!ex) return toast('Artikel ist nicht im Bon', 'info'); ex.qty -= Math.min(q, ex.qty); if (ex.qty <= 0) cart = cart.filter(i => i !== ex); }
     else {
       if (S.stock && avail(p) < q) return toast(`Nur noch ${Math.max(0, avail(p))} verfügbar`, 'error');
-      if (ex) ex.qty += q; else cart.push({ id, name: p.name, price: p.price, qty: q, tax: p.taxRate ?? 19 });
+      if (ex) ex.qty += q; else cart.push({ id, name: p.name, price: loss ? 0 : p.price, orig: p.price, loss, qty: q, tax: p.taxRate ?? 19 });
     }
     recalc(); qtyStr = '1'; qtyDirty = false; $('qty').textContent = '1'; renderAll();
   },
-  del: id => { cart = cart.filter(i => i.id !== id); renderAll(); },
+  del: k => { cart = cart.filter(i => (i.id + (i.loss ? ':L' : '')) !== k); renderAll(); },
   clear: () => { cart = []; renderAll(); },
 
   // Zahlung
   checkout: () => { if (!cart.length) return; show('m-pay'); acts.method('BAR'); },
   method: m => {
     if (m === 'KARTE' && S.cardPayment === false) return;
+    const z = cartTotal() === 0; // reiner Verlust-Bon: keine Zahlung
+    show('p-methods', !z); show('p-print', !z && S.receiptPrint !== false);
+    $('p-done').textContent = z ? 'Verlust buchen' : (S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen');
+    $('p-done').classList.toggle('col-span-2', z || S.receiptPrint === false);
+    if (z) { method = 'VERLUST'; termOk = null; show('p-cash', false); show('p-term', false); $('p-total').textContent = eur(0); $('p-done').disabled = false; $('p-done').style.opacity = 1; pushDisplay(cartState()); return; }
     method = m; given = '0'; termOk = null; termStatus('Bereit'); show('p-term', m === 'KARTE' && !!S.posTerminal);
     $('p-bar').className = 'btn ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
     $('p-card').className = 'btn ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
@@ -478,7 +489,7 @@ const acts = {
   toggleMode: () => {
     delMode = !delMode; const b = $('mode'); b.textContent = delMode ? 'DEL' : 'ADD';
     b.className = 'btn w-full h-14 mt-1 text-xl font-black text-white ' + (delMode ? 'bg-red-500' : 'bg-green-500');
-    $('grid').classList.toggle('ring-4', delMode); $('grid').classList.toggle('ring-red-300', delMode);
+    gridRing();
   },
   addEmp: async () => {
     const name = $('emp-name').value.trim(), p = $('emp-pin').value.trim();
@@ -493,6 +504,10 @@ const acts = {
   delEmp: async i => {
     const l = [...(S.employees || [])]; l.splice(+i, 1);
     try { await setDoc(settingsRef(), { employees: l }, { merge: true }); } catch (e) { toast('Fehler: ' + e.code, 'error'); }
+  },
+  toggleLoss: () => {
+    lossMode = !lossMode; const b = $('loss'); b.textContent = lossMode ? 'VERLUST AN' : 'VERLUST';
+    b.className = 'btn w-full mt-1 text-xs font-black ' + (lossMode ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'); gridRing();
   },
   back: id => { show(id, false); openSettings(); },
   termPay: async () => {
@@ -605,7 +620,7 @@ async function finish(print) {
     const g = method === 'BAR' ? parseInt(given) / 100 : tot;
     if (method === 'BAR' && g < tot - 0.005) { toast('Gegebener Betrag zu niedrig', 'error'); return; }
     if (method === 'KARTE' && S.posTerminal && !termOk) { toast('Bitte zuerst am Terminal bezahlen', 'error'); return; }
-    const items = cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.qty, totalBrutto: i.total, taxRate: i.tax }));
+    const items = cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.qty, totalBrutto: i.total, taxRate: i.tax, ...(i.loss ? { loss: true, lossValue: r2((i.orig || 0) * i.qty) } : {}) }));
     if (fee > 0) items.push({ id: 'FEE', name: 'Kartengebühr', price: fee, quantity: 1, totalBrutto: fee, taxRate: 0, isFee: true });
     const rid = (S.receiptCounter || 0) + 1;
     const b = writeBatch(db);
@@ -614,10 +629,10 @@ async function finish(print) {
     const upd = { receiptCounter: increment(1) }; if (method === 'BAR') upd.cashBoxBalance = increment(tot);
     b.set(settingsRef(), upd, { merge: true });
     await commit(b);
-    if (print && S.receiptPrint !== false) printReceipt(items, tot, rid);
+    if (print && method !== 'VERLUST' && S.receiptPrint !== false) printReceipt(items.filter(i => !i.loss), tot, rid);
     cart = []; qtyStr = '1'; termOk = null; show('m-pay', false); renderAll();
-    pushDisplay({ type: 'thanks' });
-    toast('Zahlung erfolgreich', 'success');
+    pushDisplay(method === 'VERLUST' ? { type: 'cart', items: [], total: 0 } : { type: 'thanks' });
+    toast(method === 'VERLUST' ? 'Verlust gebucht' : 'Zahlung erfolgreich', 'success');
   } catch (e) { console.error(e); toast('Fehler bei Zahlung: ' + (e.code || e.message), 'error'); }
   finally { busy = false; }
 }
@@ -745,17 +760,18 @@ async function runReport() {
   } catch (e) { $('r-view').innerHTML = `<p class="text-red-500 p-4">Fehler: ${esc(e.code || e.message)}</p>`; }
 }
 function analyze(rows, f, t) {
-  const R = { f, t, rows, total: 0, count: 0, bar: 0, card: 0, fee: 0, ein: 0, ent: 0, cxN: 0, cxSum: 0, byHour: {}, byDay: {}, byEmp: {}, prods: {}, vat: {} };
+  const R = { f, t, rows, total: 0, count: 0, bar: 0, card: 0, fee: 0, ein: 0, ent: 0, cxN: 0, cxSum: 0, lossN: 0, lossVal: 0, lossProds: {}, byHour: {}, byDay: {}, byEmp: {}, prods: {}, vat: {} };
   rows.forEach(x => {
     const cash = x.type && x.type.includes('CASH');
     if (x.status === 'cancelled') { if (!cash) { R.cxN++; R.cxSum += x.totalBrutto || 0; } return; }
     if (cash) { x.type === 'CASH-EINLAGE' ? R.ein += x.amount : R.ent += x.amount; return; }
     const v = x.totalBrutto || 0, d = tsDate(x.timestamp), emp = x.employee || 'Admin';
-    R.total += v; R.count++; x.paymentMethod === 'BAR' ? R.bar += v : R.card += v;
+    if (x.paymentMethod !== 'VERLUST') { R.total += v; R.count++; x.paymentMethod === 'BAR' ? R.bar += v : R.card += v; }
     R.byDay[dstr(d)] = (R.byDay[dstr(d)] || 0) + v; R.byHour[d.getHours()] = (R.byHour[d.getHours()] || 0) + v;
-    const e = (R.byEmp[emp] ||= { n: 0, s: 0 }); e.n++; e.s += v;
+    const e = (R.byEmp[emp] ||= { n: 0, s: 0 }); if (x.paymentMethod !== 'VERLUST') e.n++; e.s += v;
     (x.items || []).forEach(i => {
       if (i.isFee) { R.fee += i.totalBrutto; return; }
+      if (i.loss) { R.lossN += i.quantity; R.lossVal += i.lossValue || 0; const l = (R.lossProds[i.name] ||= { q: 0, s: 0 }); l.q += i.quantity; l.s += i.lossValue || 0; return; }
       const p = (R.prods[i.name] ||= { q: 0, s: 0 }); p.q += i.quantity; p.s += i.totalBrutto;
       const k = String(i.taxRate ?? 19), vv = (R.vat[k] ||= { g: 0, n: 0 }); vv.g += i.totalBrutto; vv.n += i.totalBrutto / (1 + k / 100);
     });
@@ -783,36 +799,38 @@ function renderReport(R) {
   const prodHtml = top.map(([k, v]) => `<div class="py-1 text-sm"><div class="flex justify-between"><span class="truncate">${esc(k)} <span class="text-xs text-slate-400">${v.q}x</span></span><b>${eur(v.s)}</b></div><div class="h-1.5 bg-slate-100 rounded mt-0.5"><div class="h-1.5 bg-blue-500 rounded" style="width:${Math.round(v.s / mx * 100)}%"></div></div></div>`).join('') || '<p class="text-sm text-slate-400">–</p>';
   const empHtml = Object.entries(R.byEmp).sort((a, b) => b[1].s - a[1].s).map(([k, v]) => row(esc(k) + ` <span class="text-xs text-slate-400">${v.n} Bons</span>`, eur(v.s))).join('');
   const vatHtml = Object.entries(R.vat).sort((a, b) => b[0] - a[0]).map(([k, v]) => row(`${esc(k)} % (netto ${eur(v.n)})`, eur(v.g - v.n))).join('');
+  const lossHtml = Object.entries(R.lossProds).sort((a, b) => b[1].s - a[1].s).map(([k, v]) => row(esc(k) + ` <span class="text-xs text-slate-400">${v.q}x</span>`, eur(v.s))).join('');
   const list = R.rows.slice(0, 300).map(x => {
     const cash = x.type && x.type.includes('CASH'), cx = x.status === 'cancelled';
     const d = tsDate(x.timestamp).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    return `<div class="flex justify-between gap-2 py-1 border-b border-slate-100 text-sm ${cx ? 'opacity-50 line-through' : ''}"><span class="truncate"><span class="text-xs text-slate-400 mr-2">${d}</span>${esc(cash ? x.type : `Bon #${x.receiptId || '?'} · ${x.paymentMethod}`)}${S.employeeSystem ? ` <span class="text-xs text-slate-400">${esc(x.employee || 'Admin')}</span>` : ''}</span><b>${eur((cash ? x.amount : x.totalBrutto) || 0)}</b></div>`;
+    return `<div class="flex justify-between gap-2 py-1 border-b border-slate-100 text-sm ${cx ? 'opacity-50 line-through' : ''}"><span class="truncate"><span class="text-xs text-slate-400 mr-2">${d}</span>${esc(cash ? x.type : `Bon #${x.receiptId || '?'} · ${x.paymentMethod}`)}${S.employeeSystem ? ` <span class="text-xs text-slate-400">${esc(x.employee || 'Admin')}</span>` : ''}</span><b>${eur((cash ? x.amount : x.paymentMethod === 'VERLUST' ? (x.items || []).reduce((a, i) => a + (i.lossValue || 0), 0) : x.totalBrutto) || 0)}</b></div>`;
   }).join('');
   return `<div class="text-sm text-slate-500">Zeitraum: <b>${per}</b></div>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
     ${kpi('Umsatz', eur(R.total), 'text-green-600')}${kpi('Bons', R.count, '', 'Ø ' + eur(R.count ? R.total / R.count : 0))}
     ${kpi('Bar', eur(R.bar))}${kpi('Karte', eur(R.card), '', R.fee ? 'inkl. Gebühren ' + eur(R.fee) : '')}
-    ${kpi('Stornos', R.cxN, R.cxN ? 'text-red-600' : '', eur(R.cxSum))}${kpi('Einlagen', eur(R.ein))}${kpi('Entnahmen', eur(R.ent))}${kpi('Kassenbestand', eur(S.cashBoxBalance || 0), '', 'aktuell')}
+    ${kpi('Stornos', R.cxN, R.cxN ? 'text-red-600' : '', eur(R.cxSum))}${R.lossN ? kpi('Verluste', eur(R.lossVal), 'text-amber-600', R.lossN + ' Stück (Warenwert)') : ''}${kpi('Einlagen', eur(R.ein))}${kpi('Entnahmen', eur(R.ent))}${kpi('Kassenbestand', eur(S.cashBoxBalance || 0), '', 'aktuell')}
   </div>
   ${sec(R.f === R.t ? 'Umsatz nach Uhrzeit' : 'Umsatz nach Tag', chart(R))}
   <div class="grid md:grid-cols-2 gap-3">
     ${sec('Top-Produkte', prodHtml)}
     <div class="space-y-3">${S.employeeSystem ? sec('Je Mitarbeiter', empHtml) : ''}${S.taxReceipt !== false && vatHtml ? sec('Enthaltene MwSt.', vatHtml) : ''}</div>
   </div>
+  ${R.lossN ? sec('Verluste nach Produkt (Warenwert)', lossHtml) : ''}
   ${sec(`Transaktionen (${R.rows.length}${R.rows.length > 300 ? ', 300 angezeigt' : ''})`, `<div class="max-h-64 overflow-y-auto">${list}</div>`)}`;
 }
 const csvCell = v => { let x = String(v ?? ''); if (/^[=+\-@\t\r]/.test(x)) x = "'" + x; return /[;"\n\r]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
 function exportCsv() {
   if (!rep) return toast('Bitte zuerst laden', 'error');
   const R = rep, n = v => r2(v || 0).toFixed(2).replace('.', ','), c = csvCell;
-  let csv = `Bericht;${R.f};${R.t}\nUmsatz gesamt;${n(R.total)}\nBons;${R.count}\nDurchschnitt Bon;${n(R.count ? R.total / R.count : 0)}\nBar;${n(R.bar)}\nKarte;${n(R.card)}\nKartengebühren;${n(R.fee)}\nStornos Anzahl;${R.cxN}\nStornos Summe;${n(R.cxSum)}\nEinlagen;${n(R.ein)}\nEntnahmen;${n(R.ent)}\n\nProdukt;Menge;Umsatz\n`;
+  let csv = `Bericht;${R.f};${R.t}\nUmsatz gesamt;${n(R.total)}\nBons;${R.count}\nDurchschnitt Bon;${n(R.count ? R.total / R.count : 0)}\nBar;${n(R.bar)}\nKarte;${n(R.card)}\nKartengebühren;${n(R.fee)}\nStornos Anzahl;${R.cxN}\nStornos Summe;${n(R.cxSum)}\nEinlagen;${n(R.ein)}\nEntnahmen;${n(R.ent)}\nVerluste Stück;${R.lossN}\nVerluste Warenwert;${n(R.lossVal)}\n\nProdukt;Menge;Umsatz\n`;
   Object.entries(R.prods).sort((a, b) => b[1].s - a[1].s).forEach(([k, v]) => csv += `${c(k)};${v.q};${n(v.s)}\n`);
   csv += '\nMitarbeiter;Bons;Umsatz\n';
   Object.entries(R.byEmp).forEach(([k, v]) => csv += `${c(k)};${v.n};${n(v.s)}\n`);
   csv += '\nDatum;Uhrzeit;Typ;Bon;Betrag;Zahlart;Mitarbeiter;Status;Artikel\n';
   R.rows.forEach(t => {
     const d = tsDate(t.timestamp), cash = t.type && t.type.includes('CASH');
-    csv += [d.toLocaleDateString('de-DE'), d.toLocaleTimeString('de-DE'), c(cash ? t.type : 'Verkauf'), t.receiptId || '', n(cash ? t.amount : t.totalBrutto), c(t.paymentMethod || '-'), c(t.employee || 'Admin'), t.status, c((t.items || []).filter(i => !i.isFee).map(i => i.quantity + 'x ' + i.name).join(', '))].join(';') + '\n';
+    csv += [d.toLocaleDateString('de-DE'), d.toLocaleTimeString('de-DE'), c(cash ? t.type : 'Verkauf'), t.receiptId || '', n(cash ? t.amount : t.totalBrutto), c(t.paymentMethod || '-'), c(t.employee || 'Admin'), t.status, c((t.items || []).filter(i => !i.isFee).map(i => i.quantity + 'x ' + i.name + (i.loss ? ' (Verlust)' : '')).join(', '))].join(';') + '\n';
   });
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `Bericht_${R.f}_${R.t}.csv`; document.body.appendChild(a); a.click(); a.remove();
@@ -820,7 +838,7 @@ function exportCsv() {
 function printReport() {
   if (!rep) return toast('Bitte zuerst laden', 'error');
   const R = rep, l = (a, b) => `<div class="l"><span>${a}</span><b>${b}</b></div>`;
-  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center">Bericht ${esc(dlong(R.f))} – ${esc(dlong(R.t))}</div><hr>${l('Umsatz', eur(R.total))}${l('Bons', R.count)}${l('Bar', eur(R.bar))}${l('Karte', eur(R.card))}${R.fee ? l('Kartengebühren', eur(R.fee)) : ''}${l('Stornos', R.cxN + ' / ' + eur(R.cxSum))}${l('Einlagen', eur(R.ein))}${l('Entnahmen', eur(R.ent))}${S.employeeSystem ? '<hr>' + Object.entries(R.byEmp).map(([k, v]) => l(esc(k), eur(v.s))).join('') : ''}<hr><div style="text-align:center;font-size:10px">${new Date().toLocaleString('de-DE')}</div>`;
+  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center">Bericht ${esc(dlong(R.f))} – ${esc(dlong(R.t))}</div><hr>${l('Umsatz', eur(R.total))}${l('Bons', R.count)}${l('Bar', eur(R.bar))}${l('Karte', eur(R.card))}${R.fee ? l('Kartengebühren', eur(R.fee)) : ''}${l('Stornos', R.cxN + ' / ' + eur(R.cxSum))}${l('Einlagen', eur(R.ein))}${l('Entnahmen', eur(R.ent))}${R.lossN ? l('Verluste (Warenwert)', eur(R.lossVal)) : ''}${S.employeeSystem ? '<hr>' + Object.entries(R.byEmp).map(([k, v]) => l(esc(k), eur(v.s))).join('') : ''}<hr><div style="text-align:center;font-size:10px">${new Date().toLocaleString('de-DE')}</div>`;
   setTimeout(() => window.print(), 50);
 }
 
