@@ -148,9 +148,15 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
   <input id="s-fee" type="number" step="0.01" min="0" class="inp mb-2">
   <label class="block text-xs text-slate-500">Terminal-Bridge-URL (z. B. http://localhost:8787/pay)</label>
   <input id="s-posurl" class="inp mb-3" placeholder="leer = nur manuelle Bestätigung">
+  <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Sicherheit</h3>
+  <label class="block text-xs text-slate-500">Display-Konto: UID(s), nur Leserecht auf die Kundenanzeige (kommagetrennt)</label>
+  <input id="s-dispuid" class="inp mb-2" placeholder="UID des Display-Kontos">
+  <label class="block text-xs text-slate-500">Terminal-Zugangstoken (optional, wird als Bearer-Token gesendet)</label>
+  <input id="s-postoken" type="password" autocomplete="off" class="inp mb-2">
+  <button data-act="audit" class="btn w-full bg-slate-100 mb-3 text-sm">Sicherheitsprotokoll anzeigen</button>
   <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Mitarbeiter (Code erfasst, wer verkauft)</h3>
   <div id="emp-list" class="space-y-1 mb-2"></div>
-  <div class="grid grid-cols-3 gap-2 mb-3"><input id="emp-name" class="inp" placeholder="Name"><input id="emp-pin" class="inp" maxlength="4" inputmode="numeric" placeholder="Code (4)"><button data-act="addEmp" class="btn bg-green-600 text-white !p-2">+</button></div>
+  <div class="grid grid-cols-3 gap-2 mb-3"><input id="emp-name" class="inp" maxlength="40" placeholder="Name"><input id="emp-pin" class="inp" maxlength="4" inputmode="numeric" placeholder="Code (4)"><button data-act="addEmp" class="btn bg-green-600 text-white !p-2">+</button></div>
   <h3 class="text-xs font-bold uppercase text-slate-400 mb-1">Admin-Code (4 Ziffern, leer = aus)</h3>
   <div class="flex gap-2 mb-3"><input id="s-pin" maxlength="4" inputmode="numeric" class="inp"><button data-act="clearPin" class="btn bg-red-100 text-red-600 whitespace-nowrap !px-3">Entfernen</button></div>
   <button data-act="saveSettings" class="btn w-full bg-blue-600 text-white mb-2">Speichern</button>
@@ -226,11 +232,17 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <!-- KUNDENSCREEN-LINK -->
 <div id="m-link" class="modal off"><div class="box text-center">
   <h2 class="text-xl font-bold mb-2">Kundenbildschirm auf zweitem Gerät</h2>
-  <p class="text-sm text-slate-500 mb-3">Adresse auf dem zweiten Gerät öffnen (QR scannen oder Link eintippen) und dort mit <b>demselben Konto</b> anmelden.</p>
+  <p class="text-sm text-slate-500 mb-3">Adresse auf dem zweiten Gerät öffnen (QR scannen oder Link eintippen) und dort anmelden – am besten mit einem <b>eigenen Display-Konto</b> (Einstellungen → Display-Konto), das nur die Anzeige lesen darf.</p>
   <div id="link-qr" class="flex justify-center mb-3"></div>
   <input id="link-url" readonly class="inp text-xs mb-3" onclick="this.select()">
   <div class="grid grid-cols-2 gap-2"><button data-act="copyLink" class="btn bg-blue-600 text-white">Link kopieren</button><button data-act="openLocal" class="btn bg-slate-100">Hier öffnen</button></div>
   <button data-act="close" data-arg="m-link" class="w-full mt-3 text-sm font-bold text-slate-400">Schließen</button>
+</div></div>
+
+<div id="m-audit" class="modal off"><div class="box" style="max-width:40rem;height:80dvh;display:flex;flex-direction:column">
+  <h2 class="text-xl font-bold mb-3">Sicherheitsprotokoll</h2>
+  <div id="alist" class="flex-1 overflow-y-auto bg-slate-50 p-2 rounded-xl border text-sm"></div>
+  <div class="grid grid-cols-2 gap-2 mt-3"><button data-act="back" data-arg="m-audit" class="btn bg-blue-100 text-blue-700">← Einstellungen</button><button data-act="close" data-arg="m-audit" class="btn bg-slate-200">Schließen</button></div>
 </div></div>
 
 <div id="print"></div>
@@ -240,6 +252,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, limit, writeBatch, increment, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
 const app = initializeApp({
   apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
   authDomain: "kassensystem-85412.firebaseapp.com",
@@ -249,6 +262,9 @@ const app = initializeApp({
   messagingSenderId: "916536785810",
   appId: "1:916536785810:web:0d0319ef565af65d279f4b"
 });
+// App Check (optional, empfohlen): reCAPTCHA-v3-Site-Key aus der Firebase-Konsole eintragen, dann ist der Zugriff nur noch über diese App möglich
+const APPCHECK_KEY = '';
+if (APPCHECK_KEY) { try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider(APPCHECK_KEY), isTokenAutoRefreshEnabled: true }); } catch (e) { console.error('AppCheck', e); } }
 const auth = getAuth(app);
 let db;
 try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
@@ -289,13 +305,19 @@ const MODE = new URLSearchParams(location.search).get('mode') === 'display' ? 'd
 let uid = null, unsubs = [];
 let products = {}, cats = {}, cart = [];
 let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true,
-  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false };
+  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false, displayUids: [], posToken: '' };
 let filterCat = null, qtyStr = '1', qtyDirty = false, delMode = false;
 let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null, lossMode = false;
 const who = () => currentEmployee ? currentEmployee.name : 'Admin';
+function audit(action, detail = '') { // append-only Sicherheitsprotokoll
+  if (!uid) return;
+  setDoc(doc(col('audit')), { ts: new Date(), action: String(action).slice(0, 80), detail: String(detail ?? '').slice(0, 300), by: who(), ua: navigator.userAgent.slice(0, 100) }).catch(() => {});
+}
 const col = n => collection(db, `users/${uid}/${n}`);
 const settingsRef = () => doc(db, `users/${uid}/settings/config`);
-const dispRef = () => doc(db, `users/${uid}/display/current`);
+const SHOP = new URLSearchParams(location.search).get('shop') || '';
+const dispOwner = () => (MODE === 'display' && /^[A-Za-z0-9]{20,40}$/.test(SHOP)) ? SHOP : uid;
+const dispRef = () => doc(db, `users/${dispOwner()}/display/current`);
 
 // ---------- Auth ----------
 $('login-title').textContent = MODE === 'display' ? 'Kundenbildschirm anmelden' : 'Anmelden';
@@ -327,7 +349,11 @@ function startDisplay() {
   unsubs.push(onSnapshot(dispRef(), { includeMetadataChanges: true }, s => {
     $('cd-dot').style.background = s.metadata.fromCache ? '#ef4444' : '#22c55e';
     if (s.exists()) applyDisplay(s.data());
-  }, err => { console.error(err); toast('Verbindungsfehler: ' + err.code, 'error'); }));
+  }, err => {
+    console.error(err);
+    if (err.code === 'permission-denied') { $('cd-foot').classList.add('off'); $('cd-body').innerHTML = `<div class="flex-1 flex flex-col items-center justify-center p-8 text-center"><div class="text-3xl font-bold mb-4">Kein Zugriff</div><p class="text-slate-400 mb-4">Dieses Gerät ist noch nicht freigegeben. Trage diese Konto-ID in der Kasse unter Einstellungen → Display-Konto ein:</p><code class="text-xl bg-slate-800 px-4 py-2 rounded select-all">${esc(uid)}</code></div>`; }
+    else toast('Verbindungsfehler: ' + err.code, 'error');
+  }));
   // Absicherung: Server regelmäßig abfragen (schlafende Verbindungen, Tab im Hintergrund)
   const poll = async () => { try { const s = await getDocFromServer(dispRef()); if (s.exists()) applyDisplay(s.data()); } catch (e) {} };
   const iv = setInterval(poll, 4000), vis = () => { if (!document.hidden) poll(); };
@@ -348,8 +374,8 @@ function renderDisplay(d) {
     body.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center"><h1 class="text-7xl font-bold mb-4">Willkommen</h1><p class="text-3xl text-slate-400">Wir freuen uns auf Sie!</p></div>`;
   } else {
     $('cd-total').textContent = eur(d.total);
-    const n = d.items.reduce((a, i) => a + i.q, 0);
-    body.innerHTML = `<div class="flex-1 flex flex-col p-8 min-h-0 max-w-4xl w-full mx-auto"><h2 class="text-3xl font-bold border-b border-slate-700 pb-3 mb-4 flex justify-between"><span>Ihre Bestellung</span><span class="text-xl text-slate-400">${n} Artikel</span></h2><div id="cd-items" class="flex-1 overflow-y-auto text-2xl space-y-3">${d.items.map(i => `<div class="flex justify-between border-b border-slate-700 pb-2"><span><b class="text-slate-400 mr-2">${i.q}x</b>${esc(i.n)}</span><span>${eur(i.t)}</span></div>`).join('')}</div></div>`;
+    const n = d.items.reduce((a, i) => a + (Number(i.q) || 0), 0);
+    body.innerHTML = `<div class="flex-1 flex flex-col p-8 min-h-0 max-w-4xl w-full mx-auto"><h2 class="text-3xl font-bold border-b border-slate-700 pb-3 mb-4 flex justify-between"><span>Ihre Bestellung</span><span class="text-xl text-slate-400">${n} Artikel</span></h2><div id="cd-items" class="flex-1 overflow-y-auto text-2xl space-y-3">${d.items.map(i => `<div class="flex justify-between border-b border-slate-700 pb-2"><span><b class="text-slate-400 mr-2">${Number(i.q) || 0}x</b>${esc(i.n)}</span><span>${eur(i.t)}</span></div>`).join('')}</div></div>`;
     const el = $('cd-items'); el.scrollTop = el.scrollHeight;
   }
 }
@@ -370,7 +396,7 @@ const avail = p => S.stock ? p.stock - cart.filter(i => i.id === p.id).reduce((a
 
 let firstSettings = true;
 function startPos() {
-  show('pos'); firstSettings = true;
+  show('pos'); firstSettings = true; audit('Kasse geöffnet');
   unsubs.push(onSnapshot(settingsRef(), async s => {
     if (!s.exists()) { await setDoc(settingsRef(), { ...S, mode: 'custom' }); return; }
     S = { ...S, ...s.data() };
@@ -473,18 +499,21 @@ const acts = {
     const pin = $('s-pin').value.trim();
     if (pin && !/^\d{4}$/.test(pin)) return toast('Code muss 4 Ziffern haben', 'error');
     const url = $('s-posurl').value.trim();
-    if (url) { try { if (!/^https?:$/.test(new URL(url).protocol)) throw 0; } catch (e) { return toast('Bridge-URL ungültig (http:// oder https://)', 'error'); } }
+    if (url) { try { const u = new URL(url), h = u.hostname, priv = /^(localhost$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || h.endsWith('.local'); if (!(u.protocol === 'https:' || (u.protocol === 'http:' && priv))) throw 0; } catch (e) { return toast('Bridge-URL ungültig: https:// oder http:// nur im lokalen Netz', 'error'); } }
     const d = { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: Math.min(100, Math.max(0, parseFloat($('s-fee').value) || 0)), posUrl: url };
     FEATS.forEach(([k]) => d[k] = $('f-' + k).checked);
+    const uids = $('s-dispuid').value.split(',').map(x => x.trim()).filter(Boolean);
+    if (uids.length > 5 || uids.some(x => !/^[A-Za-z0-9]{20,40}$/.test(x))) return toast('Display-Konto-UID ungültig (20–40 Zeichen, max. 5)', 'error');
+    d.displayUids = uids; d.posToken = $('s-postoken').value.trim().slice(0, 200);
     if (d.employeeSystem && !pin && !S.reversalHash) return toast('Für den Mitarbeiter-Code bitte zuerst einen Admin-Code vergeben', 'error');
     try {
       if (pin) { d.reversalHash = await hashPin(pin); d.reversalCode = deleteField(); }
-      await setDoc(settingsRef(), d, { merge: true }); toast('Gespeichert', 'success'); show('m-set', false);
+      await setDoc(settingsRef(), d, { merge: true }); audit('Einstellungen gespeichert', Object.keys(d).filter(k => k !== 'posToken').join(', ')); toast('Gespeichert', 'success'); show('m-set', false);
     } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
   clearPin: async () => {
     if (!confirm('Admin-Code wirklich entfernen? Der Mitarbeiter-Code wird dabei deaktiviert.')) return;
-    try { await setDoc(settingsRef(), { reversalHash: deleteField(), reversalCode: deleteField(), employeeSystem: false }, { merge: true }); $('f-employeeSystem').checked = false; toast('Admin-Code entfernt', 'success'); }
+    try { await setDoc(settingsRef(), { reversalHash: deleteField(), reversalCode: deleteField(), employeeSystem: false }, { merge: true }); $('f-employeeSystem').checked = false; audit('Admin-Code entfernt'); toast('Admin-Code entfernt', 'success'); }
     catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
   toggleMode: () => {
@@ -493,18 +522,25 @@ const acts = {
     gridRing();
   },
   addEmp: async () => {
-    const name = $('emp-name').value.trim(), p = $('emp-pin').value.trim();
+    const name = $('emp-name').value.trim().slice(0, 40), p = $('emp-pin').value.trim();
     if (!name || !/^\d{4}$/.test(p)) return toast('Name und 4-stelliger Code nötig', 'error');
     try {
       const h = await hashPin(p);
       if (h === S.reversalHash || (!S.reversalHash && p === (S.reversalCode || '0000')) || (S.employees || []).some(e => e.pinHash === h || e.pin === p)) return toast('Code bereits vergeben', 'error');
       await setDoc(settingsRef(), { employees: [...(S.employees || []), { name, pinHash: h, role: 'staff' }] }, { merge: true });
-      $('emp-name').value = ''; $('emp-pin').value = ''; toast('Mitarbeiter angelegt', 'success');
+      $('emp-name').value = ''; $('emp-pin').value = ''; audit('Mitarbeiter angelegt', name); toast('Mitarbeiter angelegt', 'success');
     } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
   delEmp: async i => {
-    const l = [...(S.employees || [])]; l.splice(+i, 1);
+    const l = [...(S.employees || [])]; const gone = l.splice(+i, 1)[0]; audit('Mitarbeiter gelöscht', gone && gone.name);
     try { await setDoc(settingsRef(), { employees: l }, { merge: true }); } catch (e) { toast('Fehler: ' + e.code, 'error'); }
+  },
+  audit: async () => {
+    show('m-set', false); show('m-audit'); $('alist').textContent = 'Lade …';
+    try {
+      const snap = await getDocs(query(col('audit'), orderBy('ts', 'desc'), limit(150)));
+      $('alist').innerHTML = snap.docs.map(d => { const a = d.data(); return `<div class="py-1 border-b border-slate-200"><span class="text-xs text-slate-400 mr-2">${tsDate(a.ts).toLocaleString('de-DE')}</span><b>${esc(a.action)}</b> <span class="text-slate-500">${esc(a.detail || '')}</span> <span class="text-xs text-slate-400">· ${esc(a.by || '')}</span></div>`; }).join('') || 'Keine Einträge.';
+    } catch (e) { $('alist').textContent = 'Fehler: ' + (e.code || e.message); }
   },
   toggleLoss: () => {
     lossMode = !lossMode; const b = $('loss'); b.textContent = lossMode ? 'VERLUST AN' : 'VERLUST';
@@ -517,31 +553,33 @@ const acts = {
     termBusy = true; termStatus('Warte auf Terminal … Karte vorhalten', 'text-indigo-700');
     const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 120000);
     try {
-      const r = await fetch(S.posUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+      const r = await fetch(S.posUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(S.posToken ? { Authorization: 'Bearer ' + S.posToken } : {}) }, signal: ctl.signal, cache: 'no-store', credentials: 'omit',
         body: JSON.stringify({ action: 'payment', amount: Math.round(calc('KARTE') * 100), currency: 'EUR', receiptId: (S.receiptCounter || 0) + 1 }) });
       const j = await r.json();
-      if (j.status === 'approved') { termOk = { mode: 'bridge', trace: j.trace || null, receipt: j.receipt || null, time: Date.now() }; termStatus('✓ Zahlung genehmigt', 'text-green-700'); updateChange(); }
+      if (j.status === 'approved' && j.amount !== undefined && Number(j.amount) !== Math.round(calc('KARTE') * 100)) termStatus('✗ Betrag stimmt nicht überein', 'text-red-600');
+      else if (j.status === 'approved') { termOk = { mode: 'bridge', trace: j.trace || null, receipt: j.receipt || null, time: Date.now() }; termStatus('✓ Zahlung genehmigt', 'text-green-700'); updateChange(); }
       else termStatus('✗ ' + (j.message || j.status || 'Abgelehnt'), 'text-red-600');
     } catch (e) { termStatus('✗ Terminal nicht erreichbar (' + (e.name === 'AbortError' ? 'Zeitüberschreitung' : 'Bridge/CORS/Mixed-Content') + ')', 'text-red-600'); }
     finally { clearTimeout(to); termBusy = false; }
   },
   termManual: () => {
     if (!confirm('Wurde die Zahlung am Terminal erfolgreich abgeschlossen?')) return;
-    termOk = { mode: 'manual', time: Date.now() }; termStatus('✓ Manuell bestätigt', 'text-green-700'); updateChange();
+    audit('Terminal manuell bestätigt', eur(calc('KARTE'))); termOk = { mode: 'manual', time: Date.now() }; termStatus('✓ Manuell bestätigt', 'text-green-700'); updateChange();
   },
   close: id => show(id, false),
 
   // Produkte
   products: () => { show('m-set', false); show('m-prod'); acts.resetProd(); renderProdMgmt(); },
   addCat: async () => {
-    const n = $('c-name').value.trim(); if (!n) return;
+    const n = $('c-name').value.trim().slice(0, 60); if (!n) return;
     await setDoc(doc(col('categories')), { name: n, order: Date.now() }); $('c-name').value = '';
   },
   delCat: async id => { if (confirm('Kategorie löschen?')) await deleteDoc(doc(col('categories'), id)); },
   saveProd: async () => {
-    const id = $('e-id').value, name = $('e-name').value.trim(), price = parseFloat($('e-price').value);
-    if (!name || isNaN(price) || price < 0) return toast('Name und Preis prüfen', 'error');
+    const id = $('e-id').value, name = $('e-name').value.trim().slice(0, 80), price = parseFloat($('e-price').value);
+    if (!name || isNaN(price) || price < 0 || price > 100000) return toast('Name und Preis prüfen (max. 100.000 €)', 'error');
     const data = { name, price: r2(price), categoryId: $('e-cat').value, stock: Math.max(0, parseInt($('e-stock').value) || 0), taxRate: parseFloat($('e-vat').value) };
+    if (id && products[id] && products[id].price !== data.price) audit('Preis geändert', `${products[id].name}: ${eur(products[id].price)} → ${eur(data.price)}`);
     try { id ? await updateDoc(doc(col('products'), id), data) : await setDoc(doc(col('products')), data); acts.resetProd(); toast('Gespeichert', 'success'); }
     catch (e) { toast('Fehler: ' + e.code, 'error'); }
   },
@@ -551,7 +589,7 @@ const acts = {
     $('e-cat').value = p.categoryId || ''; $('e-vat').value = String(p.taxRate ?? 19);
     $('e-save').textContent = 'Speichern'; show('e-cancel');
   },
-  delProd: async id => { if (confirm('Produkt löschen?')) { cart = cart.filter(i => i.id !== id); await deleteDoc(doc(col('products'), id)); renderAll(); } },
+  delProd: async id => { if (confirm('Produkt löschen?')) { audit('Produkt gelöscht', products[id] && products[id].name); cart = cart.filter(i => i.id !== id); await deleteDoc(doc(col('products'), id)); renderAll(); } },
   resetProd: () => { ['e-id', 'e-name', 'e-price'].forEach(i => $(i).value = ''); $('e-stock').value = '100'; $('e-save').textContent = 'Hinzufügen'; show('e-cancel', false); },
 
   // Kasse / Storno / Bericht
@@ -563,7 +601,7 @@ const acts = {
       const b = writeBatch(db);
       b.set(settingsRef(), { cashBoxBalance: increment(type === 'EINLAGE' ? amount : -amount) }, { merge: true });
       b.set(doc(col('transactions')), { type: 'CASH-' + type, amount, timestamp: new Date(), status: 'completed', employee: who() });
-      await commit(b); show('m-cash', false); toast('Gebucht', 'success');
+      await commit(b); audit('Kasse ' + type, eur(amount)); show('m-cash', false); toast('Gebucht', 'success');
     } catch (e) { toast('Fehler: ' + e.code, 'error'); }
   },
   history: () => { show('m-set', false); openHistory(); },
@@ -589,7 +627,7 @@ const acts = {
 
   // Kundenbildschirm / Sonstiges
   displayLink: () => {
-    const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('mode', 'display');
+    const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('mode', 'display'); u.searchParams.set('shop', uid);
     $('link-url').value = u.toString(); $('link-qr').innerHTML = '';
     try { new QRCode($('link-qr'), { text: u.toString(), width: 180, height: 180 }); } catch (e) {}
     show('m-link');
@@ -599,11 +637,12 @@ const acts = {
   fullscreen: () => { if (MODE === 'display' && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); },
   logout: () => signOut(auth).then(() => location.reload()),
   register: async () => {
-    try { await createUserWithEmailAndPassword(auth, ...creds()); toast('Konto erstellt', 'success'); } catch (e) { toast('Fehler: ' + e.code, 'error'); }
+    if (creds()[1].length < 10) return toast('Passwort: mindestens 10 Zeichen', 'error');
+    try { await createUserWithEmailAndPassword(auth, ...creds()); toast('Konto erstellt', 'success'); } catch (e) { toast(authMsg(e), 'error'); }
   },
   reset: async () => {
     const em = $('login-email').value.trim(); if (!em) return toast('Bitte E-Mail eintragen', 'error');
-    try { await sendPasswordResetEmail(auth, em); toast('E-Mail gesendet', 'success'); } catch (e) { toast('Fehler: ' + e.code, 'error'); }
+    try { await sendPasswordResetEmail(auth, em); toast('Falls ein Konto existiert, wurde eine E-Mail gesendet (Spam prüfen)', 'success'); } catch (e) { toast(authMsg(e), 'error'); }
   }
 };
 document.addEventListener('click', e => {
@@ -644,6 +683,7 @@ async function finish(print) {
     const upd = { receiptCounter: increment(1) }; if (method === 'BAR') upd.cashBoxBalance = increment(tot);
     b.set(settingsRef(), upd, { merge: true });
     await commit(b);
+    if (items.some(i => i.loss)) audit('Verlust gebucht', items.filter(i => i.loss).map(i => i.quantity + 'x ' + i.name).join(', ') + ' (Bon #' + rid + ')');
     if (print && method !== 'VERLUST' && S.receiptPrint !== false) printReceipt(items.filter(i => !i.loss), tot, rid);
     cart = []; qtyStr = '1'; termOk = null; show('m-pay', false); renderAll();
     pushDisplay(method === 'VERLUST' ? { type: 'cart', items: [], total: 0 } : { type: 'thanks' });
@@ -663,7 +703,8 @@ function pinKey(k) {
   if (k === 'C') pin = ''; else if (k === 'ENTER') return checkPin(); else if (pin.length < 4) pin += k;
   $('pin-dots').textContent = '●'.repeat(pin.length); if (pin.length === 4) checkPin();
 }
-let fails = 0, lockUntil = 0, idleT = null;
+const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, String(v)); } catch (e) {} } };
+let fails = +ls.get('pos_f') || 0, lockUntil = +ls.get('pos_l') || 0, idleT = null;
 async function hashPin(p) {
   if (!window.crypto || !crypto.subtle) throw new Error('Sicherer Kontext (https) nötig');
   const enc = new TextEncoder(), k = await crypto.subtle.importKey('raw', enc.encode(p), 'PBKDF2', false, ['deriveBits']);
@@ -694,10 +735,11 @@ async function checkPin() {
     if (pinLock && !adm && S.employeeSystem) emp = (S.employees || []).find(e => e.pinHash === h || (e.pin && e.pin === p));
   } catch (e) { return toast('Code-Prüfung nicht möglich: ' + e.message, 'error'); }
   if (adm || emp) {
-    fails = 0; if (pinLock) { currentEmployee = adm ? null : emp; updateWho(); }
+    fails = 0; ls.set('pos_f', 0); ls.set('pos_l', 0); if (pinLock) { currentEmployee = adm ? null : emp; updateWho(); }
     const cb = pinCb; pinCb = null; show('m-pin', false); cb && cb();
   } else {
     fails++; if (fails >= 5) lockUntil = Date.now() + Math.min(600, 30 * 2 ** (fails - 5)) * 1000;
+    ls.set('pos_f', fails); ls.set('pos_l', lockUntil); if (fails === 5) audit('PIN gesperrt', '5 Fehlversuche');
     toast(fails >= 5 ? 'Zu viele Fehlversuche – Eingabe vorübergehend gesperrt' : 'Falscher Code', 'error');
   }
 }
@@ -705,7 +747,7 @@ async function checkPin() {
 // ---------- Einstellungen / Produkte ----------
 function openSettings() {
   $('s-company').value = S.companyName || ''; $('s-address').value = S.address || ''; $('s-tax').value = S.taxId || '';
-  $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = ''; $('s-pin').placeholder = (S.reversalHash || S.reversalCode) ? '•••• gesetzt – neu eingeben zum Ändern' : '4 Ziffern'; $('s-posurl').value = S.posUrl || '';
+  $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = ''; $('s-pin').placeholder = (S.reversalHash || S.reversalCode) ? '•••• gesetzt – neu eingeben zum Ändern' : '4 Ziffern'; $('s-posurl').value = S.posUrl || ''; $('s-dispuid').value = (S.displayUids || []).join(', '); $('s-postoken').value = S.posToken || '';
   FEATS.forEach(([k]) => $('f-' + k).checked = !!S[k]);
   renderEmps(); show('m-set');
 }
@@ -747,7 +789,7 @@ async function cancelTx(id, label) {
       if (t.paymentMethod === 'BAR') cash = -(t.totalBrutto || 0);
     }
     if (cash) b.set(settingsRef(), { cashBoxBalance: increment(cash) }, { merge: true });
-    await commit(b); toast('Storno erfolgreich', 'success'); if (!label) openHistory();
+    await commit(b); audit('Storno', 'Bon #' + (t.receiptId || '-') + ' ' + eur(t.totalBrutto || t.amount || 0)); toast('Storno erfolgreich', 'success'); if (!label) openHistory();
   } catch (e) { console.error(e); toast('Fehler bei Storno: ' + (e.code || e.message), 'error'); }
 }
 
