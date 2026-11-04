@@ -85,6 +85,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
       </div>
       <div class="card p-3 space-y-2">
         <button id="pay" data-act="checkout" disabled class="btn w-full bg-green-600 text-white text-2xl py-4 disabled:opacity-40">ABRECHNEN</button>
+        <button data-act="cancelLast" class="btn w-full bg-red-50 text-red-600 border border-red-200">Letzten Bon stornieren</button>
         <div class="grid grid-cols-2 gap-2">
           <button data-act="settings" class="btn bg-slate-100">Einstellungen</button>
           <button data-act="report" class="btn bg-blue-600 text-white">Berichte</button>
@@ -237,7 +238,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, writeBatch, increment, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, limit, writeBatch, increment, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
@@ -567,6 +568,20 @@ const acts = {
   },
   history: () => { show('m-set', false); openHistory(); },
   cancel: id => needPin('Storno', () => cancelTx(id)),
+  cancelLast: async () => {
+    try {
+      const snap = await getDocs(query(col('transactions'), orderBy('timestamp', 'desc'), limit(15)));
+      const d = snap.docs.find(x => !(x.data().type && x.data().type.includes('CASH')));
+      if (!d) return toast('Kein Bon vorhanden', 'info');
+      const t = d.data(), nr = t.receiptId || '?';
+      if (t.status === 'cancelled') return toast(`Der letzte Bon (#${nr}) ist bereits storniert`, 'info');
+      if (currentEmployee && t.employee !== currentEmployee.name) return toast('Du kannst nur deine eigenen Bons stornieren', 'error');
+      const time = tsDate(t.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      const label = `Letzter Bon #${nr} um ${time} Uhr: ${t.paymentMethod === 'VERLUST' ? 'Verlust-Buchung' : eur(t.totalBrutto || 0) + ' (' + t.paymentMethod + ')'}`;
+      const run = () => cancelTx(d.id, label);
+      currentEmployee ? run() : needPin('Storno', run);
+    } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
+  },
   runReport: () => runReport(),
   range: k => { setRange(k); runReport(); },
   printReport: () => printReport(),
@@ -719,8 +734,8 @@ async function openHistory() {
     }).join('');
   } catch (e) { $('hlist').innerHTML = `<p class="text-red-500 p-3">Fehler: ${esc(e.code || e.message)}</p>`; }
 }
-async function cancelTx(id) {
-  if (!confirm('Wirklich stornieren? Bestand und Kasse werden zurückgebucht.')) return;
+async function cancelTx(id, label) {
+  if (!confirm((label ? label + '\n\n' : '') + 'Wirklich stornieren? Bestand und Kasse werden zurückgebucht.')) return;
   try {
     const ref = doc(col('transactions'), id), s = await getDoc(ref), t = s.data();
     if (!t || t.status === 'cancelled') return toast('Bereits storniert', 'info');
@@ -732,7 +747,7 @@ async function cancelTx(id) {
       if (t.paymentMethod === 'BAR') cash = -(t.totalBrutto || 0);
     }
     if (cash) b.set(settingsRef(), { cashBoxBalance: increment(cash) }, { merge: true });
-    await commit(b); toast('Storno erfolgreich', 'success'); openHistory();
+    await commit(b); toast('Storno erfolgreich', 'success'); if (!label) openHistory();
   } catch (e) { console.error(e); toast('Fehler bei Storno: ' + (e.code || e.message), 'error'); }
 }
 
