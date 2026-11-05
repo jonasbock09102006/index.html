@@ -104,9 +104,10 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <div id="m-pay" class="modal off"><div class="box">
   <div class="text-center text-xs font-bold text-slate-400 uppercase">Zu zahlen</div>
   <div id="p-total" class="text-center text-5xl font-black mb-4">0,00 €</div>
-  <div id="p-methods" class="grid grid-cols-2 gap-2 mb-3">
-    <button id="p-bar" data-act="method" data-arg="BAR" class="btn">BAR</button>
-    <button id="p-card" data-act="method" data-arg="KARTE" class="btn">KARTE</button>
+  <div id="p-methods" class="flex gap-2 mb-3">
+    <button id="p-bar" data-act="method" data-arg="BAR" class="btn flex-1">BAR</button>
+    <button id="p-card" data-act="method" data-arg="KARTE" class="btn flex-1">KARTE</button>
+    <button id="p-paypal" data-act="method" data-arg="PAYPAL" class="off btn flex-1">PAYPAL</button>
   </div>
   <div id="p-cash" class="bg-slate-50 p-3 rounded-xl border mb-3">
     <div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-slate-500 uppercase">Gegeben</span><span id="p-given" class="bg-white border px-3 py-1 rounded-lg text-xl font-bold">0,00</span></div>
@@ -123,10 +124,6 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
     <div id="p-term-status" class="font-bold mb-2">Bereit</div>
     <button data-act="termPay" class="btn w-full bg-indigo-600 text-white mb-2">Zahlung am Terminal starten</button>
     <button data-act="termManual" class="text-xs text-slate-500 underline">Manuell als bezahlt bestätigen</button>
-  </div>
-  <div id="p-pp" class="off bg-sky-50 border border-sky-200 p-3 rounded-xl mb-3 text-center">
-    <div id="p-pp-status" class="text-sm font-bold mb-2">PayPal-QR nicht angezeigt</div>
-    <div class="grid grid-cols-2 gap-2"><button id="p-pp-btn" data-act="ppToggle" class="btn bg-sky-600 text-white !p-2 text-sm">QR auf Kundendisplay</button><button data-act="ppPaid" class="btn bg-slate-100 !p-2 text-sm">PayPal erhalten</button></div>
   </div>
   <div class="grid grid-cols-2 gap-2">
     <button id="p-done" data-act="finish" data-arg="0" class="btn bg-slate-500 text-white">Ohne Bon</button>
@@ -286,6 +283,7 @@ catch (e) { db = getFirestore(app); }
 const $ = id => document.getElementById(id);
 const r2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
 const eur = n => r2(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const ask = m => S.confirmDialogs === false || window.confirm(m); // Rückfrage vor Storno/Löschen, abschaltbar
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const show = (id, on = true) => $(id).classList.toggle('off', !on);
 function toast(m, t = 'info') {
@@ -302,7 +300,7 @@ const FEATS = [
   ['cardPayment', 'Kartenzahlung', 'Button „KARTE" im Abrechnungsdialog'],
   ['cardFee', 'Kartengebühr-Aufschlag', 'Aufschlag in % bei Kartenzahlung'],
   ['changeCalc', 'Wechselgeld-Rechner', 'Aus = bei Barzahlung nur Bar/Karte wählen, ohne Betragseingabe'],
-  ['paypalQr', 'PayPal-QR auf Kundendisplay', 'Bei Kartenzahlung wählbar, mit Betrag im QR'],
+  ['paypalQr', 'PayPal-Zahlung', 'Eigener Button im Abrechnungsdialog, QR mit Betrag auf dem Kundendisplay'],
   ['receiptQr', 'Bon als QR-Code', 'Digitaler Bon auf dem Kundendisplay (Kasse muss unter https laufen)'],
   ['receiptPrint', 'Bon drucken', 'Druck-Button und Bon-Funktion'],
   ['taxReceipt', 'MwSt.-Ausweis auf dem Bon', ''],
@@ -311,12 +309,13 @@ const FEATS = [
   ['employeeSystem', 'Mitarbeiter-Code', 'Anmeldung per Code, Verkäufer wird erfasst'],
   ['posTerminal', 'Sparkassen-POS-Terminal', 'Kartenzahlung über Terminal auslösen'],
   ['autoLock', 'Auto-Sperre', 'Sperrt die Kasse nach 5 Min. ohne Bedienung'],
+  ['confirmDialogs', 'Sicherheitsabfragen', 'Rückfrage vor Storno, Löschen und Code-Entfernen'],
   ['lossBooking', 'Verlust-Buchung', 'Produkte zum Preis 0 € ausbuchen (Bruch, Schwund, Gratis)']
 ];
-const GROUPS = { 'tab-pay': ['cardPayment', 'cardFee', 'changeCalc', 'receiptPrint', 'taxReceipt', 'paypalQr', 'receiptQr', 'posTerminal'], 'tab-fun': ['stock', 'customerDisplay', 'lossBooking'], 'tab-sec-feats': ['employeeSystem', 'autoLock'] };
+const GROUPS = { 'tab-pay': ['cardPayment', 'cardFee', 'changeCalc', 'receiptPrint', 'taxReceipt', 'paypalQr', 'receiptQr', 'posTerminal'], 'tab-fun': ['stock', 'customerDisplay', 'lossBooking'], 'tab-sec-feats': ['employeeSystem', 'autoLock', 'confirmDialogs'] };
 const SUB = {
   cardFee: '<label class="block text-xs text-slate-500">Aufschlag in %</label><input id="s-fee" type="number" step="0.01" min="0" class="inp">',
-  paypalQr: '<label class="block text-xs text-slate-500">PayPal.me-Name oder -Link</label><input id="s-paypal" class="inp" placeholder="z. B. paypal.me/MeinShop"><p class="text-xs text-slate-400 mt-1">Der QR enthält den Betrag. Den Zahlungseingang bitte in PayPal prüfen und in der Kasse bestätigen.</p>',
+  paypalQr: '<label class="block text-xs text-slate-500">PayPal.me-Name oder -Link</label><input id="s-paypal" class="inp" placeholder="z. B. paypal.me/MeinShop"><p class="text-xs text-slate-400 mt-1">Der QR enthält den Betrag. Zahlungseingang in der PayPal-App prüfen, danach einfach abschließen.</p>',
   customerDisplay: '<label class="block text-xs text-slate-500">Display-Konto: UID(s), nur Leserecht (kommagetrennt)</label><input id="s-dispuid" class="inp" placeholder="UID des Display-Kontos">',
   posTerminal: '<label class="block text-xs text-slate-500">Terminal-Bridge-URL</label><input id="s-posurl" class="inp" placeholder="leer = nur manuelle Bestätigung"><p class="text-xs text-slate-400 mt-1">z. B. http://localhost:8787/pay (Bridge am Kassen-PC)</p><label class="block text-xs text-slate-500 mt-2">Zugangstoken (optional, Bearer)</label><input id="s-postoken" type="password" autocomplete="off" class="inp">'
 };
@@ -339,6 +338,7 @@ function setTab(k) {
   $('s-tabs').innerHTML = TABS.map(([t, n]) => `<button data-act="setTab" data-arg="${t}" class="btn !py-2 text-sm whitespace-nowrap ${t === k ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">${n}</button>`).join('');
 }
 const ppClean = v => { const x = String(v || '').trim().replace(/^https?:\/\//i, '').replace(/^(www\.)?paypal\.(me|com\/paypalme)\//i, '').split(/[\/?#]/)[0]; return /^[A-Za-z0-9._-]{1,60}$/.test(x) ? x : ''; };
+const ppAvail = () => !!S.paypalQr && !!ppClean(S.paypalUrl) && S.customerDisplay !== false;
 const ppUrl = a => { const n = ppClean(S.paypalUrl); return n ? `https://www.paypal.me/${n}/${a.toFixed(2)}EUR` : ''; };
 
 // ---------- Zustand ----------
@@ -346,7 +346,7 @@ const MODE = location.hash.startsWith('#r=') ? 'receipt' : (new URLSearchParams(
 let uid = null, unsubs = [];
 let products = {}, cats = {}, cart = [];
 let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true,
-  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false, displayUids: [], posToken: '', changeCalc: true, paypalQr: false, paypalUrl: '', receiptQr: false };
+  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false, displayUids: [], posToken: '', changeCalc: true, confirmDialogs: true, paypalQr: false, paypalUrl: '', receiptQr: false };
 let filterCat = null, qtyStr = '1', qtyDirty = false, delMode = false;
 let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null, lossMode = false, ppOn = false;
 const who = () => currentEmployee ? currentEmployee.name : 'Admin';
@@ -408,7 +408,7 @@ function renderDisplay(d) {
   foot.classList.toggle('off', d.type !== 'cart');
   if (d.type === 'checkout') {
     const qr = typeof d.qr === 'string' && d.qr.startsWith('https://www.paypal.me/') ? d.qr : '';
-    body.innerHTML = `<div class="flex-1 flex ${qr ? 'flex-row gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-4xl text-slate-400 uppercase tracking-widest mb-6">Zu zahlen</div><div class="${qr ? 'text-8xl' : 'text-[9rem]'} font-black leading-none">${eur(d.total)}</div><div class="text-2xl text-slate-500 mt-6">${d.method === 'KARTE' ? 'Kartenzahlung' : 'Barzahlung'}</div></div>${qr ? '<div class="text-center"><div id="cd-qr" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Mit PayPal bezahlen<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
+    body.innerHTML = `<div class="flex-1 flex ${qr ? 'flex-row gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-4xl text-slate-400 uppercase tracking-widest mb-6">Zu zahlen</div><div class="${qr ? 'text-8xl' : 'text-[9rem]'} font-black leading-none">${eur(d.total)}</div><div class="text-2xl text-slate-500 mt-6">${d.method === 'KARTE' ? 'Kartenzahlung' : d.method === 'PAYPAL' ? 'PayPal' : 'Barzahlung'}</div></div>${qr ? '<div class="text-center"><div id="cd-qr" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Mit PayPal bezahlen<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
     if (qr) { try { new QRCode($('cd-qr'), { text: qr, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { console.error(e); } }
   } else if (d.type === 'thanks') {
     const okRq = u => { try { const x = new URL(u); return x.origin === location.origin && x.hash.startsWith('#r='); } catch (e) { return false; } };
@@ -462,7 +462,7 @@ function startPos() {
   renderAll();
 }
 function applyFeatures() {
-  show('p-card', S.cardPayment !== false); show('p-print', S.receiptPrint !== false);
+  show('p-card', S.cardPayment !== false); show('p-paypal', ppAvail()); show('p-print', S.receiptPrint !== false);
   $('p-done').textContent = S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen';
   $('p-done').classList.toggle('col-span-2', S.receiptPrint === false);
   show('btn-disp', S.customerDisplay !== false); show('loss', !!S.lossBooking); if (!S.lossBooking) lossMode = false; gridRing(); updateWho(); idleReset();
@@ -520,18 +520,18 @@ const acts = {
   checkout: () => { if (!cart.length) return; show('m-pay'); acts.method('BAR'); },
   method: m => {
     if (m === 'KARTE' && S.cardPayment === false) return;
+    if (m === 'PAYPAL' && !ppAvail()) return;
     const z = cartTotal() === 0; // reiner Verlust-Bon: keine Zahlung
     show('p-methods', !z); show('p-print', !z && S.receiptPrint !== false); show('p-qr', !z && !!S.receiptQr && S.customerDisplay !== false);
     $('p-done').textContent = z ? 'Verlust buchen' : (S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen');
     $('p-done').classList.toggle('col-span-2', z || S.receiptPrint === false);
     if (z) { method = 'VERLUST'; termOk = null; show('p-cash', false); show('p-term', false); $('p-total').textContent = eur(0); $('p-done').disabled = false; $('p-done').style.opacity = 1; pushDisplay(cartState()); return; }
     method = m; given = '0'; termOk = null; termStatus('Bereit'); show('p-term', m === 'KARTE' && !!S.posTerminal);
-    ppOn = false; show('p-pp', m === 'KARTE' && !!S.paypalQr && !!ppClean(S.paypalUrl) && S.customerDisplay !== false);
-    $('p-pp-btn').textContent = 'QR auf Kundendisplay'; $('p-pp-status').textContent = 'PayPal-QR nicht angezeigt';
-    $('p-bar').className = 'btn ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
-    $('p-card').className = 'btn ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
+    $('p-bar').className = 'btn flex-1 ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
+    $('p-card').className = (S.cardPayment === false ? 'off ' : '') + 'btn flex-1 ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
+    $('p-paypal').className = (ppAvail() ? '' : 'off ') + 'btn flex-1 ' + (m === 'PAYPAL' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500');
     show('p-cash', m === 'BAR' && S.changeCalc !== false); $('p-total').textContent = eur(calc(m));
-    updateChange(); pushDisplay({ type: 'checkout', total: calc(m), method: m });
+    updateChange(); pushDisplay({ type: 'checkout', total: calc(m), method: m, ...(m === 'PAYPAL' ? { qr: ppUrl(calc(m)) } : {}) });
   },
   cashKey: k => { given = k === 'C' ? '0' : (given === '0' ? k.replace(/^0+$/, '0') : (given.length < 7 ? given + k : given)); updateChange(); },
   cashAdd: v => { given = v === 'exact' ? String(Math.round(calc('BAR') * 100)) : String((parseInt(given) || 0) + parseInt(v)); updateChange(); },
@@ -563,7 +563,7 @@ const acts = {
     } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
   clearPin: async () => {
-    if (!confirm('Admin-Code wirklich entfernen? Der Mitarbeiter-Code wird dabei deaktiviert.')) return;
+    if (!ask('Admin-Code wirklich entfernen? Der Mitarbeiter-Code wird dabei deaktiviert.')) return;
     try { await setDoc(settingsRef(), { reversalHash: deleteField(), reversalCode: deleteField(), employeeSystem: false }, { merge: true }); $('f-employeeSystem').checked = false; audit('Admin-Code entfernt'); toast('Admin-Code entfernt', 'success'); }
     catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
@@ -594,11 +594,6 @@ const acts = {
     } catch (e) { $('alist').textContent = 'Fehler: ' + (e.code || e.message); }
   },
   setTab: k => setTab(k),
-  ppToggle: () => { ppOn = !ppOn; ppRefresh(); },
-  ppPaid: () => {
-    if (!confirm('PayPal-Zahlung wirklich eingegangen?')) return;
-    termOk = { mode: 'paypal', time: Date.now() }; $('p-pp-status').textContent = '✓ PayPal-Zahlung bestätigt'; updateChange();
-  },
   toggleLoss: () => {
     lossMode = !lossMode; const b = $('loss'); b.textContent = lossMode ? 'VERLUST AN' : 'VERLUST';
     b.className = 'btn w-full mt-1 text-xs font-black ' + (lossMode ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700'); gridRing();
@@ -620,7 +615,6 @@ const acts = {
     finally { clearTimeout(to); termBusy = false; }
   },
   termManual: () => {
-    if (!confirm('Wurde die Zahlung am Terminal erfolgreich abgeschlossen?')) return;
     audit('Terminal manuell bestätigt', eur(calc('KARTE'))); termOk = { mode: 'manual', time: Date.now() }; termStatus('✓ Manuell bestätigt', 'text-green-700'); updateChange();
   },
   close: id => show(id, false),
@@ -631,7 +625,7 @@ const acts = {
     const n = $('c-name').value.trim().slice(0, 60); if (!n) return;
     await setDoc(doc(col('categories')), { name: n, order: Date.now() }); $('c-name').value = '';
   },
-  delCat: async id => { if (confirm('Kategorie löschen?')) await deleteDoc(doc(col('categories'), id)); },
+  delCat: async id => { if (ask('Kategorie löschen?')) await deleteDoc(doc(col('categories'), id)); },
   saveProd: async () => {
     const id = $('e-id').value, name = $('e-name').value.trim().slice(0, 80), price = parseFloat($('e-price').value);
     if (!name || isNaN(price) || price < 0 || price > 100000) return toast('Name und Preis prüfen (max. 100.000 €)', 'error');
@@ -646,7 +640,7 @@ const acts = {
     $('e-cat').value = p.categoryId || ''; $('e-vat').value = String(p.taxRate ?? 19);
     $('e-save').textContent = 'Speichern'; show('e-cancel');
   },
-  delProd: async id => { if (confirm('Produkt löschen?')) { audit('Produkt gelöscht', products[id] && products[id].name); cart = cart.filter(i => i.id !== id); await deleteDoc(doc(col('products'), id)); renderAll(); } },
+  delProd: async id => { if (ask('Produkt löschen?')) { audit('Produkt gelöscht', products[id] && products[id].name); cart = cart.filter(i => i.id !== id); await deleteDoc(doc(col('products'), id)); renderAll(); } },
   resetProd: () => { ['e-id', 'e-name', 'e-price'].forEach(i => $(i).value = ''); $('e-stock').value = '100'; $('e-save').textContent = 'Hinzufügen'; show('e-cancel', false); },
 
   // Kasse / Storno / Bericht
@@ -707,17 +701,11 @@ document.addEventListener('click', e => {
   const f = acts[b.dataset.act]; if (f) { if (b.dataset.act === 'fullscreen' && e.target.closest('button')) return; f(b.dataset.arg); }
 });
 
-function ppRefresh() {
-  const tot = calc('KARTE');
-  $('p-pp-btn').textContent = ppOn ? 'QR ausblenden' : 'QR auf Kundendisplay';
-  $('p-pp-status').textContent = ppOn ? 'QR wird auf dem Kundendisplay angezeigt' : 'PayPal-QR nicht angezeigt';
-  pushDisplay({ type: 'checkout', total: tot, method: 'KARTE', qr: ppOn ? ppUrl(tot) : null });
-}
 function termStatus(t, c) { $('p-term-status').textContent = t; $('p-term-status').className = 'font-bold mb-2 ' + (c || ''); }
 
 function updateChange() {
   const tot = calc(method), g = parseInt(given) / 100;
-  const ok = method === 'KARTE' ? (!S.posTerminal || !!termOk) : (S.changeCalc === false || g >= tot - 0.005);
+  const ok = method === 'KARTE' ? (!S.posTerminal || !!termOk) : method === 'BAR' ? (S.changeCalc === false || g >= tot - 0.005) : true;
   $('p-given').textContent = g.toFixed(2).replace('.', ',');
   $('p-change').textContent = eur(Math.max(0, g - tot));
   $('p-done').disabled = $('p-print').disabled = $('p-qr').disabled = !ok;
@@ -844,7 +832,7 @@ async function openHistory() {
   } catch (e) { $('hlist').innerHTML = `<p class="text-red-500 p-3">Fehler: ${esc(e.code || e.message)}</p>`; }
 }
 async function cancelTx(id, label) {
-  if (!confirm((label ? label + '\n\n' : '') + 'Wirklich stornieren? Bestand und Kasse werden zurückgebucht.')) return;
+  if (!ask((label ? label + '\n\n' : '') + 'Wirklich stornieren? Bestand und Kasse werden zurückgebucht.')) return;
   try {
     const ref = doc(col('transactions'), id), s = await getDoc(ref), t = s.data();
     if (!t || t.status === 'cancelled') return toast('Bereits storniert', 'info');
@@ -884,13 +872,13 @@ async function runReport() {
   } catch (e) { $('r-view').innerHTML = `<p class="text-red-500 p-4">Fehler: ${esc(e.code || e.message)}</p>`; }
 }
 function analyze(rows, f, t) {
-  const R = { f, t, rows, total: 0, count: 0, bar: 0, card: 0, fee: 0, ein: 0, ent: 0, cxN: 0, cxSum: 0, lossN: 0, lossVal: 0, lossProds: {}, byHour: {}, byDay: {}, byEmp: {}, prods: {}, vat: {} };
+  const R = { f, t, rows, total: 0, count: 0, bar: 0, card: 0, pp: 0, fee: 0, ein: 0, ent: 0, cxN: 0, cxSum: 0, lossN: 0, lossVal: 0, lossProds: {}, byHour: {}, byDay: {}, byEmp: {}, prods: {}, vat: {} };
   rows.forEach(x => {
     const cash = x.type && x.type.includes('CASH');
     if (x.status === 'cancelled') { if (!cash) { R.cxN++; R.cxSum += x.totalBrutto || 0; } return; }
     if (cash) { x.type === 'CASH-EINLAGE' ? R.ein += x.amount : R.ent += x.amount; return; }
     const v = x.totalBrutto || 0, d = tsDate(x.timestamp), emp = x.employee || 'Admin';
-    if (x.paymentMethod !== 'VERLUST') { R.total += v; R.count++; x.paymentMethod === 'BAR' ? R.bar += v : R.card += v; }
+    if (x.paymentMethod !== 'VERLUST') { R.total += v; R.count++; x.paymentMethod === 'BAR' ? R.bar += v : x.paymentMethod === 'PAYPAL' ? R.pp += v : R.card += v; }
     R.byDay[dstr(d)] = (R.byDay[dstr(d)] || 0) + v; R.byHour[d.getHours()] = (R.byHour[d.getHours()] || 0) + v;
     const e = (R.byEmp[emp] ||= { n: 0, s: 0 }); if (x.paymentMethod !== 'VERLUST') e.n++; e.s += v;
     (x.items || []).forEach(i => {
@@ -932,7 +920,7 @@ function renderReport(R) {
   return `<div class="text-sm text-slate-500">Zeitraum: <b>${per}</b></div>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
     ${kpi('Umsatz', eur(R.total), 'text-green-600')}${kpi('Bons', R.count, '', 'Ø ' + eur(R.count ? R.total / R.count : 0))}
-    ${kpi('Bar', eur(R.bar))}${kpi('Karte', eur(R.card), '', R.fee ? 'inkl. Gebühren ' + eur(R.fee) : '')}
+    ${kpi('Bar', eur(R.bar))}${kpi('Karte', eur(R.card), '', R.fee ? 'inkl. Gebühren ' + eur(R.fee) : '')}${R.pp || S.paypalQr ? kpi('PayPal', eur(R.pp)) : ''}
     ${kpi('Stornos', R.cxN, R.cxN ? 'text-red-600' : '', eur(R.cxSum))}${R.lossN ? kpi('Verluste', eur(R.lossVal), 'text-amber-600', R.lossN + ' Stück (Warenwert)') : ''}${kpi('Einlagen', eur(R.ein))}${kpi('Entnahmen', eur(R.ent))}${kpi('Kassenbestand', eur(S.cashBoxBalance || 0), '', 'aktuell')}
   </div>
   ${sec(R.f === R.t ? 'Umsatz nach Uhrzeit' : 'Umsatz nach Tag', chart(R))}
@@ -947,7 +935,7 @@ const csvCell = v => { let x = String(v ?? ''); if (/^[=+\-@\t\r]/.test(x)) x = 
 function exportCsv() {
   if (!rep) return toast('Bitte zuerst laden', 'error');
   const R = rep, n = v => r2(v || 0).toFixed(2).replace('.', ','), c = csvCell;
-  let csv = `Bericht;${R.f};${R.t}\nUmsatz gesamt;${n(R.total)}\nBons;${R.count}\nDurchschnitt Bon;${n(R.count ? R.total / R.count : 0)}\nBar;${n(R.bar)}\nKarte;${n(R.card)}\nKartengebühren;${n(R.fee)}\nStornos Anzahl;${R.cxN}\nStornos Summe;${n(R.cxSum)}\nEinlagen;${n(R.ein)}\nEntnahmen;${n(R.ent)}\nVerluste Stück;${R.lossN}\nVerluste Warenwert;${n(R.lossVal)}\n\nProdukt;Menge;Umsatz\n`;
+  let csv = `Bericht;${R.f};${R.t}\nUmsatz gesamt;${n(R.total)}\nBons;${R.count}\nDurchschnitt Bon;${n(R.count ? R.total / R.count : 0)}\nBar;${n(R.bar)}\nKarte;${n(R.card)}\nPayPal;${n(R.pp)}\nKartengebühren;${n(R.fee)}\nStornos Anzahl;${R.cxN}\nStornos Summe;${n(R.cxSum)}\nEinlagen;${n(R.ein)}\nEntnahmen;${n(R.ent)}\nVerluste Stück;${R.lossN}\nVerluste Warenwert;${n(R.lossVal)}\n\nProdukt;Menge;Umsatz\n`;
   Object.entries(R.prods).sort((a, b) => b[1].s - a[1].s).forEach(([k, v]) => csv += `${c(k)};${v.q};${n(v.s)}\n`);
   csv += '\nMitarbeiter;Bons;Umsatz\n';
   Object.entries(R.byEmp).forEach(([k, v]) => csv += `${c(k)};${v.n};${n(v.s)}\n`);
@@ -962,7 +950,7 @@ function exportCsv() {
 function printReport() {
   if (!rep) return toast('Bitte zuerst laden', 'error');
   const R = rep, l = (a, b) => `<div class="l"><span>${a}</span><b>${b}</b></div>`;
-  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center">Bericht ${esc(dlong(R.f))} – ${esc(dlong(R.t))}</div><hr>${l('Umsatz', eur(R.total))}${l('Bons', R.count)}${l('Bar', eur(R.bar))}${l('Karte', eur(R.card))}${R.fee ? l('Kartengebühren', eur(R.fee)) : ''}${l('Stornos', R.cxN + ' / ' + eur(R.cxSum))}${l('Einlagen', eur(R.ein))}${l('Entnahmen', eur(R.ent))}${R.lossN ? l('Verluste (Warenwert)', eur(R.lossVal)) : ''}${S.employeeSystem ? '<hr>' + Object.entries(R.byEmp).map(([k, v]) => l(esc(k), eur(v.s))).join('') : ''}<hr><div style="text-align:center;font-size:10px">${new Date().toLocaleString('de-DE')}</div>`;
+  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center">Bericht ${esc(dlong(R.f))} – ${esc(dlong(R.t))}</div><hr>${l('Umsatz', eur(R.total))}${l('Bons', R.count)}${l('Bar', eur(R.bar))}${l('Karte', eur(R.card))}${R.pp ? l('PayPal', eur(R.pp)) : ''}${R.fee ? l('Kartengebühren', eur(R.fee)) : ''}${l('Stornos', R.cxN + ' / ' + eur(R.cxSum))}${l('Einlagen', eur(R.ein))}${l('Entnahmen', eur(R.ent))}${R.lossN ? l('Verluste (Warenwert)', eur(R.lossVal)) : ''}${S.employeeSystem ? '<hr>' + Object.entries(R.byEmp).map(([k, v]) => l(esc(k), eur(v.s))).join('') : ''}<hr><div style="text-align:center;font-size:10px">${new Date().toLocaleString('de-DE')}</div>`;
   setTimeout(() => window.print(), 50);
 }
 
@@ -991,7 +979,7 @@ function renderReceiptPage() {
       <div class="text-center mt-3 font-bold">BON #${esc(Number(o.n) || '')}</div><div class="text-center text-xs text-slate-500 mb-3">${esc(new Date(Number(o.d) || Date.now()).toLocaleString('de-DE'))}</div>
       <div class="border-t border-dashed border-slate-400 pt-2 space-y-1">${items.map(i => `<div class="flex justify-between gap-2"><span>${i.q}x ${esc(i.n)}</span><b>${eur(i.t)}</b></div>`).join('')}</div>
       <div class="border-t border-dashed border-slate-400 mt-2 pt-2 flex justify-between text-base font-bold"><span>SUMME</span><span>${eur(Number(o.s) || 0)}</span></div>
-      <div class="text-xs text-slate-500 mt-1">Zahlart: ${o.m === 'BAR' ? 'Bar' : o.m === 'KARTE' ? 'Karte' : '–'}</div>
+      <div class="text-xs text-slate-500 mt-1">Zahlart: ${o.m === 'BAR' ? 'Bar' : o.m === 'KARTE' ? 'Karte' : o.m === 'PAYPAL' ? 'PayPal' : '–'}</div>
       <div class="mt-2 space-y-0.5">${vat}</div><div class="text-center text-xs text-slate-400 mt-4">Vielen Dank für Ihren Einkauf!</div></div>
       <button onclick="window.print()" class="noprint btn w-full bg-blue-600 text-white mt-4">Drucken / als PDF speichern</button></div>`;
   } catch (e) { el.innerHTML = '<p class="p-10 text-center text-slate-500">Der Bon konnte nicht gelesen werden.</p>'; }
