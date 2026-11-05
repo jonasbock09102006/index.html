@@ -109,6 +109,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
     <button id="p-card" data-act="method" data-arg="KARTE" class="btn flex-1">KARTE</button>
     <button id="p-paypal" data-act="method" data-arg="PAYPAL" class="off btn flex-1">PAYPAL</button>
   </div>
+  <div id="p-ppbox" class="off text-center bg-sky-50 border border-sky-200 rounded-xl p-3 mb-3"><div id="p-ppqr" class="inline-block bg-white p-2 rounded-lg"></div><div class="text-xs text-slate-500 mt-1">Der QR-Code läuft auch auf dem Kundendisplay<br><a id="p-pplink" class="underline break-all" target="_blank" rel="noopener noreferrer"></a></div></div>
   <div id="p-cash" class="bg-slate-50 p-3 rounded-xl border mb-3">
     <div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-slate-500 uppercase">Gegeben</span><span id="p-given" class="bg-white border px-3 py-1 rounded-lg text-xl font-bold">0,00</span></div>
     <div class="flex justify-between items-center mb-2 pt-2 border-t"><span class="font-bold">Rückgeld</span><span id="p-change" class="text-2xl font-black">0,00 €</span></div>
@@ -283,6 +284,12 @@ catch (e) { db = getFirestore(app); }
 const $ = id => document.getElementById(id);
 const r2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
 const eur = n => r2(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+function drawQr(id, text, size, lvl) {
+  const el = $(id); el.innerHTML = '';
+  try { if (typeof QRCode === 'undefined') throw new Error('QR-Bibliothek nicht geladen'); new QRCode(el, { text, width: size, height: size, correctLevel: lvl || QRCode.CorrectLevel.M }); }
+  catch (e) { console.error(e); el.innerHTML = `<div class="text-xs text-red-600 p-2 break-all" style="max-width:16rem">QR nicht darstellbar (${esc(e.message)})<br>${esc(text)}</div>`; }
+}
+const qsz = () => Math.max(160, Math.min(420, Math.floor(Math.min(innerWidth, innerHeight) * 0.5)));
 const ask = m => S.confirmDialogs === false || window.confirm(m); // Rückfrage vor Storno/Löschen, abschaltbar
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const show = (id, on = true) => $(id).classList.toggle('off', !on);
@@ -408,13 +415,13 @@ function renderDisplay(d) {
   foot.classList.toggle('off', d.type !== 'cart');
   if (d.type === 'checkout') {
     const qr = typeof d.qr === 'string' && d.qr.startsWith('https://www.paypal.me/') ? d.qr : '';
-    body.innerHTML = `<div class="flex-1 flex ${qr ? 'flex-row gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-4xl text-slate-400 uppercase tracking-widest mb-6">Zu zahlen</div><div class="${qr ? 'text-8xl' : 'text-[9rem]'} font-black leading-none">${eur(d.total)}</div><div class="text-2xl text-slate-500 mt-6">${d.method === 'KARTE' ? 'Kartenzahlung' : d.method === 'PAYPAL' ? 'PayPal' : 'Barzahlung'}</div></div>${qr ? '<div class="text-center"><div id="cd-qr" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Mit PayPal bezahlen<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
-    if (qr) { try { new QRCode($('cd-qr'), { text: qr, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { console.error(e); } }
+    body.innerHTML = `<div class="flex-1 flex ${qr ? 'flex-col lg:flex-row gap-8 lg:gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-4xl text-slate-400 uppercase tracking-widest mb-6">Zu zahlen</div><div class="${qr ? 'text-6xl lg:text-8xl' : 'text-[9rem]'} font-black leading-none">${eur(d.total)}</div><div class="text-2xl text-slate-500 mt-6">${d.method === 'KARTE' ? 'Kartenzahlung' : d.method === 'PAYPAL' ? 'PayPal' : 'Barzahlung'}</div>${d.method === 'PAYPAL' && !qr ? '<div class="text-xl text-red-400 mt-4">PayPal-QR nicht verfügbar</div>' : ''}</div>${qr ? '<div class="text-center"><div id="cd-qr" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Mit PayPal bezahlen<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
+    if (qr) drawQr('cd-qr', qr, qsz());
   } else if (d.type === 'thanks') {
     const okRq = u => { try { const x = new URL(u); return x.origin === location.origin && x.hash.startsWith('#r='); } catch (e) { return false; } };
     const rq = typeof d.rqr === 'string' && okRq(d.rqr) ? d.rqr : '';
-    body.innerHTML = `<div class="flex-1 flex ${rq ? 'flex-row gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-7xl font-bold mb-4">Vielen Dank!</div><div class="text-3xl text-slate-400">Auf Wiedersehen</div></div>${rq ? '<div class="text-center"><div id="cd-rq" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Ihr digitaler Bon<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
-    if (rq) { try { new QRCode($('cd-rq'), { text: rq, width: 420, height: 420, correctLevel: QRCode.CorrectLevel.L }); } catch (e) { console.error(e); } }
+    body.innerHTML = `<div class="flex-1 flex ${rq ? 'flex-col lg:flex-row gap-8 lg:gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-7xl font-bold mb-4">Vielen Dank!</div><div class="text-3xl text-slate-400">Auf Wiedersehen</div></div>${rq ? '<div class="text-center"><div id="cd-rq" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Ihr digitaler Bon<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
+    if (rq) drawQr('cd-rq', rq, qsz(), typeof QRCode !== 'undefined' ? QRCode.CorrectLevel.L : undefined);
     thanksTimer = setTimeout(() => renderDisplay({ type: 'cart', items: [], total: 0 }), rq ? 45000 : 6000);
   } else if (!d.items || !d.items.length) {
     $('cd-total').textContent = eur(0);
@@ -525,13 +532,15 @@ const acts = {
     show('p-methods', !z); show('p-print', !z && S.receiptPrint !== false); show('p-qr', !z && !!S.receiptQr && S.customerDisplay !== false);
     $('p-done').textContent = z ? 'Verlust buchen' : (S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen');
     $('p-done').classList.toggle('col-span-2', z || S.receiptPrint === false);
-    if (z) { method = 'VERLUST'; termOk = null; show('p-cash', false); show('p-term', false); $('p-total').textContent = eur(0); $('p-done').disabled = false; $('p-done').style.opacity = 1; pushDisplay(cartState()); return; }
+    if (z) { method = 'VERLUST'; termOk = null; show('p-ppbox', false); show('p-cash', false); show('p-term', false); $('p-total').textContent = eur(0); $('p-done').disabled = false; $('p-done').style.opacity = 1; pushDisplay(cartState()); return; }
     method = m; given = '0'; termOk = null; termStatus('Bereit'); show('p-term', m === 'KARTE' && !!S.posTerminal);
     $('p-bar').className = 'btn flex-1 ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
     $('p-card').className = (S.cardPayment === false ? 'off ' : '') + 'btn flex-1 ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
     $('p-paypal').className = (ppAvail() ? '' : 'off ') + 'btn flex-1 ' + (m === 'PAYPAL' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500');
     show('p-cash', m === 'BAR' && S.changeCalc !== false); $('p-total').textContent = eur(calc(m));
-    updateChange(); pushDisplay({ type: 'checkout', total: calc(m), method: m, ...(m === 'PAYPAL' ? { qr: ppUrl(calc(m)) } : {}) });
+    const ppu = m === 'PAYPAL' ? ppUrl(calc(m)) : '';
+    show('p-ppbox', !!ppu); if (ppu) { drawQr('p-ppqr', ppu, 150); $('p-pplink').textContent = ppu; $('p-pplink').href = ppu; }
+    updateChange(); pushDisplay({ type: 'checkout', total: calc(m), method: m, ...(ppu ? { qr: ppu } : {}) });
   },
   cashKey: k => { given = k === 'C' ? '0' : (given === '0' ? k.replace(/^0+$/, '0') : (given.length < 7 ? given + k : given)); updateChange(); },
   cashAdd: v => { given = v === 'exact' ? String(Math.round(calc('BAR') * 100)) : String((parseInt(given) || 0) + parseInt(v)); updateChange(); },
