@@ -41,6 +41,7 @@ button.card:active{transform:scale(.97);box-shadow:none}
 .key{height:56px;border-radius:12px;font-weight:600;font-size:1.3rem!important;background:#fff;border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .key:active{background:#EDF1F1}
 .pm{min-height:84px;font-size:1.35rem!important;font-weight:600;border-radius:16px}
+.masonry{columns:2 21rem;column-gap:.9rem}.sc{break-inside:avoid;margin-bottom:.9rem}
 .sec{font-size:.8rem;font-weight:600;color:var(--mute);margin:.7rem 0 .3rem}
 .inp{width:100%;padding:.72rem .85rem;border:1px solid #D3DBDC;border-radius:11px;background:#fff;transition:border-color .12s,box-shadow .12s}
 .inp:focus{outline:0;border-color:var(--petrol);box-shadow:0 0 0 3px rgba(27,94,108,.16)}
@@ -182,29 +183,27 @@ button.card:active{transform:scale(.97);box-shadow:none}
 
 <!-- EINSTELLUNGEN -->
 <div id="m-set" class="modal off"><div class="box" style="max-width:56rem;height:92dvh;display:flex;flex-direction:column">
-  <div class="flex justify-between items-center mb-3"><h2 class="text-xl font-bold text-blue-700">Einstellungen</h2><button data-act="close" data-arg="m-set" class="text-2xl text-slate-400">&times;</button></div>
-  <div id="s-tabs" class="flex gap-2 mb-3 overflow-x-auto"></div>
+  <div class="flex justify-between items-center mb-3"><h2 class="font-display text-2xl font-semibold text-blue-800">Einstellungen</h2><button data-act="close" data-arg="m-set" class="text-2xl text-slate-400">&times;</button></div>
+  <div id="s-tabs" class="flex gap-1 mb-4 overflow-x-auto border-b border-slate-200"></div>
   <div class="flex-1 overflow-y-auto pr-1">
     <div id="tab-ov" class="space-y-3"></div>
     <div id="tab-gen" class="off space-y-3">
-      <div class="card p-4"><h3 class="sec !mt-0">Firmendaten (erscheinen auf dem Bon)</h3>
+      <div class="card p-4"><h3 class="font-display text-lg font-semibold mb-2">Firmendaten <span class="font-sans text-xs font-normal text-slate-500">erscheinen auf dem Bon</span></h3>
         <div class="grid md:grid-cols-2 gap-2"><input id="s-company" class="inp" placeholder="Firmenname"><input id="s-tax" class="inp" placeholder="Steuernummer"><input id="s-address" class="inp md:col-span-2" placeholder="Adresse"></div>
       </div>
     </div>
-    <div id="tab-pay" class="off grid md:grid-cols-2 gap-3 content-start"></div>
-    <div id="tab-fun" class="off grid md:grid-cols-2 gap-3 content-start"></div>
-    <div id="tab-sec" class="off space-y-3">
-      <div id="tab-sec-feats" class="grid md:grid-cols-2 gap-3"></div>
-      <div class="grid md:grid-cols-2 gap-3">
-        <div class="card p-4 space-y-2"><h3 class="sec !mt-0">Admin-Code (4 Ziffern)</h3>
-          <div class="flex gap-2"><input id="s-pin" maxlength="4" inputmode="numeric" class="inp"><button data-act="clearPin" class="btn bg-red-100 text-red-600 whitespace-nowrap !px-3">Entfernen</button></div>
-          <button data-act="audit" class="btn w-full bg-slate-100 text-sm">Sicherheitsprotokoll anzeigen</button>
-        </div>
-        <div class="card p-4 space-y-2"><h3 class="sec !mt-0">Mitarbeiter</h3>
-          <div id="emp-list" class="space-y-1"></div>
-          <div class="grid grid-cols-3 gap-2"><input id="emp-name" class="inp" maxlength="40" placeholder="Name"><input id="emp-pin" class="inp" maxlength="4" inputmode="numeric" placeholder="Code (4)"><button data-act="addEmp" class="btn bg-green-600 text-white !p-2">+</button></div>
-        </div>
-      </div>
+    <div id="tab-pay" class="off masonry"></div>
+    <div id="tab-fun" class="off masonry"></div>
+    <div id="tab-sec" class="off masonry">
+      <div id="tab-sec-feats" style="display:contents"></div>
+      <section class="card sc p-4 space-y-2"><h3 class="font-display text-lg font-semibold">Admin-Code <span class="font-sans text-xs font-normal text-slate-500">4 Ziffern</span></h3>
+        <div class="flex gap-2"><input id="s-pin" maxlength="4" inputmode="numeric" class="inp"><button data-act="clearPin" class="btn bg-red-50 text-red-700 whitespace-nowrap !px-3">Entfernen</button></div>
+        <button data-act="audit" class="btn w-full bg-slate-100 text-sm">Sicherheitsprotokoll anzeigen</button>
+      </section>
+      <section class="card sc p-4 space-y-2"><h3 class="font-display text-lg font-semibold">Mitarbeiter</h3>
+        <div id="emp-list" class="space-y-1"></div>
+        <div class="grid grid-cols-3 gap-2"><input id="emp-name" class="inp" maxlength="40" placeholder="Name"><input id="emp-pin" class="inp" maxlength="4" inputmode="numeric" placeholder="Code (4)"><button data-act="addEmp" class="btn bg-green-600 text-white !p-2">+</button></div>
+      </section>
     </div>
     <div id="tab-adm" class="off grid sm:grid-cols-3 gap-3 content-start">
       <button data-act="products" class="card p-5 text-left hover:bg-slate-50"><b class="text-lg">Produkte &amp; Kategorien</b><div class="text-xs text-slate-400 mt-1">Anlegen, bearbeiten, Bestand</div></button>
@@ -360,14 +359,21 @@ const FEATS = [
   ['lossBooking', 'Verlust-Buchung', 'Produkte zum Preis 0 € ausbuchen (Bruch, Schwund, Gratis)']
 ];
 const GROUPS = { 'tab-pay': ['cardPayment', 'cardFee', 'changeCalc', 'receiptPrint', 'taxReceipt', 'paypalQr', 'receiptQr', 'posTerminal'], 'tab-fun': ['stock', 'customerDisplay', 'lossBooking'], 'tab-sec-feats': ['employeeSystem', 'autoLock', 'confirmDialogs'] };
+const lab = 'block text-xs text-slate-500 mb-1', hint = 'text-xs text-slate-500 leading-snug';
 const SUB = {
-  cardFee: '<label class="block text-xs text-slate-500">Aufschlag in %</label><input id="s-fee" type="number" step="0.01" min="0" class="inp">',
-  paypalQr: '<label class="block text-xs text-slate-500">PayPal.me-Name oder -Link</label><input id="s-paypal" class="inp" placeholder="z. B. paypal.me/MeinShop"><p class="text-xs text-slate-400 mt-1">Der QR enthält den Betrag. Zahlungseingang in der PayPal-App prüfen, danach einfach abschließen.</p>',
-  customerDisplay: '<label class="block text-xs text-slate-500">Display-Konto: UID(s), nur Leserecht (kommagetrennt)</label><input id="s-dispuid" class="inp" placeholder="UID des Display-Kontos">',
-  posTerminal: '<label class="block text-xs text-slate-500">Terminal-Bridge-URL</label><input id="s-posurl" class="inp" placeholder="leer = nur manuelle Bestätigung"><p class="text-xs text-slate-400 mt-1">z. B. http://localhost:8787/pay (Bridge am Kassen-PC)</p><label class="block text-xs text-slate-500 mt-2">Zugangstoken (optional, Bearer)</label><input id="s-postoken" type="password" autocomplete="off" class="inp">'
+  cardFee: `<div><label class="${lab}">Aufschlag in %</label><input id="s-fee" type="number" step="0.01" min="0" class="inp"></div>`,
+  paypalQr: `<div><label class="${lab}">PayPal.me-Name oder -Link</label><input id="s-paypal" class="inp" placeholder="z. B. paypal.me/MeinShop"></div><p class="${hint} sm:self-end sm:pb-2">Der QR enthält den Betrag. Zahlungseingang in der PayPal-App prüfen, danach abschließen.</p>`,
+  posTerminal: `<div><label class="${lab}">Terminal-Bridge-URL</label><input id="s-posurl" class="inp" placeholder="leer = manuelle Bestätigung"></div><div><label class="${lab}">Zugangstoken (optional)</label><input id="s-postoken" type="password" autocomplete="off" class="inp"></div><p class="${hint} sm:col-span-2">z. B. http://localhost:8787/pay (Bridge am Kassen-PC)</p>`,
+  customerDisplay: `<div class="sm:col-span-2"><label class="${lab}">Display-Konto: UID(s), nur Leserecht (kommagetrennt)</label><input id="s-dispuid" class="inp" placeholder="UID des Display-Kontos"></div>`
 };
-const featRow = k => { const [, n, h] = FEATS.find(f => f[0] === k); return `<div class="card p-3"><label class="flex items-center gap-3 cursor-pointer"><span class="sw"><input type="checkbox" id="f-${k}"><i></i></span><span class="flex-1"><b>${n}</b>${h ? `<span class="block text-xs text-slate-400">${h}</span>` : ''}</span></label>${SUB[k] ? `<div id="sub-${k}" class="off mt-3 pt-3 border-t border-slate-100 space-y-1">${SUB[k]}</div>` : ''}</div>`; };
-Object.entries(GROUPS).forEach(([id, ks]) => $(id).innerHTML = ks.map(featRow).join(''));
+const SECTIONS = {
+  'tab-pay': [['Zahlungsarten', ['cardPayment', 'paypalQr', 'posTerminal']], ['Gebühren und Rückgeld', ['cardFee', 'changeCalc']], ['Beleg', ['receiptPrint', 'taxReceipt', 'receiptQr']]],
+  'tab-fun': [['Verkauf', ['stock', 'lossBooking']], ['Anzeige', ['customerDisplay']]],
+  'tab-sec-feats': [['Zugriff und Schutz', ['employeeSystem', 'autoLock', 'confirmDialogs']]]
+};
+const featRow = k => { const [, n, h] = FEATS.find(f => f[0] === k); return `<div class="px-4 py-3"><label class="flex items-center gap-3 cursor-pointer"><span class="flex-1 min-w-0"><b class="font-medium">${n}</b>${h ? `<span class="block text-xs text-slate-500 leading-snug">${h}</span>` : ''}</span><span class="sw"><input type="checkbox" id="f-${k}"><i></i></span></label>${SUB[k] ? `<div id="sub-${k}" class="off mt-3 -mx-4 -mb-3 px-4 py-3 bg-slate-50 border-t border-slate-100"><div class="grid sm:grid-cols-2 gap-x-3 gap-y-2">${SUB[k]}</div></div>` : ''}</div>`; };
+const secHtml = ([t, ks]) => `<section class="card sc overflow-hidden"><h3 class="font-display text-lg font-semibold px-4 pt-3 pb-1">${t}</h3><div class="divide-y divide-slate-100">${ks.map(featRow).join('')}</div></section>`;
+Object.entries(SECTIONS).forEach(([id, secs]) => $(id).innerHTML = secs.map(secHtml).join(''));
 const syncSubs = () => Object.keys(SUB).forEach(k => show('sub-' + k, $('f-' + k).checked));
 document.addEventListener('change', e => { if (e.target.id && e.target.id.startsWith('f-')) syncSubs(); });
 const TABS = [['ov', 'Übersicht'], ['gen', 'Allgemein'], ['pay', 'Zahlung'], ['fun', 'Funktionen'], ['sec', 'Sicherheit'], ['adm', 'Verwaltung']];
@@ -382,7 +388,7 @@ function renderOverview() {
 }
 function setTab(k) {
   TABS.forEach(([t]) => show('tab-' + t, t === k)); if (k === 'ov') renderOverview();
-  $('s-tabs').innerHTML = TABS.map(([t, n]) => `<button data-act="setTab" data-arg="${t}" class="btn !py-2 text-sm whitespace-nowrap ${t === k ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}">${n}</button>`).join('');
+  $('s-tabs').innerHTML = TABS.map(([t, n]) => `<button data-act="setTab" data-arg="${t}" class="px-4 py-2.5 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors ${t === k ? 'border-blue-600 text-blue-700 font-semibold' : 'border-transparent text-slate-500'}">${n}</button>`).join('');
 }
 const ppClean = v => { const x = String(v || '').trim().replace(/^https?:\/\//i, '').replace(/^(www\.)?paypal\.(me|com\/paypalme)\//i, '').split(/[\/?#]/)[0]; return /^[A-Za-z0-9._-]{1,60}$/.test(x) ? x : ''; };
 const ppAvail = () => !!S.paypalQr && !!ppClean(S.paypalUrl) && S.customerDisplay !== false;
