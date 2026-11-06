@@ -14,6 +14,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 .key:active,.btn:active{transform:scale(.97)}
 .card{background:#fff;border-radius:1rem;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 .btn{padding:.7rem 1rem;border-radius:.75rem;font-weight:700}
+.pm{min-height:80px;font-size:1.4rem!important;letter-spacing:.02em;border-radius:1rem}
 .sec{font-size:.7rem;font-weight:700;text-transform:uppercase;color:#94a3b8;margin:.6rem 0 .25rem}
 .inp{width:100%;padding:.7rem;border:1px solid #cbd5e1;border-radius:.75rem}
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.8);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
@@ -101,13 +102,13 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 </div>
 
 <!-- ABRECHNUNG -->
-<div id="m-pay" class="modal off"><div class="box">
+<div id="m-pay" class="modal off"><div class="box" style="max-width:32rem">
   <div class="text-center text-xs font-bold text-slate-400 uppercase">Zu zahlen</div>
   <div id="p-total" class="text-center text-5xl font-black mb-4">0,00 €</div>
-  <div id="p-methods" class="flex gap-2 mb-3">
-    <button id="p-bar" data-act="method" data-arg="BAR" class="btn flex-1">BAR</button>
-    <button id="p-card" data-act="method" data-arg="KARTE" class="btn flex-1">KARTE</button>
-    <button id="p-paypal" data-act="method" data-arg="PAYPAL" class="off btn flex-1">PAYPAL</button>
+  <div id="p-methods" class="flex gap-3 mb-4">
+    <button id="p-bar" data-act="method" data-arg="BAR" class="btn pm flex-1">BAR</button>
+    <button id="p-card" data-act="method" data-arg="KARTE" class="btn pm flex-1">KARTE</button>
+    <button id="p-paypal" data-act="method" data-arg="PAYPAL" class="off btn pm flex-1">PAYPAL</button>
   </div>
   <div id="p-ppbox" class="off text-center bg-sky-50 border border-sky-200 rounded-xl p-3 mb-3"><div id="p-ppqr" class="inline-block bg-white p-2 rounded-lg"></div><div class="text-xs text-slate-500 mt-1">Der QR-Code läuft auch auf dem Kundendisplay<br><a id="p-pplink" class="underline break-all" target="_blank" rel="noopener noreferrer"></a></div></div>
   <div id="p-cash" class="bg-slate-50 p-3 rounded-xl border mb-3">
@@ -403,7 +404,7 @@ function startDisplay() {
     if (s.exists()) applyDisplay(s.data());
   }, err => {
     console.error(err);
-    if (err.code === 'permission-denied') { $('cd-foot').classList.add('off'); $('cd-body').innerHTML = `<div class="flex-1 flex flex-col items-center justify-center p-8 text-center"><div class="text-3xl font-bold mb-4">Kein Zugriff</div><p class="text-slate-400 mb-4">Dieses Gerät ist noch nicht freigegeben. Trage diese Konto-ID in der Kasse unter Einstellungen → Display-Konto ein:</p><code class="text-xl bg-slate-800 px-4 py-2 rounded select-all">${esc(uid)}</code></div>`; }
+    if (err.code === 'permission-denied') { $('cd-foot').classList.add('off'); $('cd-body').innerHTML = `<div class="flex-1 flex flex-col items-center justify-center p-8 text-center"><div class="text-3xl font-bold mb-4">Kein Zugriff</div><p class="text-slate-400 mb-4">Dieses Gerät ist noch nicht freigegeben. Trage diese Konto-ID in der Kasse unter Einstellungen → Display-Konto ein:</p><code class="text-xl bg-slate-800 px-4 py-2 rounded select-all">${esc(uid)}</code><p class="text-slate-500 mt-4 text-sm">Gelesen wird die Kasse: ${esc(dispOwner())}<br>Steht die UID oben schon in der Kasse, fehlen meist die Firestore-Regeln in Firebase (Regeln veröffentlichen).</p></div>`; }
     else toast('Verbindungsfehler: ' + err.code, 'error');
   }));
   // Absicherung: Server regelmäßig abfragen (schlafende Verbindungen, Tab im Hintergrund)
@@ -540,9 +541,9 @@ const acts = {
     $('p-done').classList.toggle('col-span-2', z || S.receiptPrint === false);
     if (z) { method = 'VERLUST'; termOk = null; show('p-ppbox', false); show('p-cash', false); show('p-term', false); $('p-total').textContent = eur(0); $('p-done').disabled = false; $('p-done').style.opacity = 1; pushDisplay(cartState()); return; }
     method = m; given = '0'; termOk = null; termStatus('Bereit'); show('p-term', m === 'KARTE' && !!S.posTerminal);
-    $('p-bar').className = 'btn flex-1 ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
-    $('p-card').className = (S.cardPayment === false ? 'off ' : '') + 'btn flex-1 ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
-    $('p-paypal').className = (ppAvail() ? '' : 'off ') + 'btn flex-1 ' + (m === 'PAYPAL' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500');
+    $('p-bar').className = 'btn pm flex-1 ' + (m === 'BAR' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-500');
+    $('p-card').className = (S.cardPayment === false ? 'off ' : '') + 'btn pm flex-1 ' + (m === 'KARTE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500');
+    $('p-paypal').className = (ppAvail() ? '' : 'off ') + 'btn pm flex-1 ' + (m === 'PAYPAL' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500');
     show('p-cash', m === 'BAR' && S.changeCalc !== false); $('p-total').textContent = eur(calc(m));
     const ppu = m === 'PAYPAL' ? ppUrl(calc(m)) : '';
     show('p-ppbox', !!ppu); if (ppu) { drawQr('p-ppqr', ppu, 150); $('p-pplink').textContent = ppu; $('p-pplink').href = ppu; }
