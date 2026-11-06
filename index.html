@@ -263,6 +263,8 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, se
 import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocFromServer, getDocs, query, where, orderBy, onSnapshot, limit, writeBatch, increment, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
+// Kundendisplay nutzt eine eigene App-Instanz: eigener Login, auch im selben Browser wie die Kasse
+const IS_DISPLAY = new URLSearchParams(location.search).get('mode') === 'display' && !location.hash.startsWith('#r=');
 const app = initializeApp({
   apiKey: "AIzaSyBoa1jaK18f0yNjzaHTmxXFuZLmQ-Eefhc",
   authDomain: "kassensystem-85412.firebaseapp.com",
@@ -271,7 +273,7 @@ const app = initializeApp({
   storageBucket: "kassensystem-85412.firebasestorage.app",
   messagingSenderId: "916536785810",
   appId: "1:916536785810:web:0d0319ef565af65d279f4b"
-});
+}, IS_DISPLAY ? 'display' : '[DEFAULT]');
 // App Check (optional, empfohlen): reCAPTCHA-v3-Site-Key aus der Firebase-Konsole eintragen, dann ist der Zugriff nur noch über diese App möglich
 const APPCHECK_KEY = '';
 if (APPCHECK_KEY) { try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider(APPCHECK_KEY), isTokenAutoRefreshEnabled: true }); } catch (e) { console.error('AppCheck', e); } }
