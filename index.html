@@ -277,7 +277,7 @@ const APPCHECK_KEY = '';
 if (APPCHECK_KEY) { try { initializeAppCheck(app, { provider: new ReCaptchaV3Provider(APPCHECK_KEY), isTokenAutoRefreshEnabled: true }); } catch (e) { console.error('AppCheck', e); } }
 const auth = getAuth(app);
 let db;
-try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+try { db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch (e) { db = getFirestore(app); }
 
 // ---------- Helfer ----------
@@ -366,6 +366,7 @@ const settingsRef = () => doc(db, `users/${uid}/settings/config`);
 const SHOP = new URLSearchParams(location.search).get('shop') || '';
 const dispOwner = () => (MODE === 'display' && /^[A-Za-z0-9]{20,40}$/.test(SHOP)) ? SHOP : uid;
 const dispRef = () => doc(db, `users/${dispOwner()}/display/current`);
+const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('kasse-display') : null; // sofortiger Weg im selben Browser
 
 // ---------- Auth ----------
 $('login-title').textContent = MODE === 'display' ? 'Kundenbildschirm anmelden' : 'Anmelden';
@@ -405,7 +406,8 @@ function startDisplay() {
   }));
   // Absicherung: Server regelmäßig abfragen (schlafende Verbindungen, Tab im Hintergrund)
   const poll = async () => { try { const s = await getDocFromServer(dispRef()); if (s.exists()) applyDisplay(s.data()); } catch (e) {} };
-  const iv = setInterval(poll, 4000), vis = () => { if (!document.hidden) poll(); };
+  if (bc) { bc.onmessage = e => { const m = e.data; if (m && m.owner === dispOwner() && m.d) applyDisplay(m.d); }; unsubs.push(() => { bc.onmessage = null; }); }
+  const iv = setInterval(poll, 2000), vis = () => { if (!document.hidden) poll(); };
   document.addEventListener('visibilitychange', vis);
   unsubs.push(() => { clearInterval(iv); document.removeEventListener('visibilitychange', vis); });
 }
@@ -436,12 +438,14 @@ function renderDisplay(d) {
 
 // ---------- Kasse (Gerät 1) ----------
 let dispTimer = null, dispPending = null, lastPushTs = 0;
-function pushDisplay(state) {
+function pushDisplay(state, now) {
   if (!uid || MODE !== 'pos' || S.customerDisplay === false) return;
   lastPushTs = Math.max(Date.now(), lastPushTs + 1);
   dispPending = { ...state, ts: lastPushTs };
+  if (bc) { try { bc.postMessage({ owner: uid, d: dispPending }); } catch (e) {} }
   clearTimeout(dispTimer);
-  dispTimer = setTimeout(() => { const d = dispPending; dispPending = null; if (d) setDoc(dispRef(), d).catch(e => console.error('Display:', e)); }, 60);
+  const send = () => { const d = dispPending; dispPending = null; if (d) setDoc(dispRef(), d).catch(e => console.error('Display:', e)); };
+  now ? send() : (dispTimer = setTimeout(send, 60));
 }
 const cartState = () => ({ type: 'cart', items: cart.map(i => ({ n: i.name, q: i.qty, t: i.total })), total: cartTotal() });
 const cartTotal = () => r2(cart.reduce((s, i) => s + i.total, 0));
@@ -540,7 +544,7 @@ const acts = {
     show('p-cash', m === 'BAR' && S.changeCalc !== false); $('p-total').textContent = eur(calc(m));
     const ppu = m === 'PAYPAL' ? ppUrl(calc(m)) : '';
     show('p-ppbox', !!ppu); if (ppu) { drawQr('p-ppqr', ppu, 150); $('p-pplink').textContent = ppu; $('p-pplink').href = ppu; }
-    updateChange(); pushDisplay({ type: 'checkout', total: calc(m), method: m, ...(ppu ? { qr: ppu } : {}) });
+    updateChange(); pushDisplay({ type: 'checkout', total: calc(m), method: m, ...(ppu ? { qr: ppu } : {}) }, true);
   },
   cashKey: k => { given = k === 'C' ? '0' : (given === '0' ? k.replace(/^0+$/, '0') : (given.length < 7 ? given + k : given)); updateChange(); },
   cashAdd: v => { given = v === 'exact' ? String(Math.round(calc('BAR') * 100)) : String((parseInt(given) || 0) + parseInt(v)); updateChange(); },
@@ -665,7 +669,7 @@ const acts = {
     } catch (e) { toast('Fehler: ' + e.code, 'error'); }
   },
   history: () => { show('m-set', false); openHistory(); },
-  cancel: id => needPin('Storno', () => cancelTx(id)),
+  cancel: id => needPin('Storno', ok => cancelTx(id, undefined, ok === true)),
   cancelLast: async () => {
     try {
       const snap = await getDocs(query(col('transactions'), orderBy('timestamp', 'desc'), limit(15)));
@@ -676,7 +680,7 @@ const acts = {
       if (currentEmployee && t.employee !== currentEmployee.name) return toast('Du kannst nur deine eigenen Bons stornieren', 'error');
       const time = tsDate(t.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
       const label = `Letzter Bon #${nr} um ${time} Uhr: ${t.paymentMethod === 'VERLUST' ? 'Verlust-Buchung' : eur(t.totalBrutto || 0) + ' (' + t.paymentMethod + ')'}`;
-      const run = () => cancelTx(d.id, label);
+      const run = ok => cancelTx(d.id, label, ok === true);
       currentEmployee ? run() : needPin('Storno', run);
     } catch (e) { toast('Fehler: ' + (e.code || e.message), 'error'); }
   },
@@ -761,7 +765,7 @@ function openPin(title, cb, lock = false) {
   pin = ''; pinCb = cb; pinLock = lock; $('pin-title').textContent = title; $('pin-dots').textContent = '';
   show('pin-cancel', !lock); $('m-pin').style.background = lock ? '#f8fafc' : 'rgba(15,23,42,.8)'; show('m-pin');
 }
-function needPin(title, cb) { if (currentEmployee) return toast('Nur für Admin', 'error'); if (!S.reversalHash && !S.reversalCode) cb(); else openPin(title, cb); }
+function needPin(title, cb) { if (currentEmployee) return toast('Nur für Admin', 'error'); if (!S.reversalHash && !S.reversalCode) cb(false); else openPin(title, cb); }
 function pinKey(k) {
   if (k === 'C') pin = ''; else if (k === 'ENTER') return checkPin(); else if (pin.length < 4) pin += k;
   $('pin-dots').textContent = '●'.repeat(pin.length); if (pin.length === 4) checkPin();
@@ -799,7 +803,7 @@ async function checkPin() {
   } catch (e) { return toast('Code-Prüfung nicht möglich: ' + e.message, 'error'); }
   if (adm || emp) {
     fails = 0; ls.set('pos_f', 0); ls.set('pos_l', 0); if (pinLock) { currentEmployee = adm ? null : emp; updateWho(); }
-    const cb = pinCb; pinCb = null; show('m-pin', false); cb && cb();
+    const cb = pinCb; pinCb = null; show('m-pin', false); cb && cb(true);
   } else {
     fails++; if (fails >= 5) lockUntil = Date.now() + Math.min(600, 30 * 2 ** (fails - 5)) * 1000;
     ls.set('pos_f', fails); ls.set('pos_l', lockUntil); if (fails === 5) audit('PIN gesperrt', '5 Fehlversuche');
@@ -840,8 +844,8 @@ async function openHistory() {
     }).join('');
   } catch (e) { $('hlist').innerHTML = `<p class="text-red-500 p-3">Fehler: ${esc(e.code || e.message)}</p>`; }
 }
-async function cancelTx(id, label) {
-  if (!ask((label ? label + '\n\n' : '') + 'Wirklich stornieren? Bestand und Kasse werden zurückgebucht.')) return;
+async function cancelTx(id, label, pinOk) {
+  if (!pinOk && !ask((label ? label + '\n\n' : '') + 'Wirklich stornieren? Bestand und Kasse werden zurückgebucht.')) return;
   try {
     const ref = doc(col('transactions'), id), s = await getDoc(ref), t = s.data();
     if (!t || t.status === 'cancelled') return toast('Bereits storniert', 'info');
