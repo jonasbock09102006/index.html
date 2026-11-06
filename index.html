@@ -5,29 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kassensystem</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { display: ["'Iowan Old Style'", "'Palatino Linotype'", 'Palatino', "'Book Antiqua'", 'ui-serif', "'Noto Serif'", 'serif'] },
+  colors: {
+    slate:  { 50:'#F6F8F8',100:'#EDF1F1',200:'#DEE4E4',300:'#C5CECF',400:'#8E9B9E',500:'#667679',600:'#4A5A5D',700:'#344245',800:'#222E31',900:'#142023',950:'#0C1517' },
+    blue:   { 50:'#EBF4F5',100:'#D5E7EA',200:'#AACFD5',300:'#7BB2BC',400:'#4A8F9C',500:'#2A7482',600:'#1B5E6C',700:'#164C58',800:'#123D47',900:'#0E2F37',950:'#09202A' },
+    green:  { 50:'#EEF6F1',100:'#DBEBE1',200:'#B9D6C5',300:'#8EBBA1',400:'#5F9D7B',500:'#3E8261',600:'#2D6B4E',700:'#245641',800:'#1D4535',900:'#16352A',950:'#0D221A' },
+    indigo: { 50:'#F5F1F7',100:'#E8DFED',200:'#D2C0DC',300:'#B596C4',400:'#9468A7',500:'#774B8B',600:'#613B74',700:'#4F305F',800:'#3F274C',900:'#301D3A',950:'#1D1124' },
+    sky:    { 50:'#ECF4FB',100:'#D6E8F6',200:'#ADD0EC',300:'#7DB3DF',400:'#4B91CF',500:'#2A76BA',600:'#1C62A3',700:'#174F85',800:'#133F6B',900:'#0F3153',950:'#091F36' },
+    amber:  { 50:'#FBF6EA',100:'#F5EAC9',200:'#EBD595',300:'#DDBB5F',400:'#CCA03A',500:'#B5872A',600:'#976D20',700:'#785519',800:'#5E4316',900:'#483313',950:'#2A1D09' },
+    red:    { 50:'#FBF0F0',100:'#F6DCDC',200:'#EDBABA',300:'#E08F90',400:'#D06567',500:'#BC4547',600:'#A23336',700:'#832A2D',800:'#6A2427',900:'#561F22',950:'#2F1011' }
+  }
+} } };
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;height:100dvh;overflow:hidden;color:#1e293b}
+:root{--ink:#142023;--mute:#667679;--line:#E1E7E7;--paper:#F2F4F3;--petrol:#1B5E6C;--brass:#B5872A}
+body{font-family:system-ui,-apple-system,'Segoe UI Variable','Segoe UI',Roboto,sans-serif;background:var(--paper);height:100dvh;overflow:hidden;color:var(--ink);-webkit-font-smoothing:antialiased}
+*{scrollbar-width:thin;scrollbar-color:#C5CECF transparent}
 .off{display:none!important}
-input,select,button{font-size:16px!important;touch-action:manipulation}
-.key{height:54px;border-radius:.75rem;font-weight:700;font-size:1.25rem!important;background:#fff;border:1px solid #e2e8f0}
-.key:active,.btn:active{transform:scale(.97)}
-.card{background:#fff;border-radius:1rem;border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-.btn{padding:.7rem 1rem;border-radius:.75rem;font-weight:700}
-.pm{min-height:80px;font-size:1.4rem!important;letter-spacing:.02em;border-radius:1rem}
-.sec{font-size:.7rem;font-weight:700;text-transform:uppercase;color:#94a3b8;margin:.6rem 0 .25rem}
-.inp{width:100%;padding:.7rem;border:1px solid #cbd5e1;border-radius:.75rem}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.8);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
-.box{background:#fff;border-radius:1.25rem;padding:1.25rem;width:100%;max-width:26rem;max-height:92dvh;overflow:auto}
+input,select{font-size:16px!important;touch-action:manipulation}
+button{touch-action:manipulation}
+:focus-visible{outline:2px solid var(--petrol);outline-offset:2px}
+.num,.font-display{font-family:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',ui-serif,'Noto Serif',serif;font-variant-numeric:lining-nums tabular-nums}
+.num{font-weight:600;letter-spacing:-.01em}
+.uppercase{text-transform:none!important}.tracking-widest,.tracking-wider{letter-spacing:.01em!important}
+/* Flächen: Panels nur mit Linie, bedienbare Kacheln mit leichtem Relief */
+.card{background:#fff;border-radius:18px;border:1px solid var(--line)}
+button.card{border-radius:14px;box-shadow:0 1px 0 rgba(20,32,35,.05),0 3px 8px -2px rgba(20,32,35,.09);transition:transform .08s,box-shadow .08s}
+button.card:active{transform:scale(.97);box-shadow:none}
+.paper{background:#FEFEFC;border-color:#E9E7DF}
+.btn{padding:.75rem 1.1rem;border-radius:12px;font-weight:600;transition:transform .08s,background-color .12s}
+.btn:active,.key:active{transform:scale(.97)}
+.key{height:56px;border-radius:12px;font-weight:600;font-size:1.3rem!important;background:#fff;border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.key:active{background:#EDF1F1}
+.pm{min-height:84px;font-size:1.35rem!important;font-weight:600;border-radius:16px}
+.sec{font-size:.8rem;font-weight:600;color:var(--mute);margin:.7rem 0 .3rem}
+.inp{width:100%;padding:.72rem .85rem;border:1px solid #D3DBDC;border-radius:11px;background:#fff;transition:border-color .12s,box-shadow .12s}
+.inp:focus{outline:0;border-color:var(--petrol);box-shadow:0 0 0 3px rgba(27,94,108,.16)}
+.modal{position:fixed;inset:0;background:rgba(12,21,23,.55);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
+.box{background:#fff;border-radius:22px;padding:1.4rem;width:100%;max-width:26rem;max-height:92dvh;overflow:auto;box-shadow:0 24px 60px -12px rgba(12,21,23,.4);animation:rise .18s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #toast{position:fixed;top:1rem;right:1rem;z-index:9999;pointer-events:none}
-.t{padding:.8rem 1.2rem;border-radius:.75rem;color:#fff;margin-bottom:.5rem;font-weight:600;box-shadow:0 8px 16px rgba(0,0,0,.2)}
+.t{padding:.75rem 1.1rem;border-radius:12px;color:#fff;margin-bottom:.5rem;font-weight:500;box-shadow:0 10px 24px -8px rgba(12,21,23,.45)}
+/* Kundenbildschirm: tiefes Petrol, Elfenbein, Messing für die Summe */
+#display{background:#0E2F37;color:#F3EEE2}
+#display .border-slate-700{border-color:rgba(243,238,226,.14)}
+#display #cd-foot{background:rgba(255,255,255,.04);border-top:1px solid rgba(181,135,42,.5)}
+#display .text-slate-300,#display .text-slate-400,#display .text-slate-500{color:#9DC3CA}
+#cd-total{color:#E3C27D}
+/* Schalter */
+.sw{position:relative;width:2.75rem;height:1.5rem;flex:none}.sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;background:#C5CECF;border-radius:99px;transition:.15s}.sw i:after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw input:checked+i{background:#2D6B4E}.sw input:checked+i:after{left:22px}
 #print{display:none}
 @media print{@page{margin:0}body>*:not(#print):not(#rcpt){display:none!important}body{overflow:visible;height:auto;background:#fff}
 #print{display:block;width:72mm;font:12px 'Courier New',monospace;color:#000}
 #print .l{display:flex;justify-content:space-between;gap:6px}#print hr{border:0;border-top:1px dashed #000;margin:6px 0}}
-.sw{position:relative;width:2.75rem;height:1.5rem;flex:none}.sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
-.sw i{position:absolute;inset:0;background:#cbd5e1;border-radius:99px;transition:.15s}.sw i:after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-.sw input:checked+i{background:#22c55e}.sw input:checked+i:after{left:22px}
 @media print{#rcpt{position:static!important;background:#fff!important}.noprint{display:none!important}}
 </style>
 </head>
@@ -36,9 +72,9 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <div id="offline" class="off fixed top-0 inset-x-0 z-[9998] bg-red-600 text-white text-center text-xs font-bold py-1">OFFLINE – Verkäufe werden gespeichert und später synchronisiert</div>
 
 <!-- LOGIN (Kasse und Kundenbildschirm) -->
-<div id="login" class="modal off" style="background:#0f172a;z-index:500">
+<div id="login" class="modal off" style="background:#0E2F37;z-index:500">
   <form id="login-form" class="box" style="max-width:22rem">
-    <h1 id="login-title" class="text-2xl font-bold text-center mb-4">Anmelden</h1>
+    <h1 id="login-title" class="font-display text-3xl font-semibold text-center mb-5">Anmelden</h1>
     <input id="login-email" type="email" required placeholder="E-Mail" class="inp mb-3">
     <input id="login-pw" type="password" required placeholder="Passwort" class="inp mb-4">
     <p id="login-warn" class="off text-xs text-red-600 mb-3">Achtung: Die Datei wurde direkt geöffnet (file://). Firebase-Login funktioniert nur über http(s) – z. B. Firebase Hosting oder localhost.</p>
@@ -54,7 +90,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <div id="display" class="off fixed inset-0 bg-slate-900 text-white flex-col" data-act="fullscreen" style="z-index:300;display:flex">
   <div id="cd-body" class="flex-1 overflow-hidden flex flex-col"></div>
   <div id="cd-foot" class="bg-slate-800 p-6 flex justify-between items-center border-t border-slate-700">
-    <span class="text-2xl text-slate-400">Gesamtsumme</span><span id="cd-total" class="text-7xl font-black text-green-400">0,00 €</span>
+    <span class="text-2xl text-slate-400">Gesamtsumme</span><span id="cd-total" class="num text-7xl">0,00 €</span>
   </div>
   <div id="cd-dot" class="absolute top-3 right-3 w-3 h-3 rounded-full bg-red-500"></div>
 </div>
@@ -64,6 +100,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
   <div class="grid md:grid-cols-3 gap-4 h-full max-w-7xl mx-auto p-2 md:p-4">
     <div class="md:col-span-2 flex flex-col gap-3 min-h-0">
       <div class="card p-2 flex gap-2 items-center">
+        <span id="brand" class="font-display text-xl font-semibold px-3 hidden md:block whitespace-nowrap text-blue-700"></span>
         <div id="tabs" class="flex-1 flex gap-2 overflow-x-auto"></div>
         <span id="who" class="off text-xs font-bold text-slate-500 px-2 whitespace-nowrap"></span><button data-act="lock" class="btn bg-slate-800 text-white">Sperren</button>
         <button id="btn-disp" data-act="displayLink" class="btn bg-blue-100 text-blue-700">Kunden-Screen</button>
@@ -73,7 +110,7 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
       <div class="card p-3 grid grid-cols-4 gap-3">
         <div>
           <div class="text-xs font-bold text-slate-400 uppercase">Menge</div>
-          <div id="qty" class="h-14 flex items-center justify-center text-4xl font-black text-blue-600 bg-blue-50 rounded-xl">1</div>
+          <div id="qty" class="num h-14 flex items-center justify-center text-4xl text-blue-600 bg-blue-50 rounded-xl">1</div>
           <button id="mode" data-act="toggleMode" class="btn w-full h-14 mt-1 text-xl font-black text-white bg-green-500">ADD</button>
           <button id="loss" data-act="toggleLoss" class="off btn w-full mt-1 text-xs font-black bg-amber-100 text-amber-700">VERLUST</button>
         </div>
@@ -81,16 +118,16 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
       </div>
     </div>
     <div class="flex flex-col gap-3 min-h-0">
-      <div class="card p-4 flex-1 flex flex-col min-h-0">
+      <div class="card paper p-4 flex-1 flex flex-col min-h-0">
         <h2 class="font-bold border-b border-dashed pb-2 mb-2 flex justify-between"><span>Aktueller Bon</span><span class="text-xs bg-slate-100 px-2 py-1 rounded">#<span id="rc">-</span></span></h2>
         <div id="cart" class="flex-1 overflow-y-auto"></div>
         <div class="border-t-2 border-dashed border-slate-800 pt-3 mt-2">
-          <div class="flex justify-between items-end"><span class="font-bold text-slate-500">GESAMT</span><span id="total" class="text-4xl font-black">0,00 €</span></div>
+          <div class="flex justify-between items-end"><span class="font-medium text-slate-500">Gesamt</span><span id="total" class="num text-4xl">0,00 €</span></div>
           <button data-act="clear" class="w-full text-xs font-bold text-red-400 uppercase tracking-widest mt-2">Bon leeren</button>
         </div>
       </div>
       <div class="card p-3 space-y-2">
-        <button id="pay" data-act="checkout" disabled class="btn w-full bg-green-600 text-white text-2xl py-4 disabled:opacity-40">ABRECHNEN</button>
+        <button id="pay" data-act="checkout" disabled class="btn w-full bg-green-600 text-white text-2xl py-4 disabled:opacity-40">Abrechnen</button>
         <button data-act="cancelLast" class="btn w-full bg-red-50 text-red-600 border border-red-200">Letzten Bon stornieren</button>
         <div class="grid grid-cols-2 gap-2">
           <button data-act="settings" class="btn bg-slate-100">Einstellungen</button>
@@ -104,16 +141,16 @@ input,select,button{font-size:16px!important;touch-action:manipulation}
 <!-- ABRECHNUNG -->
 <div id="m-pay" class="modal off"><div class="box" style="max-width:32rem">
   <div class="text-center text-xs font-bold text-slate-400 uppercase">Zu zahlen</div>
-  <div id="p-total" class="text-center text-5xl font-black mb-4">0,00 €</div>
+  <div id="p-total" class="num text-center text-6xl mb-4">0,00 €</div>
   <div id="p-methods" class="flex gap-3 mb-4">
-    <button id="p-bar" data-act="method" data-arg="BAR" class="btn pm flex-1">BAR</button>
-    <button id="p-card" data-act="method" data-arg="KARTE" class="btn pm flex-1">KARTE</button>
-    <button id="p-paypal" data-act="method" data-arg="PAYPAL" class="off btn pm flex-1">PAYPAL</button>
+    <button id="p-bar" data-act="method" data-arg="BAR" class="btn pm flex-1">Bar</button>
+    <button id="p-card" data-act="method" data-arg="KARTE" class="btn pm flex-1">Karte</button>
+    <button id="p-paypal" data-act="method" data-arg="PAYPAL" class="off btn pm flex-1">PayPal</button>
   </div>
   <div id="p-ppbox" class="off text-center bg-sky-50 border border-sky-200 rounded-xl p-3 mb-3"><div id="p-ppqr" class="inline-block bg-white p-2 rounded-lg"></div><div class="text-xs text-slate-500 mt-1">Der QR-Code läuft auch auf dem Kundendisplay<br><a id="p-pplink" class="underline break-all" target="_blank" rel="noopener noreferrer"></a></div></div>
   <div id="p-cash" class="bg-slate-50 p-3 rounded-xl border mb-3">
-    <div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-slate-500 uppercase">Gegeben</span><span id="p-given" class="bg-white border px-3 py-1 rounded-lg text-xl font-bold">0,00</span></div>
-    <div class="flex justify-between items-center mb-2 pt-2 border-t"><span class="font-bold">Rückgeld</span><span id="p-change" class="text-2xl font-black">0,00 €</span></div>
+    <div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-slate-500 uppercase">Gegeben</span><span id="p-given" class="num bg-white border px-3 py-1 rounded-lg text-xl">0,00</span></div>
+    <div class="flex justify-between items-center mb-2 pt-2 border-t"><span class="font-bold">Rückgeld</span><span id="p-change" class="num text-2xl">0,00 €</span></div>
     <div id="cpad" class="grid grid-cols-3 gap-2 mb-2"></div>
     <div class="grid grid-cols-4 gap-2 text-sm font-bold">
       <button data-act="cashAdd" data-arg="exact" class="btn bg-blue-100 text-blue-700 !p-2">Passend</button>
@@ -298,7 +335,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const show = (id, on = true) => $(id).classList.toggle('off', !on);
 function toast(m, t = 'info') {
   const d = document.createElement('div'); d.className = 't'; d.textContent = m;
-  d.style.background = { success: '#059669', error: '#dc2626', info: '#2563eb' }[t];
+  d.style.background = { success: '#2D6B4E', error: '#A23336', info: '#1B5E6C' }[t];
   $('toast').prepend(d); setTimeout(() => d.remove(), t === 'error' ? 6500 : 3200);
 }
 const pad = (act, last) => ['7','8','9','4','5','6','1','2','3','C','0',last].map(k =>
@@ -335,7 +372,7 @@ const syncSubs = () => Object.keys(SUB).forEach(k => show('sub-' + k, $('f-' + k
 document.addEventListener('change', e => { if (e.target.id && e.target.id.startsWith('f-')) syncSubs(); });
 const TABS = [['ov', 'Übersicht'], ['gen', 'Allgemein'], ['pay', 'Zahlung'], ['fun', 'Funktionen'], ['sec', 'Sicherheit'], ['adm', 'Verwaltung']];
 function renderOverview() {
-  const kpi = (l, v, c = '', sub = '') => `<div class="card p-3"><div class="text-[11px] font-bold uppercase text-slate-400">${l}</div><div class="text-xl font-black ${c}">${v}</div>${sub ? `<div class="text-xs text-slate-400">${sub}</div>` : ''}</div>`;
+  const kpi = (l, v, c = '', sub = '') => `<div class="card p-3"><div class="text-xs font-medium text-slate-500">${l}</div><div class="num text-xl ${c}">${v}</div>${sub ? `<div class="text-xs text-slate-400">${sub}</div>` : ''}</div>`;
   const tabOf = k => Object.entries(GROUPS).find(([, ks]) => ks.includes(k))[0].replace('tab-', '').replace('-feats', '');
   const chips = FEATS.map(([k, n]) => `<button data-act="setTab" data-arg="${tabOf(k)}" class="flex items-center gap-2 p-2 rounded-xl border text-left text-sm ${S[k] ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200 text-slate-400'}"><span class="w-2.5 h-2.5 rounded-full ${S[k] ? 'bg-green-500' : 'bg-slate-300'}"></span>${n}</button>`).join('');
   const hasPin = !!(S.reversalHash || S.reversalCode), act = FEATS.filter(([k]) => S[k]).length;
@@ -420,17 +457,17 @@ function renderDisplay(d) {
   foot.classList.toggle('off', d.type !== 'cart');
   if (d.type === 'checkout') {
     const qr = typeof d.qr === 'string' && d.qr.startsWith('https://www.paypal.me/') ? d.qr : '';
-    body.innerHTML = `<div class="flex-1 flex ${qr ? 'flex-col lg:flex-row gap-8 lg:gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-4xl text-slate-400 uppercase tracking-widest mb-6">Zu zahlen</div><div class="${qr ? 'text-6xl lg:text-8xl' : 'text-[9rem]'} font-black leading-none">${eur(d.total)}</div><div class="text-2xl text-slate-500 mt-6">${d.method === 'KARTE' ? 'Kartenzahlung' : d.method === 'PAYPAL' ? 'PayPal' : 'Barzahlung'}</div>${d.method === 'PAYPAL' && !qr ? '<div class="text-xl text-red-400 mt-4">PayPal-QR nicht verfügbar</div>' : ''}</div>${qr ? '<div class="text-center"><div id="cd-qr" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Mit PayPal bezahlen<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
+    body.innerHTML = `<div class="flex-1 flex ${qr ? 'flex-col lg:flex-row gap-8 lg:gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-4xl text-slate-400 uppercase tracking-widest mb-6">Zu zahlen</div><div class="${qr ? 'text-6xl lg:text-8xl' : 'text-[9rem]'} num leading-none">${eur(d.total)}</div><div class="text-2xl text-slate-500 mt-6">${d.method === 'KARTE' ? 'Kartenzahlung' : d.method === 'PAYPAL' ? 'PayPal' : 'Barzahlung'}</div>${d.method === 'PAYPAL' && !qr ? '<div class="text-xl text-red-400 mt-4">PayPal-QR nicht verfügbar</div>' : ''}</div>${qr ? '<div class="text-center"><div id="cd-qr" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Mit PayPal bezahlen<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
     if (qr) drawQr('cd-qr', qr, qsz());
   } else if (d.type === 'thanks') {
     const okRq = u => { try { const x = new URL(u); return x.origin === location.origin && x.hash.startsWith('#r='); } catch (e) { return false; } };
     const rq = typeof d.rqr === 'string' && okRq(d.rqr) ? d.rqr : '';
-    body.innerHTML = `<div class="flex-1 flex ${rq ? 'flex-col lg:flex-row gap-8 lg:gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="text-7xl font-bold mb-4">Vielen Dank!</div><div class="text-3xl text-slate-400">Auf Wiedersehen</div></div>${rq ? '<div class="text-center"><div id="cd-rq" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Ihr digitaler Bon<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
+    body.innerHTML = `<div class="flex-1 flex ${rq ? 'flex-col lg:flex-row gap-8 lg:gap-16' : 'flex-col'} items-center justify-center p-8"><div class="text-center"><div class="font-display text-7xl font-semibold mb-4">Vielen Dank!</div><div class="text-3xl text-slate-400">Auf Wiedersehen</div></div>${rq ? '<div class="text-center"><div id="cd-rq" class="bg-white p-4 rounded-2xl inline-block"></div><div class="text-2xl text-slate-300 mt-4">Ihr digitaler Bon<br><span class="text-lg text-slate-500">QR-Code scannen</span></div></div>' : ''}</div>`;
     if (rq) drawQr('cd-rq', rq, qsz(), typeof QRCode !== 'undefined' ? QRCode.CorrectLevel.L : undefined);
     thanksTimer = setTimeout(() => renderDisplay({ type: 'cart', items: [], total: 0 }), rq ? 45000 : 6000);
   } else if (!d.items || !d.items.length) {
     $('cd-total').textContent = eur(0);
-    body.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center"><h1 class="text-7xl font-bold mb-4">Willkommen</h1><p class="text-3xl text-slate-400">Wir freuen uns auf Sie!</p></div>`;
+    body.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center"><h1 class="font-display text-7xl font-semibold mb-4">Willkommen</h1><p class="text-3xl text-slate-400">Wir freuen uns auf Sie!</p></div>`;
   } else {
     $('cd-total').textContent = eur(d.total);
     const n = d.items.reduce((a, i) => a + (Number(i.q) || 0), 0);
@@ -479,7 +516,7 @@ function applyFeatures() {
   show('p-card', S.cardPayment !== false); show('p-paypal', ppAvail()); show('p-print', S.receiptPrint !== false);
   $('p-done').textContent = S.receiptPrint !== false ? 'Ohne Bon' : 'Abschließen';
   $('p-done').classList.toggle('col-span-2', S.receiptPrint === false);
-  show('btn-disp', S.customerDisplay !== false); show('loss', !!S.lossBooking); if (!S.lossBooking) lossMode = false; gridRing(); updateWho(); idleReset();
+  $('brand').textContent = S.companyName || 'Kasse'; show('btn-disp', S.customerDisplay !== false); show('loss', !!S.lossBooking); if (!S.lossBooking) lossMode = false; gridRing(); updateWho(); idleReset();
 }
 function gridRing() {
   const g = $('grid'); g.classList.remove('ring-4', 'ring-red-300', 'ring-amber-300');
@@ -491,19 +528,19 @@ function renderEmps() {
 }
 function renderAll() { renderGrid(); renderCart(); }
 function renderTabs() {
-  const b = (id, n) => `<button data-act="cat" data-arg="${id ?? ''}" class="btn whitespace-nowrap border ${filterCat === id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}">${esc(n)}</button>`;
+  const b = (id, n) => `<button data-act="cat" data-arg="${id ?? ''}" class="btn !rounded-full !py-2 !px-4 text-sm whitespace-nowrap border ${filterCat === id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200'}">${esc(n)}</button>`;
   $('tabs').innerHTML = b(null, 'Alle') + Object.values(cats).map(c => b(c.id, c.name)).join('');
 }
 function renderGrid() {
   const list = Object.values(products).filter(p => filterCat === null || p.categoryId === filterCat).sort((a, b) => a.name.localeCompare(b.name));
   $('grid').innerHTML = list.length ? list.map(p => {
     const a = avail(p), out = S.stock && a <= 0;
-    return `<button data-act="add" data-arg="${p.id}" class="card relative h-28 p-2 flex flex-col items-center justify-center ${out ? 'opacity-40' : ''}">${S.stock ? `<span class="absolute top-1 right-1 bg-slate-800 text-white text-[10px] px-2 rounded font-bold">${Math.max(0, a)}</span>` : ''}<span class="font-bold text-sm text-center leading-tight">${esc(p.name)}</span><span class="text-lg font-black mt-1">${eur(p.price)}</span></button>`;
+    return `<button data-act="add" data-arg="${p.id}" class="card relative h-[7.25rem] p-3 flex flex-col justify-between items-start text-left ${out ? 'opacity-40' : ''}"><span class="font-medium text-[15px] leading-snug pr-7" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.name)}</span><span class="num text-lg">${eur(p.price)}</span>${S.stock ? `<span class="absolute top-2 right-2 text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${a <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}">${Math.max(0, a)}</span>` : ''}</button>`;
   }).join('') : '<p class="col-span-full text-center text-slate-400 p-10">Keine Produkte. Unter Einstellungen → Produkte anlegen.</p>';
 }
 function renderCart() {
   const t = cartTotal();
-  $('cart').innerHTML = cart.length ? cart.map(i => `<div class="flex items-center py-2 border-b border-dashed"><b class="w-10 text-slate-400">${i.qty}x</b><span class="flex-1 leading-tight">${esc(i.name)}${i.loss ? ' <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">VERLUST</span>' : ''}</span><b class="${i.loss ? 'text-amber-600' : ''}">${eur(i.total)}</b><button data-act="del" data-arg="${i.id}${i.loss ? ':L' : ''}" class="ml-2 px-2 text-slate-400">✕</button></div>`).join('') : '<p class="text-center text-slate-300 mt-10">Warenkorb leer</p>';
+  $('cart').innerHTML = cart.length ? cart.map(i => `<div class="flex items-center py-2 border-b border-dashed"><b class="w-10 text-slate-400">${i.qty}x</b><span class="flex-1 leading-tight">${esc(i.name)}${i.loss ? ' <span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">VERLUST</span>' : ''}</span><b class="num text-[15px] ${i.loss ? 'text-amber-600' : ''}">${eur(i.total)}</b><button data-act="del" data-arg="${i.id}${i.loss ? ':L' : ''}" class="ml-2 px-2 text-slate-400">✕</button></div>`).join('') : '<p class="text-center text-slate-300 mt-10">Warenkorb leer</p>';
   $('total').textContent = eur(t); $('pay').disabled = !cart.length;
   pushDisplay(cartState());
 }
@@ -919,7 +956,7 @@ function chart(R) {
 }
 function renderReport(R) {
   if (!R.rows.length) return '<p class="text-center text-slate-400 p-10">Keine Transaktionen im gewählten Zeitraum.</p>';
-  const kpi = (l, v, c = '', s = '') => `<div class="card p-3"><div class="text-[11px] font-bold uppercase text-slate-400">${l}</div><div class="text-xl sm:text-2xl font-black ${c}">${v}</div>${s ? `<div class="text-xs text-slate-400">${s}</div>` : ''}</div>`;
+  const kpi = (l, v, c = '', s = '') => `<div class="card p-3"><div class="text-xs font-medium text-slate-500">${l}</div><div class="num text-xl sm:text-2xl ${c}">${v}</div>${s ? `<div class="text-xs text-slate-400">${s}</div>` : ''}</div>`;
   const sec = (t, b) => `<div class="card p-3"><h3 class="text-xs font-bold uppercase text-slate-400 mb-2">${t}</h3>${b}</div>`;
   const row = (a, b) => `<div class="flex justify-between gap-2 py-1 border-b border-slate-100 text-sm"><span class="truncate">${a}</span><span class="whitespace-nowrap font-semibold">${b}</span></div>`;
   const top = Object.entries(R.prods).sort((a, b) => b[1].s - a[1].s).slice(0, 10), mx = top.length ? top[0][1].s : 1;
