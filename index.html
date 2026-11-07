@@ -362,22 +362,20 @@ const FEATS = [
   ['customerDisplay', 'Kundenbildschirm', 'Live-Anzeige auf zweitem Gerät'],
   ['employeeSystem', 'Mitarbeiter-Code', 'Anmeldung per Code, Verkäufer wird erfasst'],
   ['posTerminal', 'Sparkassen-POS-Terminal', 'Kartenzahlung über Terminal auslösen'],
-  ['tseEnabled', 'TSE (KassenSichV)', 'Signiert jeden Verkauf über eine zertifizierte TSE (Bridge nötig)'],
   ['autoLock', 'Auto-Sperre', 'Sperrt die Kasse nach 5 Min. ohne Bedienung'],
   ['confirmDialogs', 'Sicherheitsabfragen', 'Rückfrage vor Storno, Löschen und Code-Entfernen'],
   ['lossBooking', 'Verlust-Buchung', 'Produkte zum Preis 0 € ausbuchen (Bruch, Schwund, Gratis)']
 ];
-const GROUPS = { 'tab-pay': ['cardPayment', 'cardFee', 'changeCalc', 'receiptPrint', 'taxReceipt', 'paypalQr', 'receiptQr', 'posTerminal', 'tseEnabled'], 'tab-fun': ['stock', 'customerDisplay', 'lossBooking'], 'tab-sec-feats': ['employeeSystem', 'autoLock', 'confirmDialogs'] };
+const GROUPS = { 'tab-pay': ['cardPayment', 'cardFee', 'changeCalc', 'receiptPrint', 'taxReceipt', 'paypalQr', 'receiptQr', 'posTerminal'], 'tab-fun': ['stock', 'customerDisplay', 'lossBooking'], 'tab-sec-feats': ['employeeSystem', 'autoLock', 'confirmDialogs'] };
 const lab = 'block text-xs text-slate-500 mb-1', hint = 'text-xs text-slate-500 leading-snug';
 const SUB = {
   cardFee: `<div><label class="${lab}">Aufschlag in %</label><input id="s-fee" type="number" step="0.01" min="0" class="inp"></div>`,
   paypalQr: `<div><label class="${lab}">PayPal.me-Name oder -Link</label><input id="s-paypal" class="inp" placeholder="z. B. paypal.me/MeinShop"></div><p class="${hint} sm:self-end sm:pb-2">Der QR enthält den Betrag. Zahlungseingang in der PayPal-App prüfen, danach abschließen.</p>`,
   posTerminal: `<div><label class="${lab}">Terminal-Bridge-URL</label><input id="s-posurl" class="inp" placeholder="leer = manuelle Bestätigung"></div><div><label class="${lab}">Zugangstoken (optional)</label><input id="s-postoken" type="password" autocomplete="off" class="inp"></div><p class="${hint} sm:col-span-2">z. B. http://localhost:8787/pay (Bridge am Kassen-PC)</p>`,
-  tseEnabled: `<div><label class="${lab}">TSE-Bridge-URL</label><input id="s-tseurl" class="inp" placeholder="https://… oder http://localhost:8788"></div><div><label class="${lab}">Zugangstoken (optional)</label><input id="s-tsetoken" type="password" autocomplete="off" class="inp"></div><div><label class="${lab}">Kassen-ID (Seriennummer der Kasse)</label><input id="s-kassenid" class="inp" maxlength="60"></div><label class="flex items-center gap-2 text-sm sm:self-end sm:pb-2"><input type="checkbox" id="s-tseblock" class="w-4 h-4"> Verkauf bei TSE-Ausfall sperren</label><p class="${hint} sm:col-span-2">Rechtssicher nur mit zertifizierter TSE und beim Finanzamt gemeldeter Kasse. Ausfälle werden am Beleg vermerkt.</p>`,
   customerDisplay: `<div class="sm:col-span-2"><label class="${lab}">Display-Konto: UID(s), nur Leserecht (kommagetrennt)</label><input id="s-dispuid" class="inp" placeholder="UID des Display-Kontos"></div>`
 };
 const SECTIONS = {
-  'tab-pay': [['Zahlungsarten', ['cardPayment', 'paypalQr', 'posTerminal']], ['Gebühren und Rückgeld', ['cardFee', 'changeCalc']], ['Beleg', ['receiptPrint', 'taxReceipt', 'receiptQr']], ['Kasse und Recht', ['tseEnabled']]],
+  'tab-pay': [['Zahlungsarten', ['cardPayment', 'paypalQr', 'posTerminal']], ['Gebühren und Rückgeld', ['cardFee', 'changeCalc']], ['Beleg', ['receiptPrint', 'taxReceipt', 'receiptQr']]],
   'tab-fun': [['Verkauf', ['stock', 'lossBooking']], ['Anzeige', ['customerDisplay']]],
   'tab-sec-feats': [['Zugriff und Schutz', ['employeeSystem', 'autoLock', 'confirmDialogs']]]
 };
@@ -409,7 +407,7 @@ const MODE = location.hash.startsWith('#r=') ? 'receipt' : (new URLSearchParams(
 let uid = null, unsubs = [];
 let products = {}, cats = {}, cart = [];
 let S = { companyName: '', address: '', taxId: '', cardFeeRate: 0, reversalCode: '', cashBoxBalance: 0, receiptCounter: 0, stock: true,
-  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false, displayUids: [], posToken: '', tseEnabled: false, tseUrl: '', tseToken: '', kassenId: '', tseBlock: false, closingCounter: 0, lastClosingTs: null, changeCalc: true, confirmDialogs: true, paypalQr: false, paypalUrl: '', receiptQr: false };
+  cardPayment: true, cardFee: true, receiptPrint: true, taxReceipt: true, customerDisplay: true, employeeSystem: false, posTerminal: false, posUrl: '', employees: [], reversalHash: '', autoLock: false, lossBooking: false, displayUids: [], posToken: '', closingCounter: 0, lastClosingTs: null, changeCalc: true, confirmDialogs: true, paypalQr: false, paypalUrl: '', receiptQr: false };
 let filterCat = null, qtyStr = '1', qtyDirty = false, delMode = false;
 let method = 'BAR', given = '0', manAmt = '0', busy = false, termOk = null, termBusy = false, currentEmployee = null, lossMode = false, ppOn = false;
 const who = () => currentEmployee ? currentEmployee.name : 'Admin';
@@ -618,11 +616,10 @@ const acts = {
     if (pin && !/^\d{4}$/.test(pin)) return toast('Code muss 4 Ziffern haben', 'error');
     const url = $('s-posurl').value.trim();
     if (url) { try { const u = new URL(url), h = u.hostname, priv = /^(localhost$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || h.endsWith('.local'); if (!(u.protocol === 'https:' || (u.protocol === 'http:' && priv))) throw 0; } catch (e) { return toast('Bridge-URL ungültig: https:// oder http:// nur im lokalen Netz', 'error'); } }
-    const d = { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: Math.min(100, Math.max(0, parseFloat($('s-fee').value) || 0)), posUrl: url, paypalUrl: ppClean($('s-paypal').value), tseUrl: $('s-tseurl').value.trim(), tseToken: $('s-tsetoken').value.trim(), kassenId: $('s-kassenid').value.trim(), tseBlock: $('s-tseblock').checked };
+    const d = { companyName: $('s-company').value.trim(), address: $('s-address').value.trim(), taxId: $('s-tax').value.trim(), cardFeeRate: Math.min(100, Math.max(0, parseFloat($('s-fee').value) || 0)), posUrl: url, paypalUrl: ppClean($('s-paypal').value) };
     FEATS.forEach(([k]) => d[k] = $('f-' + k).checked);
     if ($('s-paypal').value.trim() && !d.paypalUrl) return toast('PayPal-Name/Link ungültig', 'error');
     if (d.paypalQr && !d.paypalUrl) return toast('Bitte PayPal.me-Name oder -Link eintragen', 'error');
-    if (d.tseEnabled) { try { if (!/^https?:$/.test(new URL(d.tseUrl).protocol)) throw 0; } catch (e) { return toast('TSE-Bridge-URL fehlt oder ist ungültig', 'error'); } if (!d.kassenId) return toast('Bitte die Kassen-ID eintragen', 'error'); }
     const uids = $('s-dispuid').value.split(',').map(x => x.trim()).filter(Boolean);
     if (uids.length > 5 || uids.some(x => !/^[A-Za-z0-9]{20,40}$/.test(x))) return toast('Display-Konto-UID ungültig (20–40 Zeichen, max. 5)', 'error');
     d.displayUids = uids; d.posToken = $('s-postoken').value.trim().slice(0, 200);
@@ -804,23 +801,14 @@ async function finish(mode) {
     const rid = (S.receiptCounter || 0) + 1;
     const rqr = wantQr ? receiptUrl(items, tot, rid, method) : '';
     if (wantQr && !rqr) { toast('QR-Bon nicht möglich (Kasse muss über https geöffnet sein, oder Bon zu lang)', 'error'); return; }
-    let tse = null;
-    if (S.tseEnabled && tot > 0 && method !== 'VERLUST') {
-      try { tse = await tseSign('RECEIPT', items, tot, method, rid); }
-      catch (e) {
-        if (S.tseBlock) { toast('TSE-Fehler – Verkauf gesperrt: ' + e.message, 'error'); return; }
-        tse = { ok: false, status: 'AUSFALL', error: String(e.message).slice(0, 150), time: Date.now() };
-        toast('TSE nicht erreichbar – Verkauf wird als TSE-Ausfall vermerkt', 'error');
-      }
-    }
     const b = writeBatch(db);
-    b.set(doc(col('transactions')), { items, totalBrutto: tot, timestamp: new Date(), paymentMethod: method, status: 'completed', received: g, change: r2(g - tot), receiptId: rid, employee: who(), ...(method === 'KARTE' && termOk ? { terminal: termOk } : {}), ...(tse ? { tse } : {}) });
+    b.set(doc(col('transactions')), { items, totalBrutto: tot, timestamp: new Date(), paymentMethod: method, status: 'completed', received: g, change: r2(g - tot), receiptId: rid, employee: who(), ...(method === 'KARTE' && termOk ? { terminal: termOk } : {}) });
     if (S.stock) items.forEach(i => { if (!i.isFee && products[i.id]) b.update(doc(col('products'), i.id), { stock: increment(-i.quantity) }); });
     const upd = { receiptCounter: increment(1) }; if (method === 'BAR') upd.cashBoxBalance = increment(tot);
     b.set(settingsRef(), upd, { merge: true });
     await commit(b);
     if (items.some(i => i.loss)) audit('Verlust gebucht', items.filter(i => i.loss).map(i => i.quantity + 'x ' + i.name).join(', ') + ' (Bon #' + rid + ')');
-    if (print && method !== 'VERLUST' && S.receiptPrint !== false) printReceipt(items.filter(i => !i.loss), tot, rid, tse);
+    if (print && method !== 'VERLUST' && S.receiptPrint !== false) printReceipt(items.filter(i => !i.loss), tot, rid);
     cart = []; qtyStr = '1'; termOk = null; show('m-pay', false); renderAll();
     pushDisplay(method === 'VERLUST' ? { type: 'cart', items: [], total: 0 } : { type: 'thanks', ...(rqr ? { rqr } : {}) });
     toast(method === 'VERLUST' ? 'Verlust gebucht' : 'Zahlung erfolgreich', 'success');
@@ -885,7 +873,7 @@ function openSettings() {
   $('s-company').value = S.companyName || ''; $('s-address').value = S.address || ''; $('s-tax').value = S.taxId || '';
   $('s-fee').value = S.cardFeeRate || 0; $('s-pin').value = ''; $('s-pin').placeholder = (S.reversalHash || S.reversalCode) ? '•••• gesetzt – neu eingeben zum Ändern' : '4 Ziffern'; $('s-posurl').value = S.posUrl || ''; $('s-dispuid').value = (S.displayUids || []).join(', '); $('s-postoken').value = S.posToken || '';
   FEATS.forEach(([k]) => $('f-' + k).checked = !!S[k]);
-  $('s-paypal').value = S.paypalUrl || ''; $('s-tseurl').value = S.tseUrl || ''; $('s-tsetoken').value = S.tseToken || ''; $('s-kassenid').value = S.kassenId || ''; $('s-tseblock').checked = !!S.tseBlock; syncSubs(); setTab('ov');
+  $('s-paypal').value = S.paypalUrl || ''; syncSubs(); setTab('ov');
   renderEmps(); show('m-set');
 }
 function renderProdMgmt() {
@@ -918,16 +906,7 @@ async function cancelTx(id, label, pinOk) {
   try {
     const ref = doc(col('transactions'), id), s = await getDoc(ref), t = s.data();
     if (!t || t.status === 'cancelled') return toast('Bereits storniert', 'info');
-    let tc = null;
-    if (S.tseEnabled && t.tse && t.tse.ok && (t.totalBrutto || 0) > 0) {
-      try { tc = await tseSign('CANCELLATION', t.items || [], t.totalBrutto, t.paymentMethod, t.receiptId); }
-      catch (e) {
-        if (S.tseBlock) return toast('TSE-Fehler – Storno gesperrt: ' + e.message, 'error');
-        tc = { ok: false, status: 'AUSFALL', error: String(e.message).slice(0, 150), time: Date.now() };
-        toast('TSE nicht erreichbar – Storno wird als Ausfall vermerkt', 'error');
-      }
-    }
-    const b = writeBatch(db); b.update(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: who(), ...(tc ? { tseCancel: tc } : {}) });
+    const b = writeBatch(db); b.update(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: who() });
     let cash = 0;
     if (t.type === 'CASH-EINLAGE') cash = -t.amount; else if (t.type === 'CASH-ENTNAHME') cash = t.amount;
     else {
@@ -1076,23 +1055,6 @@ function renderReceiptPage() {
   } catch (e) { el.innerHTML = '<p class="p-10 text-center text-slate-500">Der Bon konnte nicht gelesen werden.</p>'; }
 }
 
-// ---------- TSE (über Bridge) ----------
-async function tseSign(type, items, total, method, rid) {
-  if (!S.tseUrl) throw new Error('Keine TSE-Bridge-URL');
-  const vat = {}; items.forEach(i => { if (i.loss) return; const k = String(i.taxRate ?? 19); vat[k] = (vat[k] || 0) + i.totalBrutto; });
-  const body = { action: 'sign', type, receiptId: rid, kassenId: S.kassenId || '', time: new Date().toISOString(),
-    amountsPerVat: Object.entries(vat).map(([rate, g]) => ({ rate: Number(rate), gross: r2(g).toFixed(2) })),
-    amountsPerPayment: [{ type: method === 'BAR' ? 'CASH' : 'NON_CASH', amount: r2(total).toFixed(2) }] };
-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
-  try {
-    const r = await fetch(S.tseUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(S.tseToken ? { Authorization: 'Bearer ' + S.tseToken } : {}) }, body: JSON.stringify(body), signal: ctl.signal });
-    const j = await r.json();
-    if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
-    return { ok: true, txNumber: String(j.txNumber ?? ''), serial: j.serial || '', start: j.start || '', end: j.end || '', counter: String(j.counter ?? ''), signature: j.signature || '', algorithm: j.algorithm || '', qr: j.qr || null, kassenId: S.kassenId || '' };
-  } catch (e) { throw new Error(e.name === 'AbortError' ? 'Zeitüberschreitung' : e.message); }
-  finally { clearTimeout(to); }
-}
-
 // ---------- Tagesabschluss (Z-Bericht, Kassensturz) ----------
 let zCur = null, zList = {};
 async function buildZ() {
@@ -1156,7 +1118,7 @@ async function doClose() {
   busy = true;
   try {
     const { R, from, to, prevN, prevSum } = zCur, soll = S.cashBoxBalance || 0, adj = $('z-adj').checked;
-    const z = { nr: (S.closingCounter || 0) + 1, ts: new Date(), from, to, by: who(), kassenId: S.kassenId || '', count: R.count, total: r2(R.total), bar: r2(R.bar), card: r2(R.card), pp: r2(R.pp), fee: r2(R.fee), cxN: R.cxN, cxSum: r2(R.cxSum), prevN, prevSum: r2(prevSum), lossN: R.lossN, lossVal: r2(R.lossVal), ein: r2(R.ein), ent: r2(R.ent),
+    const z = { nr: (S.closingCounter || 0) + 1, ts: new Date(), from, to, by: who(), count: R.count, total: r2(R.total), bar: r2(R.bar), card: r2(R.card), pp: r2(R.pp), fee: r2(R.fee), cxN: R.cxN, cxSum: r2(R.cxSum), prevN, prevSum: r2(prevSum), lossN: R.lossN, lossVal: r2(R.lossVal), ein: r2(R.ein), ent: r2(R.ent),
       vat: Object.fromEntries(Object.entries(R.vat).map(([k, v]) => [k, { g: r2(v.g), n: r2(v.n) }])), soll: r2(soll), ist: r2(ist), diff: r2(ist - soll), adjusted: adj, note: $('z-note').value.trim().slice(0, 200) };
     const b = writeBatch(db); b.set(doc(col('closings')), z);
     b.set(settingsRef(), { lastClosingTs: to, closingCounter: increment(1), ...(adj ? { cashBoxBalance: r2(ist) } : {}) }, { merge: true });
@@ -1168,24 +1130,17 @@ async function doClose() {
 function printZ(z) {
   const l = (a, b) => `<div class="l"><span>${a}</span><b>${b}</b></div>`, d = x => tsDate(x).toLocaleString('de-DE');
   const vat = Object.entries(z.vat || {}).map(([k, v]) => l('MwSt ' + esc(k) + ' %', eur(v.g - v.n))).join('');
-  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center;font-weight:bold">TAGESABSCHLUSS (Z) Nr. ${esc(z.nr)}</div><div style="font-size:10px;text-align:center">${esc(d(z.from))}<br>bis ${esc(d(z.to))}</div><hr>${l('Umsatz', eur(z.total))}${l('Bons', esc(z.count))}${l('Bar', eur(z.bar))}${l('Karte', eur(z.card))}${z.pp ? l('PayPal', eur(z.pp)) : ''}${z.fee ? l('Kartengebühren', eur(z.fee)) : ''}${l('Stornos', esc(z.cxN) + ' / ' + eur(z.cxSum))}${z.prevN ? l('Stornos Vorperiode', esc(z.prevN) + ' / ' + eur(z.prevSum)) : ''}${z.lossN ? l('Verluste', eur(z.lossVal)) : ''}<hr>${vat}<hr>${l('Einlagen', eur(z.ein))}${l('Entnahmen', eur(z.ent))}${l('Soll-Bestand', eur(z.soll))}${l('Ist-Bestand', eur(z.ist))}${l('Differenz', eur(z.diff))}${z.note ? `<div style="font-size:10px">Notiz: ${esc(z.note)}</div>` : ''}<hr><div style="font-size:10px;text-align:center">Erstellt von ${esc(z.by)}${z.kassenId ? ' · Kassen-ID ' + esc(z.kassenId) : ''}<br>${esc(d(z.ts))}</div>`;
+  $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:15px">${esc(S.companyName || 'Kasse')}</div><div style="text-align:center;font-weight:bold">TAGESABSCHLUSS (Z) Nr. ${esc(z.nr)}</div><div style="font-size:10px;text-align:center">${esc(d(z.from))}<br>bis ${esc(d(z.to))}</div><hr>${l('Umsatz', eur(z.total))}${l('Bons', esc(z.count))}${l('Bar', eur(z.bar))}${l('Karte', eur(z.card))}${z.pp ? l('PayPal', eur(z.pp)) : ''}${z.fee ? l('Kartengebühren', eur(z.fee)) : ''}${l('Stornos', esc(z.cxN) + ' / ' + eur(z.cxSum))}${z.prevN ? l('Stornos Vorperiode', esc(z.prevN) + ' / ' + eur(z.prevSum)) : ''}${z.lossN ? l('Verluste', eur(z.lossVal)) : ''}<hr>${vat}<hr>${l('Einlagen', eur(z.ein))}${l('Entnahmen', eur(z.ent))}${l('Soll-Bestand', eur(z.soll))}${l('Ist-Bestand', eur(z.ist))}${l('Differenz', eur(z.diff))}${z.note ? `<div style="font-size:10px">Notiz: ${esc(z.note)}</div>` : ''}<hr><div style="font-size:10px;text-align:center">Erstellt von ${esc(z.by)}<br>${esc(d(z.ts))}</div>`;
   setTimeout(() => window.print(), 50);
 }
 
 // ---------- Bon drucken ----------
-function printReceipt(items, total, rid, tse) {
+function printReceipt(items, total, rid) {
   const groups = {};
   items.forEach(i => { if (i.isFee) return; const k = String(i.taxRate ?? 19); const net = i.totalBrutto / (1 + k / 100); (groups[k] ||= { g: 0, n: 0 }); groups[k].g += i.totalBrutto; groups[k].n += net; });
   const tax = S.taxReceipt === false ? '' : Object.entries(groups).map(([k, v]) => `<div class="l" style="font-size:10px"><span>MwSt ${esc(k)} % (netto ${eur(v.n)})</span><span>${eur(v.g - v.n)}</span></div>`).join('');
   $('print').innerHTML = `<div style="text-align:center;font-weight:bold;font-size:16px">${esc((S.companyName || 'Kasse').toUpperCase())}</div>${S.address ? `<div style="text-align:center">${esc(S.address)}</div>` : ''}${S.taxId ? `<div style="text-align:center">St-Nr: ${esc(S.taxId)}</div>` : ''}<hr><div style="text-align:center;font-weight:bold">BON NR. #${rid}</div><hr>${items.map(i => `<div class="l"><span>${i.quantity}x ${esc(i.name)}</span><b>${eur(i.totalBrutto)}</b></div>`).join('')}<hr><div class="l" style="font-size:14px;font-weight:bold"><span>SUMME</span><span>${eur(total)}</span></div><hr>${tax}<div style="text-align:center;font-size:10px;margin-top:6px">${new Date().toLocaleString('de-DE')}<br>Vielen Dank!</div>`;
-  if (tse) {
-    const ok = tse.ok, x = v => esc(v ?? '');
-    $('print').insertAdjacentHTML('beforeend', ok
-      ? `<hr><div style="font-size:9px;line-height:1.35;word-break:break-all">TSE-Transaktion: ${x(tse.txNumber)}<br>Beginn: ${x(tse.start)}<br>Ende: ${x(tse.end)}<br>TSE-Seriennr.: ${x(tse.serial)}<br>Kassen-ID: ${x(tse.kassenId)}<br>Signaturzähler: ${x(tse.counter)} (${x(tse.algorithm)})<br>Signatur: ${x(tse.signature)}</div>${tse.qr ? '<div id="print-qr" style="margin:6px auto;width:110px"></div>' : ''}`
-      : '<hr><div style="text-align:center;font-size:10px;font-weight:bold">TSE-AUSFALL – Beleg ohne Signatur</div>');
-    if (ok && tse.qr) drawQr('print-qr', tse.qr, 110, typeof QRCode !== 'undefined' ? QRCode.CorrectLevel.L : undefined);
-  }
-  setTimeout(() => window.print(), tse && tse.ok && tse.qr ? 350 : 50);
+  setTimeout(() => window.print(), 50);
 }
 
 // ---------- Offline-Anzeige ----------
